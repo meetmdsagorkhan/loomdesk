@@ -12,7 +12,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Customer support operations management system"
+  description: "Customer support operations management system",
+  icons: {
+    icon: "/icon.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

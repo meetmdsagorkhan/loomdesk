@@ -40,8 +40,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
   return (
     <aside className="flex h-full w-full flex-col rounded-3xl border border-white/60 bg-white/80 p-5 shadow-panel backdrop-blur">
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">Loomdesk</p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Operations Hub</h1>
+        <div className="mb-2">
+          <img src="/icon.png" alt="Loomdesk" className="h-16 w-auto" />
+        </div>
         <div className="mt-4 rounded-2xl bg-slate-950 px-4 py-3 text-white">
           <p className="text-sm font-medium">{user.email}</p>
           <p className="text-xs uppercase tracking-[0.22em] text-slate-300">{user.role}</p>

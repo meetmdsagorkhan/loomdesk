@@ -2,7 +2,7 @@
 
 import { type FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { LoaderCircle, Shield } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,8 +39,8 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md border-white/60 bg-white/90">
       <CardHeader>
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white">
-          <Shield className="h-6 w-6" />
+        <div className="mb-4 flex items-center justify-center">
+          <img src="/logo.png" alt="Loomdesk" className="h-32 w-auto" />
         </div>
         <CardTitle>Sign in to Loomdesk</CardTitle>
         <CardDescription>Access reports, audits, member performance, and operational communication.</CardDescription>
