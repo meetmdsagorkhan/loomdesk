@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(MEMBER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  reports       Report[]
+  scoreEvents   ScoreEvent[]
+  leaveRequests LeaveRequest[]
+  shifts        ShiftAssignment[]
+  notifications  Notification[]
+  invitedBy     String?
+  invitations   Invitation[] @relation("invitedBy")
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String           @unique
+  token       String           @unique @default(cuid())
+  role        Role             @default(MEMBER)
+  status      InvitationStatus @default(PENDING)
+  invitedById String
+  invitedBy   User             @relation("invitedBy", fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  date        DateTime      @db.Date
+  status      ReportStatus  @default(DRAFT)
+  submittedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  entries     ReportEntry[]
+  @@unique([userId, date])
+}
+
+model ReportEntry {
+  id             String      @id @default(cuid())
+  reportId       String
+  report         Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  type           EntryType
+  referenceId    String
+  status         EntryStatus
+  note           String
+  pendingReason  String?
+  createdAt      DateTime    @default(now())
+  feedback       Feedback[]
+  @@unique([reportId, referenceId])
+}
+
+model ScoreEvent {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  reportId    String?
+  entryId     String?
+  severity    ScoreSeverity
+  deduction   Float
+  reason      String
+  adminNote   String?
+  createdById String
+  createdAt   DateTime        @default(now())
+}
+
+model Feedback {
+  id        String      @id @default(cuid())
+  entryId   String
+  entry     ReportEntry @relation(fields: [entryId], references: [id])
+  comment   String
+  authorId  String
+  createdAt DateTime    @default(now())
+}
+
+model LeaveRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  reason      String
+  status      LeaveStatus   @default(PENDING)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime      @default(now())
+}
+
+model Shift {
+  id              String            @id @default(cuid())
+  name            String
+  startTime       String
+  endTime         String
+  reportDeadline  String
+  createdAt       DateTime          @default(now())
+  assignments     ShiftAssignment[]
+}
+
+model ShiftAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  shiftId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  TEAM_LEAD
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum EntryType {
+  TICKET
+  CHAT
+}
+
+enum EntryStatus {
+  SOLVED
+  PENDING
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ScoreSeverity {
+  MINOR
+  MAJOR
+}
