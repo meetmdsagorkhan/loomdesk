@@ -24,24 +24,30 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('Login form submitted', data);
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('Calling signIn...');
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
         redirect: false,
       });
+      console.log('SignIn result:', result);
 
       if (result?.error) {
+        console.error('SignIn error:', result.error);
         setError('Invalid email or password');
         setIsLoading(false);
       } else {
+        console.log('Login successful, redirecting...');
         router.push('/dashboard');
         router.refresh();
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('Invalid email or password');
       setIsLoading(false);
     }
