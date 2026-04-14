@@ -36,7 +36,9 @@ export default function DashboardPage() {
         const response = await fetch('/api/analytics/summary');
         if (response.ok) {
           const data = await response.json();
-          setAnalytics(data);
+          if (data) {
+            setAnalytics(data);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
@@ -48,32 +50,32 @@ export default function DashboardPage() {
     fetchAnalytics();
   }, []);
 
-  const statCards = analytics
+  const statCards = analytics?.kpi
     ? [
         {
           title: 'Total Reports',
-          value: analytics.kpi.totalReports,
+          value: analytics.kpi.totalReports || 0,
           change: 12,
           icon: <FileText size={24} />,
           color: 'primary',
         },
         {
           title: 'Team Members',
-          value: analytics.kpi.activeMembers,
+          value: analytics.kpi.activeMembers || 0,
           change: 0,
           icon: <Users size={24} />,
           color: 'accent',
         },
         {
           title: 'Pending QA',
-          value: analytics.kpi.pendingLeaves,
+          value: analytics.kpi.pendingLeaves || 0,
           change: -15,
           icon: <CheckCircle size={24} />,
           color: 'warning',
         },
         {
           title: 'Avg Score',
-          value: analytics.kpi.avgScore,
+          value: analytics.kpi.avgScore || 0,
           change: 3,
           icon: <TrendingUp size={24} />,
           color: 'success',
@@ -88,12 +90,14 @@ export default function DashboardPage() {
     { key: 'attendanceRate', label: 'Attendance' },
   ];
 
-  const reportData = analytics?.leaderboard?.slice(0, 5).map((item: any) => ({
-    member: item.name,
-    reports: item.reports,
-    avgScore: item.avgScore,
-    attendanceRate: `${item.attendanceRate}%`,
-  })) || [];
+  const reportData = analytics?.leaderboard
+    ? analytics.leaderboard.slice(0, 5).map((item: any) => ({
+        member: item.name || 'Unknown',
+        reports: item.reports || 0,
+        avgScore: item.avgScore || 0,
+        attendanceRate: `${item.attendanceRate || 0}%`,
+      }))
+    : [];
 
   if (isLoading) {
     return (
