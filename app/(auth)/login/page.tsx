@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
-import { signIn } from '@/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,16 +28,17 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      console.log('Calling signIn...');
-      const result = await signIn('credentials', {
-        email: data.email,
-        password: data.password,
-        redirect: false,
+      console.log('Calling signIn API...');
+      const response = await fetch('/api/auth/signin/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
-      console.log('SignIn result:', result);
+      console.log('SignIn response:', response);
 
-      if (result?.error) {
-        console.error('SignIn error:', result.error);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('SignIn error:', errorData);
         setError('Invalid email or password');
         setIsLoading(false);
       } else {
