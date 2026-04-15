@@ -77,13 +77,20 @@ export default function Navbar({ title, onMobileMenuToggle }: NavbarProps) {
   const fetchNotifications = async () => {
     try {
       if (!supabase) return;
-      
-      const { data, error } = await supabase
+
+      const result = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(20);
+
+      if (!result) {
+        console.error('Supabase query returned undefined');
+        return;
+      }
+
+      const { data, error } = result;
 
       if (error) {
         console.error('Failed to fetch notifications:', error);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -28,17 +29,17 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      console.log('Calling signIn API...');
-      const response = await fetch('/api/auth/signin/credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      console.log('Calling signIn...');
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
       });
-      console.log('SignIn response:', response);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('SignIn error:', errorData);
+      console.log('SignIn result:', result);
+
+      if (result?.error) {
+        console.error('SignIn error:', result.error);
         setError('Invalid email or password');
         setIsLoading(false);
       } else {
