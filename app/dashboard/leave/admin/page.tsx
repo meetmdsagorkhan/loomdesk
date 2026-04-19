@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, differenceInDays } from 'date-fns';
 import { Check, X, Loader2, Calendar, Filter } from 'lucide-react';
@@ -28,11 +28,6 @@ type LeaveRequest = {
 };
 
 export default function LeaveAdminPage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -49,19 +44,6 @@ export default function LeaveAdminPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (userLoading) return;
-    if (!mounted) return;
-
-    if (!user || !isAdmin({ user })) {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchMembers();
-    fetchLeaveRequests();
-  }, [user, userLoading, router, selectedStatus, selectedUserId, mounted]);
-
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/users');
@@ -72,7 +54,7 @@ export default function LeaveAdminPage() {
     }
   };
 
-  const fetchLeaveRequests = async () => {
+  const fetchLeaveRequests = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -87,7 +69,20 @@ export default function LeaveAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedStatus, selectedUserId]);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!mounted) return;
+
+    if (!user || !isAdmin({ user })) {
+      router.push('/dashboard');
+      return;
+    }
+
+    fetchMembers();
+    fetchLeaveRequests();
+  }, [user, userLoading, router, fetchLeaveRequests, mounted]);
 
   const handleAction = async () => {
     if (!actionLeaveId || !actionType) return;
@@ -240,6 +235,7 @@ export default function LeaveAdminPage() {
                       size="sm"
                       variant="outline"
                       className="text-destructive border-destructive hover:bg-destructive/10"
+                      disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
                         setActionType('reject');
@@ -251,6 +247,7 @@ export default function LeaveAdminPage() {
                     <Button
                       size="sm"
                       className="bg-success text-success-foreground hover:bg-success/90"
+                      disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
                         setActionType('approve');

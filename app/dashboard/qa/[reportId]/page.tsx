@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2, X } from 'lucide-react';
@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type Feedback = {
   id: string;
@@ -62,7 +61,6 @@ export default function QADetailPage() {
   const router = useRouter();
   const params = useParams();
   const reportId = params.reportId as string;
-  const { user } = useCurrentUser();
 
   const [report, setReport] = useState<Report | null>(null);
   const [scoreEvents, setScoreEvents] = useState<ScoreEvent[]>([]);
@@ -78,12 +76,7 @@ export default function QADetailPage() {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [isAddingFeedback, setIsAddingFeedback] = useState(false);
 
-  useEffect(() => {
-    fetchReport();
-    fetchScoreEvents();
-  }, [reportId]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     try {
       const response = await fetch(`/api/qa/reports/${reportId}`);
       const data = await response.json();
@@ -93,17 +86,27 @@ export default function QADetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reportId]);
 
-  const fetchScoreEvents = async () => {
+  const fetchScoreEvents = useCallback(async (userId: string) => {
     try {
-      const response = await fetch(`/api/qa/score-events?userId=${report?.user.id}`);
+      const response = await fetch(`/api/qa/score-events?userId=${userId}`);
       const data = await response.json();
       setScoreEvents(data.scoreEvents || []);
     } catch (error) {
       console.error('Failed to fetch score events:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchReport();
+  }, [fetchReport]);
+
+  useEffect(() => {
+    if (report?.user.id) {
+      fetchScoreEvents(report.user.id);
+    }
+  }, [report?.user.id, fetchScoreEvents]);
 
   const toggleEntry = (entryId: string) => {
     setExpandedEntries((prev) => {
@@ -142,7 +145,7 @@ export default function QADetailPage() {
       }
 
       await fetchReport();
-      await fetchScoreEvents();
+      await fetchScoreEvents(report.user.id);
       setShowDeductModal(false);
       setDeductSeverity('MINOR');
       setDeductReason('');
@@ -218,7 +221,7 @@ export default function QADetailPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push('/dashboard/qa')}
+          onClick={() => router.push('/qa')}
         >
           <ArrowLeft size={16} className="mr-2" />
           Back

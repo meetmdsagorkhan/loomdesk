@@ -3,6 +3,37 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 
+type UserSummary = {
+  id: string;
+  name: string;
+};
+
+type ReportSummary = {
+  userId: string;
+  date: Date;
+};
+
+type LeaveSummary = {
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+};
+
+type ShiftAssignmentSummary = {
+  userId: string;
+  startDate: Date;
+  endDate: Date;
+};
+
+type ScoreEventSummary = {
+  userId: string;
+  deduction: number;
+};
+
+type EntrySummary = {
+  type: 'TICKET' | 'CHAT';
+};
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -24,14 +55,12 @@ export async function GET(request: NextRequest) {
     const end = endDate ? new Date(endDate) : new Date();
 
     // Get all users
-    const users = await prisma.user.findMany({
+    const users: UserSummary[] = await prisma.user.findMany({
       select: {
         id: true,
         name: true,
       },
     });
-
-    const userIds = users.map((u) => u.id);
 
     // KPI 1: Total Reports Submitted
     const totalReports = await prisma.report.count({
@@ -45,7 +74,7 @@ export async function GET(request: NextRequest) {
     });
 
     // KPI 2: Team Attendance Rate
-    const reports = await prisma.report.findMany({
+    const reports: ReportSummary[] = await prisma.report.findMany({
       where: {
         status: 'SUBMITTED',
         date: {
@@ -59,7 +88,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const approvedLeaves = await prisma.leaveRequest.findMany({
+    const approvedLeaves: LeaveSummary[] = await prisma.leaveRequest.findMany({
       where: {
         status: 'APPROVED',
         OR: [
@@ -75,7 +104,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const shiftAssignments = await prisma.shiftAssignment.findMany({
+    const shiftAssignments: ShiftAssignmentSummary[] = await prisma.shiftAssignment.findMany({
       where: {
         startDate: { lte: end },
         endDate: { gte: start },
@@ -125,7 +154,7 @@ export async function GET(request: NextRequest) {
     const attendanceRate = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
 
     // KPI 3: Average QA Score
-    const scoreEvents = await prisma.scoreEvent.findMany({
+    const scoreEvents: ScoreEventSummary[] = await prisma.scoreEvent.findMany({
       where: {
         createdAt: {
           gte: start,
@@ -144,7 +173,10 @@ export async function GET(request: NextRequest) {
       userScores.set(event.userId, current + event.deduction);
     });
 
-    const totalScore = Array.from(userScores.values()).reduce((sum, deduction) => Math.max(0, 100 - deduction), 0);
+    const totalScore = Array.from(userScores.values()).reduce(
+      (sum, deduction) => sum + Math.max(0, 100 - deduction),
+      0
+    );
     const avgScore = userScores.size > 0 ? Math.round(totalScore / userScores.size) : 100;
 
     // KPI 4: Total Score Deductions
@@ -187,7 +219,7 @@ export async function GET(request: NextRequest) {
       const userLeaves = approvedLeaves.filter((l) => l.userId === user.id);
 
       let present = 0;
-      let late = 0;
+      const late = 0;
       let absent = 0;
       let leave = 0;
 
@@ -249,7 +281,7 @@ export async function GET(request: NextRequest) {
         .reduce((sum, event) => sum + event.deduction, 0);
       const userScore = Math.max(0, 100 - userDeductions);
 
-      weeksMap.forEach((value, weekKey) => {
+      weeksMap.forEach((value) => {
         value.totalScore += userScore;
         value.count++;
       });
@@ -263,7 +295,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Entry Type Distribution
-    const entries = await prisma.reportEntry.findMany({
+    const entries: EntrySummary[] = await prisma.reportEntry.findMany({
       where: {
         report: {
           date: {

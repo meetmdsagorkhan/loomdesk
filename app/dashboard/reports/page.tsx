@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import { Check, Trash2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Trash2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import {
+  flexRender,
   useReactTable,
   getCoreRowModel,
   ColumnDef,
@@ -15,6 +13,9 @@ import { entrySchema, type EntryFormData } from '@/lib/validations/report';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 type ReportEntry = {
   id: string;
@@ -33,6 +34,14 @@ type Report = {
   entries: ReportEntry[];
 };
 
+const defaultEntryForm: EntryFormData = {
+  type: 'TICKET',
+  referenceId: '',
+  status: 'SOLVED',
+  note: '',
+  pendingReason: '',
+};
+
 export default function ReportsPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,24 +50,14 @@ export default function ReportsPage() {
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [entryForm, setEntryForm] = useState<EntryFormData>(defaultEntryForm);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof EntryFormData, string>>>({});
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors },
-  } = useForm<EntryFormData>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      type: 'TICKET',
-      status: 'SOLVED',
-    },
-  });
+  const handleFieldChange = (field: keyof EntryFormData, value: string) => {
+    setEntryForm((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
-  const watchStatus = watch('status');
-
-  // Fetch today's report
   useEffect(() => {
     fetchReport();
   }, []);
@@ -75,10 +74,37 @@ export default function ReportsPage() {
     }
   };
 
-  const onAddEntry = async (data: EntryFormData) => {
+  const onAddEntry = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const parsed = entrySchema.safeParse(entryForm);
+
+    if (!parsed.success) {
+      const nextErrors: Partial<Record<keyof EntryFormData, string>> = {};
+
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0];
+
+        if (
+          field === 'type' ||
+          field === 'referenceId' ||
+          field === 'status' ||
+          field === 'note' ||
+          field === 'pendingReason'
+        ) {
+          nextErrors[field] = issue.message;
+        }
+      });
+
+      setFieldErrors(nextErrors);
+      return;
+    }
+
     if (!report) return;
 
+    const data = parsed.data;
     setIsSubmittingEntry(true);
+
     try {
       const response = await fetch(`/api/reports/${report.id}/entries`, {
         method: 'POST',
@@ -87,8 +113,8 @@ export default function ReportsPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Failed to add entry');
+        const result = await response.json();
+        alert(result.error || 'Failed to add entry');
         return;
       }
 
@@ -98,7 +124,8 @@ export default function ReportsPage() {
         entries: [...report.entries, newEntry],
       });
 
-      reset();
+      setEntryForm(defaultEntryForm);
+      setFieldErrors({});
       setShowSavedIndicator(true);
       setTimeout(() => setShowSavedIndicator(false), 2000);
     } catch (error) {
@@ -113,10 +140,9 @@ export default function ReportsPage() {
     if (!report) return;
 
     try {
-      const response = await fetch(
-        `/api/reports/${report.id}/entries/${entryId}`,
-        { method: 'DELETE' }
-      );
+      const response = await fetch(`/api/reports/${report.id}/entries/${entryId}`, {
+        method: 'DELETE',
+      });
 
       if (!response.ok) {
         alert('Failed to delete entry');
@@ -125,7 +151,7 @@ export default function ReportsPage() {
 
       setReport({
         ...report,
-        entries: report.entries.filter((e) => e.id !== entryId),
+        entries: report.entries.filter((entry) => entry.id !== entryId),
       });
       setDeleteEntryId(null);
     } catch (error) {
@@ -138,14 +164,15 @@ export default function ReportsPage() {
     if (!report) return;
 
     setIsSubmittingReport(true);
+
     try {
       const response = await fetch(`/api/reports/${report.id}/submit`, {
         method: 'POST',
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Failed to submit report');
+        const result = await response.json();
+        alert(result.error || 'Failed to submit report');
         return;
       }
 
@@ -170,7 +197,10 @@ export default function ReportsPage() {
       accessorKey: 'type',
       header: 'Type',
       cell: ({ row }) => (
-        <Badge variant={row.original.type === 'TICKET' ? 'info' : 'success'} label={row.original.type} />
+        <Badge
+          variant={row.original.type === 'TICKET' ? 'info' : 'success'}
+          label={row.original.type}
+        />
       ),
     },
     {
@@ -181,7 +211,10 @@ export default function ReportsPage() {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.original.status === 'SOLVED' ? 'success' : 'warning'} label={row.original.status} />
+        <Badge
+          variant={row.original.status === 'SOLVED' ? 'success' : 'warning'}
+          label={row.original.status}
+        />
       ),
     },
     {
@@ -230,13 +263,10 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Daily Report</h1>
-          <p className="text-muted-foreground mt-1">
-            {format(new Date(), 'EEEE, MMMM d, yyyy')}
-          </p>
+          <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <Badge
           variant={isSubmitted ? 'success' : 'warning'}
@@ -244,7 +274,6 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Lock Banner */}
       {isSubmitted && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3">
           <AlertCircle size={20} />
@@ -252,13 +281,11 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Entry Form */}
       {!isSubmitted && (
         <div className="bg-card rounded-2xl border border-border p-6">
           <h2 className="text-lg font-medium text-foreground mb-4">Add Entry</h2>
-          <form onSubmit={handleSubmit(onAddEntry)} className="space-y-4">
+          <form onSubmit={onAddEntry} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Type */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Type</label>
                 <div className="flex gap-2">
@@ -266,7 +293,8 @@ export default function ReportsPage() {
                     <input
                       type="radio"
                       value="TICKET"
-                      {...register('type')}
+                      checked={entryForm.type === 'TICKET'}
+                      onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
                     <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
@@ -277,7 +305,8 @@ export default function ReportsPage() {
                     <input
                       type="radio"
                       value="CHAT"
-                      {...register('type')}
+                      checked={entryForm.type === 'CHAT'}
+                      onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
                     <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
@@ -287,22 +316,21 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {/* Reference ID */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Reference ID
                 </label>
                 <input
-                  {...register('referenceId')}
+                  value={entryForm.referenceId}
+                  onChange={(event) => handleFieldChange('referenceId', event.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="e.g. TKT-1042"
                 />
-                {errors.referenceId && (
-                  <p className="text-destructive text-xs mt-1">{errors.referenceId.message}</p>
+                {fieldErrors.referenceId && (
+                  <p className="text-destructive text-xs mt-1">{fieldErrors.referenceId}</p>
                 )}
               </div>
 
-              {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Status</label>
                 <div className="flex gap-2">
@@ -310,7 +338,8 @@ export default function ReportsPage() {
                     <input
                       type="radio"
                       value="SOLVED"
-                      {...register('status')}
+                      checked={entryForm.status === 'SOLVED'}
+                      onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
                     <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
@@ -321,7 +350,8 @@ export default function ReportsPage() {
                     <input
                       type="radio"
                       value="PENDING"
-                      {...register('status')}
+                      checked={entryForm.status === 'PENDING'}
+                      onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
                     <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
@@ -332,43 +362,39 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Note */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Note</label>
               <textarea
-                {...register('note')}
+                value={entryForm.note}
+                onChange={(event) => handleFieldChange('note', event.target.value)}
                 rows={2}
                 className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
                 placeholder="Describe the work done..."
               />
-              {errors.note && (
-                <p className="text-destructive text-xs mt-1">{errors.note.message}</p>
+              {fieldErrors.note && (
+                <p className="text-destructive text-xs mt-1">{fieldErrors.note}</p>
               )}
             </div>
 
-            {/* Pending Reason */}
-            {watchStatus === 'PENDING' && (
+            {entryForm.status === 'PENDING' && (
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Pending Reason <span className="text-destructive">*</span>
                 </label>
                 <input
-                  {...register('pendingReason')}
+                  value={entryForm.pendingReason ?? ''}
+                  onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="Why is this pending?"
                 />
-                {errors.pendingReason && (
-                  <p className="text-destructive text-xs mt-1">{errors.pendingReason.message}</p>
+                {fieldErrors.pendingReason && (
+                  <p className="text-destructive text-xs mt-1">{fieldErrors.pendingReason}</p>
                 )}
               </div>
             )}
 
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={isSubmittingEntry}
-                className="min-w-[120px]"
-              >
+              <Button type="submit" disabled={isSubmittingEntry} className="min-w-[120px]">
                 {isSubmittingEntry ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -383,7 +409,6 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Saved Indicator */}
       {showSavedIndicator && (
         <div className="fixed bottom-6 right-6 bg-success text-success-foreground px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg animate-in slide-in-from-bottom-4">
           <CheckCircle2 size={16} />
@@ -391,12 +416,11 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Entries Table */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="p-6 border-b border-border">
           <h2 className="text-lg font-medium text-foreground">Entries</h2>
         </div>
-        
+
         {entryCount === 0 ? (
           <div className="p-12 text-center">
             <p className="text-muted-foreground">No entries yet. Add your first entry above.</p>
@@ -436,7 +460,6 @@ export default function ReportsPage() {
         )}
       </div>
 
-      {/* Bottom Section */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entryCount} {entryCount === 1 ? 'entry' : 'entries'} added
@@ -444,15 +467,14 @@ export default function ReportsPage() {
         {!isSubmitted && (
           <Button
             onClick={() => setShowSubmitConfirm(true)}
-            disabled={entryCount === 0}
+            disabled={entryCount === 0 || isSubmittingReport}
             className="min-w-[140px]"
           >
-            Submit Report
+            {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
           </Button>
         )}
       </div>
 
-      {/* Delete Entry Confirm Modal */}
       <ConfirmModal
         isOpen={!!deleteEntryId}
         onCancel={() => setDeleteEntryId(null)}
@@ -463,7 +485,6 @@ export default function ReportsPage() {
         variant="danger"
       />
 
-      {/* Submit Report Confirm Modal */}
       <ConfirmModal
         isOpen={showSubmitConfirm}
         onCancel={() => setShowSubmitConfirm(false)}
@@ -474,8 +495,4 @@ export default function ReportsPage() {
       />
     </div>
   );
-}
-
-function flexRender(...args: any[]) {
-  return args[0] instanceof Function ? args[0](...args.slice(1)) : args[0];
 }

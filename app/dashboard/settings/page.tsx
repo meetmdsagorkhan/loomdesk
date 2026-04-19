@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Users, Bell, Mail, Lock, Loader2, Plus } from 'lucide-react';
+import { User, Users, Bell, Mail, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
-import Sidebar from '@/components/layout/Sidebar';
-import Navbar from '@/components/layout/Navbar';
-import PageWrapper from '@/components/layout/PageWrapper';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -16,15 +13,9 @@ export const fetchCache = 'force-no-store';
 type Tab = 'profile' | 'team' | 'notifications';
 
 export default function SettingsPage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const [profileData, setProfileData] = useState({ name: '', currentPassword: '', newPassword: '' });
@@ -49,8 +40,8 @@ export default function SettingsPage() {
       return;
     }
 
-    setProfileData({ ...profileData, name: user.name || '' });
-  }, [user, userLoading, mounted]);
+    setProfileData((prev) => ({ ...prev, name: user.name || '' }));
+  }, [user, userLoading, router, mounted]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +64,7 @@ export default function SettingsPage() {
 
       alert('Profile updated successfully!');
       setProfileData({ name: user?.name || '', currentPassword: '', newPassword: '' });
-    } catch (error) {
+    } catch {
       alert('Failed to update profile');
     } finally {
       setIsUpdatingProfile(false);
@@ -101,8 +92,8 @@ export default function SettingsPage() {
 
       alert('Invitation sent successfully');
       setInviteData({ email: '', role: 'MEMBER' });
-    } catch (error) {
-      console.error('Failed to invite member:', error);
+    } catch {
+      console.error('Failed to invite member');
       alert('Failed to invite member');
     } finally {
       setIsInviting(false);
@@ -141,16 +132,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <>
-      <Sidebar isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
-      <Navbar title="Settings" onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
-      <PageWrapper>
-        <div className="space-y-6">
-          {/* Header */}
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-            <p className="text-muted-foreground mt-1">Manage your account and team settings</p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+        <p className="text-muted-foreground mt-1">Manage your account and team settings</p>
+      </div>
 
           {/* Tabs */}
           <div className="flex gap-2 border-b border-border">
@@ -312,7 +299,5 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      </PageWrapper>
-    </>
   );
 }

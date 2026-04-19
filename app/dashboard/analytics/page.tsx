@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useEffectEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import {
   FileText,
   Users,
@@ -12,7 +12,6 @@ import {
   Award,
   Loader2,
   Crown,
-  ChevronDown,
 } from 'lucide-react';
 import {
   LineChart,
@@ -95,7 +94,7 @@ function AnalyticsContent() {
     fetchAnalytics();
   }, [user, userLoading, router, dateRange, customStart, customEnd, mounted]);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useEffectEvent(async () => {
     setIsLoading(true);
     try {
       let startDate: string | undefined;
@@ -140,7 +139,7 @@ function AnalyticsContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   // Prevent SSR rendering
   if (!mounted) {
@@ -170,7 +169,21 @@ function AnalyticsContent() {
     );
   }
 
-  const COLORS = ['#6366f1', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444'];
+  const getTooltipValue = (
+    value: number | string | readonly (number | string)[] | undefined
+  ) => {
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    return value ?? 0;
+  };
+
+  const formatCountTooltip = (value: number | string | readonly (number | string)[] | undefined) =>
+    [`${getTooltipValue(value)} reports`, 'Count'] as [string, string];
+
+  const formatScoreTooltip = (value: number | string | readonly (number | string)[] | undefined) =>
+    [`${getTooltipValue(value)}%`, 'Score'] as [string, string];
 
   return (
     <div className="space-y-6">
@@ -305,7 +318,7 @@ function AnalyticsContent() {
               <XAxis dataKey="date" className="text-xs text-muted-foreground" />
               <YAxis className="text-xs text-muted-foreground" />
               <Tooltip
-                formatter={(value: any, name: any) => [`${value || 0} reports`, 'Count']}
+                formatter={formatCountTooltip}
                 labelFormatter={(label) => format(new Date(label), 'MMM d')}
               />
               <Line
@@ -345,7 +358,7 @@ function AnalyticsContent() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="week" className="text-xs text-muted-foreground" />
               <YAxis className="text-xs text-muted-foreground" />
-              <Tooltip formatter={(value: any, name: any) => [`${value}%`, 'Score']} />
+              <Tooltip formatter={formatScoreTooltip} />
               <Area
                 type="monotone"
                 dataKey="avgScore"
@@ -434,9 +447,5 @@ function AnalyticsContent() {
 }
 
 export default function AnalyticsPage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
   return <AnalyticsContent />;
 }

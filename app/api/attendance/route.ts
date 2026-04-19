@@ -28,6 +28,27 @@ interface AttendanceData {
   };
 }
 
+type AttendanceReport = {
+  date: Date;
+  status: 'DRAFT' | 'SUBMITTED';
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type AttendanceLeave = {
+  startDate: Date;
+  endDate: Date;
+  reason: string;
+};
+
+type AttendanceShiftAssignment = {
+  startDate: Date;
+  endDate: Date;
+  shift: {
+    reportDeadline: string;
+  };
+};
+
 async function calculateAttendance(
   userId: string,
   month: number,
@@ -47,7 +68,7 @@ async function calculateAttendance(
   }
 
   // Fetch reports for the month
-  const reports = await prisma.report.findMany({
+  const reports: AttendanceReport[] = await prisma.report.findMany({
     where: {
       userId,
       date: {
@@ -61,7 +82,7 @@ async function calculateAttendance(
   });
 
   // Fetch approved leaves for the month
-  const approvedLeaves = await prisma.leaveRequest.findMany({
+  const approvedLeaves: AttendanceLeave[] = await prisma.leaveRequest.findMany({
     where: {
       userId,
       status: 'APPROVED',
@@ -81,7 +102,7 @@ async function calculateAttendance(
   });
 
   // Fetch shift assignments for the month
-  const shiftAssignments = await prisma.shiftAssignment.findMany({
+  const shiftAssignments: AttendanceShiftAssignment[] = await prisma.shiftAssignment.findMany({
     where: {
       userId,
       startDate: { lte: endDate },
@@ -99,7 +120,6 @@ async function calculateAttendance(
   for (let day = 1; day <= daysInMonth; day++) {
     const currentDate = new Date(year, month - 1, day);
     const dateStr = currentDate.toISOString().split('T')[0];
-    const dayOfWeek = currentDate.getDay();
 
     let status: AttendanceStatus = 'DAY_OFF';
     let details = '';

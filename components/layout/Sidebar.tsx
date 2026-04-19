@@ -1,132 +1,143 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LayoutDashboard,
-  FileText,
-  CheckSquare,
-  CalendarOff,
-  Clock,
-  UserCheck,
-  BarChart2,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Activity,
-} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-interface NavItem {
-  label: string;
-  icon: React.ReactNode;
-  href: string;
-}
-
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
-  { label: 'Reports', icon: <FileText size={20} />, href: '/dashboard/reports' },
-  { label: 'QA Review', icon: <CheckSquare size={20} />, href: '/dashboard/qa' },
-  { label: 'Leave', icon: <CalendarOff size={20} />, href: '/dashboard/leave' },
-  { label: 'Shifts', icon: <Clock size={20} />, href: '/dashboard/shifts' },
-  { label: 'Attendance', icon: <UserCheck size={20} />, href: '/dashboard/attendance' },
-  { label: 'Analytics', icon: <BarChart2 size={20} />, href: '/dashboard/analytics' },
-  { label: 'Settings', icon: <Settings size={20} />, href: '/dashboard/settings' },
-];
+import {
+  Activity,
+  BarChart2,
+  CalendarOff,
+  CheckSquare,
+  Clock,
+  FileText,
+  LayoutDashboard,
+  Settings,
+  UserCheck,
+  X,
+} from 'lucide-react';
+import { isNavItemActive, navItems, type NavIcon } from '@/lib/navigation';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
 }
 
+const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: string }>> = {
+  dashboard: LayoutDashboard,
+  reports: FileText,
+  qa: CheckSquare,
+  leave: CalendarOff,
+  shifts: Clock,
+  attendance: UserCheck,
+  analytics: BarChart2,
+  settings: Settings,
+};
+
 export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
+
+  const groupedItems = navItems.reduce<Record<string, typeof navItems>>((groups, item) => {
+    groups[item.section] ??= [];
+    groups[item.section].push(item);
+    return groups;
+  }, {});
 
   return (
     <>
-      {/* Mobile Overlay */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={onMobileClose}
-          />
-        )}
-      </AnimatePresence>
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
+          onClick={onMobileClose}
+        />
+      )}
 
-      {/* Sidebar */}
-      <motion.aside
-        initial={{ width: 240 }}
-        animate={{ 
-          width: isCollapsed ? 64 : 240,
-        }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-50 flex flex-col lg:relative transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-200/70 bg-white/88 backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/85',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        ].join(' ')}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-          <AnimatePresence mode="wait">
-            {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2"
-              >
-                <Activity className="w-6 h-6 text-primary" />
-                <span className="font-semibold text-lg text-foreground">LoomDesk</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
-          >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-        </div>
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-5 dark:border-white/10">
+            <Link href="/dashboard" className="flex items-center gap-3" onClick={onMobileClose}>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-slate-950">
+                <Activity size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                  LoomDesk
+                </p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Operations Console
+                </p>
+              </div>
+            </Link>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href}>
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent'
-                  }`}
-                >
-                  <span className="flex-shrink-0">{item.icon}</span>
-                  <AnimatePresence mode="wait">
-                    {!isCollapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="font-medium text-sm"
+            <button
+              type="button"
+              className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+              onClick={onMobileClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto px-4 py-5">
+            {Object.entries(groupedItems).map(([section, items]) => (
+              <div key={section} className="mb-6">
+                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                  {section}
+                </p>
+                <div className="space-y-1.5">
+                  {items.map((item) => {
+                    const Icon = iconMap[item.icon];
+                    const isActive = isNavItemActive(pathname, item.href, item.matches);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onMobileClose}
+                        className={[
+                          'group flex items-start gap-3 rounded-2xl border px-3.5 py-3 transition-all',
+                          isActive
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/12 dark:border-white dark:bg-white dark:text-slate-950'
+                            : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:hover:border-white/10 dark:hover:bg-white/5',
+                        ].join(' ')}
                       >
-                        {item.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </Link>
-            );
-          })}
-        </nav>
-      </motion.aside>
+                        <div
+                          className={[
+                            'mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
+                            isActive
+                              ? 'bg-white/12 text-white dark:bg-slate-900/10 dark:text-slate-950'
+                              : 'bg-slate-100 text-slate-600 group-hover:bg-white dark:bg-white/5 dark:text-slate-300',
+                          ].join(' ')}
+                        >
+                          <Icon size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{item.label}</p>
+                          <p
+                            className={[
+                              'mt-0.5 text-xs leading-5',
+                              isActive
+                                ? 'text-slate-200 dark:text-slate-700'
+                                : 'text-slate-500 dark:text-slate-400',
+                            ].join(' ')}
+                          >
+                            {item.description}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
+      </aside>
     </>
   );
 }

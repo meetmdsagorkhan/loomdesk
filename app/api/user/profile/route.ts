@@ -8,7 +8,7 @@ const updateProfileSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
 

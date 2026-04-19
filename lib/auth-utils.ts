@@ -1,41 +1,25 @@
-import { auth } from '@/auth';
+import type { Session } from 'next-auth';
 
-export async function requireAdmin() {
-  const session = await auth();
+type AuthSubject =
+  | Session
+  | Session['user']
+  | {
+      user?: Session['user'] | null;
+      role?: string | null;
+    }
+  | null
+  | undefined;
 
-  if (!session?.user) {
-    throw new Error('Unauthorized');
-  }
-
-  if (session.user.role !== 'ADMIN') {
-    throw new Error('Forbidden: Admin only');
-  }
-
-  return session;
+function getUserFromInput(input: AuthSubject) {
+  return input && 'user' in input ? input.user : input;
 }
 
-export async function requireTeamLead() {
-  const session = await auth();
-
-  if (!session?.user) {
-    throw new Error('Unauthorized');
-  }
-
-  if (session.user.role !== 'ADMIN' && session.user.role !== 'TEAM_LEAD') {
-    throw new Error('Forbidden: Admin or Team Lead only');
-  }
-
-  return session;
-}
-
-export function isAdmin(input: any) {
-  // Support both session object and { user } object
-  const user = input?.user || input;
+export function isAdmin(input: AuthSubject) {
+  const user = getUserFromInput(input);
   return user?.role === 'ADMIN';
 }
 
-export function isTeamLead(input: any) {
-  // Support both session object and { user } object
-  const user = input?.user || input;
+export function isTeamLead(input: AuthSubject) {
+  const user = getUserFromInput(input);
   return user?.role === 'ADMIN' || user?.role === 'TEAM_LEAD';
 }

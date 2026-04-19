@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
@@ -33,11 +32,6 @@ type ShiftAssignment = {
 };
 
 export default function ShiftsPage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -60,7 +54,6 @@ export default function ShiftsPage() {
   });
   const [isAssigning, setIsAssigning] = useState(false);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -184,7 +177,6 @@ export default function ShiftsPage() {
   const handleDeleteAssignment = async () => {
     if (!deleteAssignmentId) return;
 
-    setIsDeleting(true);
     try {
       const response = await fetch(`/api/shifts/assignments/${deleteAssignmentId}`, {
         method: 'DELETE',
@@ -200,8 +192,6 @@ export default function ShiftsPage() {
     } catch (error) {
       console.error('Failed to delete assignment:', error);
       alert('Failed to delete assignment');
-    } finally {
-      setIsDeleting(false);
     }
   };
 

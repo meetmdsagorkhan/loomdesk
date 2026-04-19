@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDaysInMonth } from 'date-fns';
+import { useState, useEffect, useEffectEvent } from 'react';
+import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -33,11 +33,6 @@ type AttendanceData = {
 };
 
 export default function AttendancePage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const { user, isLoading: userLoading } = useCurrentUser();
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +67,7 @@ export default function AttendancePage() {
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useEffectEvent(async () => {
     setIsLoading(true);
     try {
       const month = currentDate.getMonth() + 1;
@@ -87,7 +82,7 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   // Prevent SSR rendering
   if (!mounted) {

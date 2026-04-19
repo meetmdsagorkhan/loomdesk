@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -32,34 +31,25 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onCancel}>
-      <AnimatePresence>
-        {isOpen && (
-          <DialogContent className="sm:max-w-[400px]">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+      <DialogContent className="sm:max-w-[400px]">
+        <div className="animate-in zoom-in-95 fade-in duration-200">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              variant={variant === 'danger' ? 'destructive' : 'default'}
+              onClick={onConfirm}
             >
-              <DialogHeader>
-                <DialogTitle>{title}</DialogTitle>
-                <DialogDescription>{description}</DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button
-                  variant={variant === 'danger' ? 'destructive' : 'default'}
-                  onClick={onConfirm}
-                >
-                  {confirmLabel}
-                </Button>
-              </DialogFooter>
-            </motion.div>
-          </DialogContent>
-        )}
-      </AnimatePresence>
+              {confirmLabel}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }

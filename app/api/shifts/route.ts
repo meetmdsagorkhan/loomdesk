@@ -11,7 +11,7 @@ const shiftSchema = z.object({
   reportDeadline: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
 

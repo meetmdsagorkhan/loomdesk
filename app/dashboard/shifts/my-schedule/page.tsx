@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { useState, useEffect, useEffectEvent } from 'react';
+import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Badge from '@/components/shared/Badge';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export const dynamic = 'force-dynamic';
@@ -23,11 +22,6 @@ type ShiftAssignment = {
 };
 
 export default function MySchedulePage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const { user, isLoading: userLoading } = useCurrentUser();
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +43,7 @@ export default function MySchedulePage() {
     fetchSchedule();
   }, [user, userLoading, currentWeek, mounted]);
 
-  const fetchSchedule = async () => {
+  const fetchSchedule = useEffectEvent(async () => {
     setIsLoading(true);
     try {
       const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -65,7 +59,7 @@ export default function MySchedulePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   const getShiftForDay = (date: Date) => {
     return assignments.find((assignment) => {

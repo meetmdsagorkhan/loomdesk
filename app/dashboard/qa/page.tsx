@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Eye, Loader2, Filter } from 'lucide-react';
 import {
+  flexRender,
   useReactTable,
   getCoreRowModel,
   ColumnDef,
@@ -33,11 +34,6 @@ type Report = {
 };
 
 export default function QAPage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [reports, setReports] = useState<Report[]>([]);
@@ -52,19 +48,6 @@ export default function QAPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (userLoading) return;
-    if (!mounted) return;
-
-    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchMembers();
-    fetchReports();
-  }, [user, userLoading, router, selectedDate, selectedUserId, selectedStatus, mounted]);
-
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/users');
@@ -75,7 +58,7 @@ export default function QAPage() {
     }
   };
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -91,7 +74,20 @@ export default function QAPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedDate, selectedUserId, selectedStatus]);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!mounted) return;
+
+    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
+      router.push('/dashboard');
+      return;
+    }
+
+    fetchMembers();
+    fetchReports();
+  }, [user, userLoading, router, fetchReports, mounted]);
 
   const columns: ColumnDef<Report>[] = [
     {
@@ -130,7 +126,7 @@ export default function QAPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => router.push(`/dashboard/qa/${row.original.id}`)}
+          onClick={() => router.push(`/qa/${row.original.id}`)}
         >
           <Eye size={16} className="mr-2" />
           View
@@ -267,8 +263,4 @@ export default function QAPage() {
       </div>
     </div>
   );
-}
-
-function flexRender(...args: any[]) {
-  return args[0] instanceof Function ? args[0](...args.slice(1)) : args[0];
 }

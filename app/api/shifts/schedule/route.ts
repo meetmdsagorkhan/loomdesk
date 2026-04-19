@@ -17,7 +17,11 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Admin can see all schedules, members can only see their own
-    const whereClause: any = isAdmin({ user: session.user })
+    const whereClause: {
+      userId?: string;
+      startDate?: { lte: Date };
+      endDate?: { gte: Date };
+    } = isAdmin({ user: session.user })
       ? {}
       : { userId: session.user.id };
 

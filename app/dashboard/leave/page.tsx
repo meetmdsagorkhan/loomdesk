@@ -20,11 +20,6 @@ type LeaveRequest = {
 };
 
 export default function LeavePage() {
-  // Prevent SSR completely
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
   const { user, isLoading: userLoading } = useCurrentUser();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);

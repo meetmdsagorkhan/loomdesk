@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -15,6 +16,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@base-ui/react": "^1.4.0",
     "@hookform/resolvers": "^5.2.2",
+    "@next/swc-win32-x64-msvc": "16.2.3",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.103.0",
     "@tanstack/react-table": "^8.21.3",

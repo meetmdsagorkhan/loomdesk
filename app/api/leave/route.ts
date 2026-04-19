@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
 
+type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 const leaveRequestSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
@@ -23,11 +25,11 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Admin can see all requests, members can only see their own
-    const whereClause: any = isAdmin({ user: session.user })
+    const whereClause: { userId?: string; status?: LeaveStatus } = isAdmin({ user: session.user })
       ? {}
       : { userId: session.user.id };
 
-    if (status && status !== 'all') {
+    if (status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED') {
       whereClause.status = status;
     }
 

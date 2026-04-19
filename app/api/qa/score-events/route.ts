@@ -5,6 +5,10 @@ import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 
+type ScoreEventSummary = {
+  deduction: number;
+};
+
 const scoreEventSchema = z.object({
   userId: z.string(),
   reportId: z.string().optional(),
@@ -49,7 +53,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate current score
-    const totalDeduction = scoreEvents.reduce((sum: number, event: any) => sum + event.deduction, 0);
+    const totalDeduction = (scoreEvents as ScoreEventSummary[]).reduce(
+      (sum, event) => sum + event.deduction,
+      0
+    );
     const currentScore = Math.max(0, 100 - totalDeduction);
 
     return NextResponse.json({
@@ -87,7 +94,10 @@ export async function POST(request: NextRequest) {
       where: { userId },
     });
 
-    const totalDeduction = existingScoreEvents.reduce((sum: number, event: any) => sum + event.deduction, 0);
+    const totalDeduction = (existingScoreEvents as ScoreEventSummary[]).reduce(
+      (sum, event) => sum + event.deduction,
+      0
+    );
     const currentScore = Math.max(0, 100 - totalDeduction);
 
     // Ensure score doesn't go below 0

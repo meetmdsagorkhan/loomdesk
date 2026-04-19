@@ -3,6 +3,23 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 
+type ReportListItem = {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  _count: {
+    entries: number;
+  };
+};
+
+type ReportScoreEvent = {
+  reportId: string | null;
+  deduction: number;
+};
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -23,7 +40,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const whereClause: any = {
+    const whereClause: {
+      status?: 'SUBMITTED' | 'DRAFT';
+      date?: { gte: Date; lt: Date };
+      userId?: string;
+    } = {
       status: 'SUBMITTED', // Only show submitted reports in QA
     };
 
@@ -42,7 +63,7 @@ export async function GET(request: NextRequest) {
       whereClause.userId = userId;
     }
 
-    if (status && status !== 'all') {
+    if (status === 'SUBMITTED' || status === 'DRAFT') {
       whereClause.status = status;
     }
 
@@ -72,22 +93,23 @@ export async function GET(request: NextRequest) {
       }),
       prisma.report.count({ where: whereClause }),
     ]);
+    const typedReports = reports as ReportListItem[];
 
     // Calculate score for each report (100 - total deductions)
-    const reportIds = reports.map((r: any) => r.id);
-    const scoreEvents = await prisma.scoreEvent.findMany({
+    const reportIds = typedReports.map((report) => report.id);
+    const scoreEvents: ReportScoreEvent[] = await prisma.scoreEvent.findMany({
       where: {
         reportId: { in: reportIds },
       },
     });
 
     const scoreMap = new Map<string, number>();
-    scoreEvents.forEach((event: any) => {
+    scoreEvents.forEach((event) => {
       const currentScore = scoreMap.get(event.reportId || '') || 0;
       scoreMap.set(event.reportId || '', currentScore + event.deduction);
     });
 
-    const reportsWithScore = reports.map((report: any) => {
+    const reportsWithScore = typedReports.map((report) => {
       const totalDeduction = scoreMap.get(report.id) || 0;
       return {
         ...report,

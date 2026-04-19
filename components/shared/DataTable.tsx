@@ -43,7 +43,7 @@ export default function DataTable({ columns, data, isLoading }: DataTableProps) 
         <thead>
           <tr className="border-b border-border">
             {columns.map((column) => (
-              <th key={column.key} className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+              <th key={column.key} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {column.label}
               </th>
             ))}

@@ -3,6 +3,10 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 
+type ReportScoreEvent = {
+  deduction: number;
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -46,11 +50,11 @@ export async function GET(
     }
 
     // Calculate score for the report
-    const scoreEvents = await prisma.scoreEvent.findMany({
+    const scoreEvents: ReportScoreEvent[] = await prisma.scoreEvent.findMany({
       where: { reportId },
     });
 
-    const totalDeduction = scoreEvents.reduce((sum: number, event: any) => sum + event.deduction, 0);
+    const totalDeduction = scoreEvents.reduce((sum, event) => sum + event.deduction, 0);
     const score = Math.max(0, 100 - totalDeduction);
 
     return NextResponse.json({
