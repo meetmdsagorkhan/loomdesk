@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   BarChart2,
-  Calendar,
+  CalendarDays,
   CalendarOff,
   CheckSquare,
   Clock,
@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import StatCard from '@/components/shared/StatCard';
 import Card from '@/components/shared/Card';
+import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import DataTable from '@/components/shared/DataTable';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { navItems, type NavIcon } from '@/lib/navigation';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -49,6 +51,7 @@ const iconMap: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
   qa: CheckSquare,
   leave: CalendarOff,
   shifts: Clock,
+  calendar: CalendarDays,
   attendance: UserCheck,
   analytics: BarChart2,
   messages: MessageSquare,
@@ -71,9 +74,11 @@ export default function DashboardPage() {
           if (data) {
             setAnalytics(data);
           }
+        } else {
+          console.warn('Analytics data not available yet');
         }
       } catch (error) {
-        console.error('Failed to fetch analytics:', error);
+        console.warn('Failed to fetch analytics:', error);
       } finally {
         setIsLoading(false);
       }
@@ -144,130 +149,63 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
-        <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-500 via-blue-600 to-slate-700 p-6 text-white shadow-[0_28px_80px_-36px_rgba(37,99,235,0.55)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">
-            {isAdmin ? 'Admin Dashboard' : 'Member Dashboard'}
-          </p>
-          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/95 to-info p-6 text-primary-foreground card-elevation-lg sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-foreground/80">
+          {isAdmin ? 'Admin Dashboard' : 'Member Dashboard'}
+        </p>
+        <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-primary-foreground">
             {user?.name
               ? `${user.name}, ${isAdmin ? 'manage your team' : 'track your progress'} efficiently.`
               : 'Everything important is now one click away.'}
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100">
-            {isAdmin
-              ? 'Oversee team performance, manage reports, review QA, and handle administrative tasks from your centralized dashboard.'
-              : 'Track your reports, view your QA scores, manage your schedule, and access all your work tools in one place.'}
-          </p>
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-primary-foreground/90">
+          {isAdmin
+            ? 'Oversee team performance, manage reports, review QA, and handle administrative tasks from your centralized dashboard.'
+            : 'Track your reports, view your QA scores, manage your schedule, and access all your work tools in one place.'}
+        </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/reports"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            {isAdmin ? 'Manage Reports' : 'My Reports'}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          {isAdmin && (
             <Link
-              href="/reports"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition-transform hover:-translate-y-0.5"
+              href="/dashboard/qa"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
             >
-              {isAdmin ? 'Manage Reports' : 'My Reports'}
-              <ArrowRight className="h-4 w-4" />
+              Review QA
             </Link>
-            {isAdmin && (
-              <Link
-                href="/qa"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/14"
-              >
-                Review QA
-              </Link>
-            )}
-            <Link
-              href="/analytics"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-semibold text-blue-100 transition-colors hover:bg-white/10"
-            >
-              {isAdmin ? 'Team Analytics' : 'My Analytics'}
-            </Link>
-          </div>
+          )}
+          <Link
+            href="/dashboard/analytics"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            {isAdmin ? 'Team Analytics' : 'My Analytics'}
+          </Link>
         </div>
-
-        <Card
-          title={isAdmin ? 'Admin Overview' : 'Your Overview'}
-          subtitle={isAdmin ? 'Team performance at a glance' : 'Your activity at a glance'}
-          className="bg-white/90 dark:bg-slate-950/75"
-        >
-          <div className="space-y-4">
-            <div className="rounded-3xl bg-blue-50/70 p-4 shadow-sm dark:bg-blue-900/20">
-              <p className="text-sm font-medium text-muted-foreground">
-                {isAdmin ? 'Active Workflows' : 'Your Tasks'}
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-card-foreground">{workspaces.length}</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isAdmin
-                  ? 'Reports, QA, leave, shifts, attendance, analytics, and settings available.'
-                  : 'Reports, leave, shifts, attendance, and analytics available.'}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl p-4 shadow-sm">
-                <p className="text-sm font-medium text-muted-foreground">Role</p>
-                <p className="mt-2 text-lg font-semibold text-card-foreground">
-                  {user?.role?.replace('_', ' ') || 'Team member'}
-                </p>
-              </div>
-              <div className="rounded-3xl p-4 shadow-sm">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {isAdmin ? 'Team Size' : 'Status'}
-                </p>
-                <p className="mt-2 text-lg font-semibold text-card-foreground">
-                  {isAdmin ? analytics?.kpi.activeMembers || 0 : 'Active'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {statCards.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
+      <section>
+        <BentoGrid>
+          {statCards.map((stat) => (
+            <BentoCard key={stat.title}>
+              <StatCard {...stat} />
+            </BentoCard>
+          ))}
+        </BentoGrid>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
-        <Card
-          title="Team Leaderboard"
-          subtitle="Recent activity and score trends"
-          className="bg-white/90 dark:bg-slate-950/75"
-        >
-          <DataTable columns={reportColumns} data={reportData} isLoading={isLoading} />
-        </Card>
-
-        <Card
-          title="Workspace Map"
-          subtitle="Direct entry points for each function"
-          className="bg-white/90 dark:bg-slate-950/75"
-        >
-          <div className="grid gap-3">
-            {workspaces.map((item) => {
-              const Icon = iconMap[item.icon];
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="group flex items-center justify-between rounded-[1.5rem] bg-background/70 px-4 py-4 transition-colors hover:bg-white dark:hover:bg-white/[0.04]"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-card-foreground">{item.label}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              );
-            })}
-          </div>
-        </Card>
-      </section>
+      <Card
+        title="Team Leaderboard"
+        subtitle="Recent activity and score trends"
+        className="bg-card/80 backdrop-blur-sm"
+      >
+        <DataTable columns={reportColumns} data={reportData} isLoading={isLoading} />
+      </Card>
     </div>
   );
 }

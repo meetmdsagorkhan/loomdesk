@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { showToast } from '@/components/shared/Toast';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -55,9 +56,15 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (selectedConversation) {
-      fetchMessages(selectedConversation);
+      void fetchMessages(selectedConversation);
     }
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedConversation && conversations.length > 0) {
+      setSelectedConversation(conversations[0].userId);
+    }
+  }, [conversations, selectedConversation]);
 
   useEffect(() => {
     scrollToBottom();
@@ -71,6 +78,9 @@ export default function MessagesPage() {
     try {
       setIsLoading(true);
       const response = await fetch('/api/messages/conversations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch conversations');
+      }
       const data = await response.json();
       setConversations(data || []);
     } catch (error) {
@@ -83,6 +93,9 @@ export default function MessagesPage() {
   const fetchMessages = async (userId: string) => {
     try {
       const response = await fetch(`/api/messages?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
       const data = await response.json();
       setMessages(data || []);
       
@@ -116,10 +129,14 @@ export default function MessagesPage() {
         const message = await response.json();
         setMessages((prev) => [...prev, message]);
         setNewMessage('');
-        fetchConversations();
+        await fetchConversations();
+      } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to send message', 'error');
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      showToast('Failed to send message', 'error');
     } finally {
       setIsSending(false);
     }

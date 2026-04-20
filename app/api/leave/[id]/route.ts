@@ -3,8 +3,8 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
+import { createNotification } from '@/lib/notifications';
 
 const approveRejectSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED']),
@@ -66,18 +66,16 @@ export async function PATCH(
 
     // Send notification to member
     try {
-      if (supabase) {
-        const startDate = format(new Date(updatedRequest.startDate), 'MMM d');
-        const endDate = format(new Date(updatedRequest.endDate), 'MMM d, yyyy');
-        const dateRange = startDate === endDate ? endDate : `${startDate} - ${endDate}`;
-        
-        await supabase.from('notifications').insert({
-          user_id: updatedRequest.userId,
-          type: 'LEAVE_UPDATE',
-          title: `Leave ${status}`,
-          message: `Your leave request for ${dateRange} was ${status.toLowerCase()}`,
-        });
-      }
+      const startDate = format(new Date(updatedRequest.startDate), 'MMM d');
+      const endDate = format(new Date(updatedRequest.endDate), 'MMM d, yyyy');
+      const dateRange = startDate === endDate ? endDate : `${startDate} - ${endDate}`;
+
+      await createNotification({
+        userId: updatedRequest.userId,
+        type: 'LEAVE_UPDATE',
+        title: `Leave ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
+        message: `Your leave request for ${dateRange} was ${status.toLowerCase()}.`,
+      });
     } catch (error) {
       console.error('Failed to send notification:', error);
       // Don't fail the request if notification fails

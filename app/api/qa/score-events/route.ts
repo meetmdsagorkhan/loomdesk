@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
+import { createNotification } from '@/lib/notifications';
 
 type ScoreEventSummary = {
   deduction: number;
@@ -121,14 +121,12 @@ export async function POST(request: NextRequest) {
 
     // Send notification to affected member
     try {
-      if (supabase) {
-        await supabase.from('notifications').insert({
-          user_id: userId,
-          type: 'SCORE_DEDUCTION',
-          title: 'Score Deduction',
-          message: `You received a ${severity.toLowerCase()} deduction: ${reason}`,
-        });
-      }
+      await createNotification({
+        userId,
+        type: 'SCORE_DEDUCTION',
+        title: 'Score Updated',
+        message: `You received a ${severity.toLowerCase()} deduction for: ${reason}`,
+      });
     } catch (error) {
       console.error('Failed to send notification:', error);
       // Don't fail the request if notification fails

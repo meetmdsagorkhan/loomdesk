@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
+import { showToast } from '@/components/shared/Toast';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -78,20 +80,28 @@ export default function ShiftsPage() {
   const fetchShifts = async () => {
     try {
       const response = await fetch('/api/shifts');
+      if (!response.ok) {
+        handleApiError('Failed to fetch shifts', 'Shift Management');
+        return;
+      }
       const data = await response.json();
       setShifts(data.shifts || []);
     } catch (error) {
-      console.error('Failed to fetch shifts:', error);
+      handleApiError(error, 'Shift Management');
     }
   };
 
   const fetchAssignments = async () => {
     try {
       const response = await fetch('/api/shifts/schedule');
+      if (!response.ok) {
+        handleApiError('Failed to fetch assignments', 'Shift Management');
+        return;
+      }
       const data = await response.json();
       setAssignments(data.assignments || []);
     } catch (error) {
-      console.error('Failed to fetch assignments:', error);
+      handleApiError(error, 'Shift Management');
     } finally {
       setIsLoading(false);
     }
@@ -100,10 +110,14 @@ export default function ShiftsPage() {
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/users');
+      if (!response.ok) {
+        handleApiError('Failed to fetch members', 'Shift Management');
+        return;
+      }
       const data = await response.json();
       setMembers(data.users || []);
     } catch (error) {
-      console.error('Failed to fetch members:', error);
+      handleApiError(error, 'Shift Management');
     }
   };
 
@@ -133,9 +147,9 @@ export default function ShiftsPage() {
       await fetchShifts();
       setNewShift({ name: '', startTime: '', endTime: '', reportDeadline: '' });
       setShowCreateShift(false);
+      showToast('Shift created successfully', 'success');
     } catch (error) {
-      console.error('Failed to create shift:', error);
-      setError('Failed to create shift');
+      handleApiError(error, 'Shift Management');
     } finally {
       setIsCreatingShift(false);
     }
@@ -166,9 +180,9 @@ export default function ShiftsPage() {
 
       await fetchAssignments();
       setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '' });
+      showToast('Shift assigned successfully', 'success');
     } catch (error) {
-      console.error('Failed to assign shift:', error);
-      setError('Failed to assign shift');
+      handleApiError(error, 'Shift Management');
     } finally {
       setIsAssigning(false);
     }
@@ -183,15 +197,15 @@ export default function ShiftsPage() {
       });
 
       if (!response.ok) {
-        alert('Failed to delete assignment');
+        handleApiError('Failed to delete assignment', 'Shift Management');
         return;
       }
 
       await fetchAssignments();
       setDeleteAssignmentId(null);
+      showToast('Assignment removed', 'success');
     } catch (error) {
-      console.error('Failed to delete assignment:', error);
-      alert('Failed to delete assignment');
+      handleApiError(error, 'Shift Management');
     }
   };
 
@@ -221,20 +235,29 @@ export default function ShiftsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Shift Management</h1>
-        <p className="text-muted-foreground mt-1">Create shift templates and assign to team members</p>
-      </div>
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+            Shift Management
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+            Create shift templates and assign to team members
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Define work schedules, assign shifts to team members, and track all assignments from one centralized location.
+          </p>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Shifts Panel */}
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
+        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-foreground">Shift Templates</h2>
+            <h2 className="text-lg font-semibold text-foreground">Shift Templates</h2>
             {!showCreateShift && (
-              <Button size="sm" onClick={() => setShowCreateShift(true)}>
+              <Button size="sm" onClick={() => setShowCreateShift(true)} className="rounded-xl">
                 <Plus size={16} className="mr-2" />
                 Create Shift
               </Button>
@@ -243,7 +266,7 @@ export default function ShiftsPage() {
 
           {/* Create Shift Form */}
           {showCreateShift && (
-            <form onSubmit={handleCreateShift} className="space-y-4 mb-6 p-4 bg-muted/50 rounded-xl shadow-sm">
+            <form onSubmit={handleCreateShift} className="space-y-4 mb-6 p-4 bg-muted/50 rounded-2xl card-elevation-sm">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Name</label>
                 <input
@@ -251,7 +274,7 @@ export default function ShiftsPage() {
                   value={newShift.name}
                   onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
                   placeholder="e.g., Morning Shift"
-                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -261,7 +284,7 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.startTime}
                     onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -270,7 +293,7 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.endTime}
                     onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -279,17 +302,17 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.reportDeadline}
                     onChange={(e) => setNewShift({ ...newShift, reportDeadline: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
               {error && (
-                <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm shadow-sm">
+                <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm">
                   {error}
                 </div>
               )}
-              <div className="flex gap-2">
-                <Button type="submit" disabled={isCreatingShift}>
+              <div className="flex gap-3">
+                <Button type="submit" disabled={isCreatingShift} className="rounded-xl">
                   {isCreatingShift ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
@@ -307,6 +330,7 @@ export default function ShiftsPage() {
                     setNewShift({ name: '', startTime: '', endTime: '', reportDeadline: '' });
                     setError('');
                   }}
+                  className="rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -316,14 +340,16 @@ export default function ShiftsPage() {
 
           {/* Shifts List */}
           {shifts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Clock size={48} className="mx-auto mb-4" />
-              <p>No shift templates created yet</p>
+            <div className="text-center py-8">
+              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+                <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No shift templates created yet</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-2">
               {shifts.map((shift) => (
-                <div key={shift.id} className="p-4 bg-muted/50 rounded-xl">
+                <div key={shift.id} className="p-4 bg-muted/50 rounded-2xl border border-border/40">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium text-foreground">{shift.name}</h3>
@@ -339,18 +365,18 @@ export default function ShiftsPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {/* Assign Shift Panel */}
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-medium text-foreground mb-4">Assign Shift</h2>
+        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Assign Shift</h2>
           <form onSubmit={handleAssignShift} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Member</label>
               <select
                 value={assignForm.userId}
                 onChange={(e) => setAssignForm({ ...assignForm, userId: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">Select member</option>
                 {members.map((member) => (
@@ -366,7 +392,7 @@ export default function ShiftsPage() {
               <select
                 value={assignForm.shiftId}
                 onChange={(e) => setAssignForm({ ...assignForm, shiftId: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">Select shift</option>
                 {shifts.map((shift) => (
@@ -384,7 +410,7 @@ export default function ShiftsPage() {
                   type="date"
                   value={assignForm.startDate}
                   onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
               <div>
@@ -394,18 +420,18 @@ export default function ShiftsPage() {
                   value={assignForm.endDate}
                   onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
                   min={assignForm.startDate}
-                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm shadow-sm">
+              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
 
-            <Button type="submit" disabled={isAssigning} className="w-full">
+            <Button type="submit" disabled={isAssigning} className="w-full rounded-xl">
               {isAssigning ? (
                 <>
                   <Loader2 size={16} className="mr-2 animate-spin" />
@@ -416,24 +442,26 @@ export default function ShiftsPage() {
               )}
             </Button>
           </form>
-        </div>
+        </section>
       </div>
 
       {/* Current Assignments Table */}
-      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
-        <div className="p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground">Current Assignments</h2>
+      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+        <div className="border-b border-border/60 p-6">
+          <h2 className="text-lg font-semibold text-foreground">Current Assignments</h2>
         </div>
         {assignments.length === 0 ? (
           <div className="p-12 text-center">
-            <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No shift assignments yet</p>
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+              <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No shift assignments yet</p>
+            </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-6">
             <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
+              <thead>
+                <tr className="border-b border-border/60">
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Shift</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Hours</th>
@@ -443,7 +471,7 @@ export default function ShiftsPage() {
               </thead>
               <tbody>
                 {assignments.map((assignment) => (
-                  <tr key={assignment.id} className="border-b border-border last:border-0">
+                  <tr key={assignment.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
                     <td className="px-6 py-4 text-sm text-foreground">{assignment.user.name}</td>
                     <td className="px-6 py-4 text-sm text-foreground">{assignment.shift.name}</td>
                     <td className="px-6 py-4 text-sm text-foreground">
@@ -457,6 +485,7 @@ export default function ShiftsPage() {
                         size="sm"
                         variant="destructive"
                         onClick={() => setDeleteAssignmentId(assignment.id)}
+                        className="rounded-xl"
                       >
                         <Trash2 size={14} className="mr-2" />
                         Remove
@@ -468,7 +497,7 @@ export default function ShiftsPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Delete Confirm Modal */}
       <ConfirmModal

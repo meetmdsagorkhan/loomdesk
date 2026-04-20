@@ -9,6 +9,8 @@ import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
+import { showToast } from '@/components/shared/Toast';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -47,10 +49,14 @@ export default function LeaveAdminPage() {
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/users');
+      if (!response.ok) {
+        handleApiError('Failed to fetch members', 'Leave Admin');
+        return;
+      }
       const data = await response.json();
       setMembers(data.users || []);
     } catch (error) {
-      console.error('Failed to fetch members:', error);
+      handleApiError(error, 'Leave Admin');
     }
   };
 
@@ -62,10 +68,14 @@ export default function LeaveAdminPage() {
       if (selectedUserId) params.append('userId', selectedUserId);
 
       const response = await fetch(`/api/leave?${params}`);
+      if (!response.ok) {
+        handleApiError('Failed to fetch leave requests', 'Leave Admin');
+        return;
+      }
       const data = await response.json();
       setLeaveRequests(data.leaveRequests || []);
     } catch (error) {
-      console.error('Failed to fetch leave requests:', error);
+      handleApiError(error, 'Leave Admin');
     } finally {
       setIsLoading(false);
     }
@@ -98,16 +108,19 @@ export default function LeaveAdminPage() {
       });
 
       if (!response.ok) {
-        alert('Failed to update leave request');
+        handleApiError('Failed to update leave request', 'Leave Admin');
         return;
       }
 
       await fetchLeaveRequests();
       setActionLeaveId(null);
       setActionType(null);
+      showToast(
+        actionType === 'approve' ? 'Leave request approved' : 'Leave request rejected',
+        'success'
+      );
     } catch (error) {
-      console.error('Failed to update leave request:', error);
-      alert('Failed to update leave request');
+      handleApiError(error, 'Leave Admin');
     } finally {
       setIsProcessing(false);
     }
@@ -137,15 +150,24 @@ export default function LeaveAdminPage() {
   const pendingRequests = leaveRequests.filter((r) => r.status === 'PENDING');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Leave Management (Admin)</h1>
-        <p className="text-muted-foreground mt-1">Review and manage leave requests</p>
-      </div>
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+            Leave Management
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+            Review and manage leave requests
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Approve or reject pending requests, filter by status or member, and track team leave from one place.
+          </p>
+        </div>
+      </section>
 
       {/* Filter Bar */}
-      <div className="bg-card rounded-2xl border border-border p-6">
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Status Filter */}
           <div>
@@ -153,7 +175,7 @@ export default function LeaveAdminPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             >
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
@@ -168,7 +190,7 @@ export default function LeaveAdminPage() {
             <select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             >
               <option value="">All Members</option>
               {members.map((member) => (
@@ -181,26 +203,26 @@ export default function LeaveAdminPage() {
 
           {/* Apply Button */}
           <div className="flex items-end">
-            <Button onClick={fetchLeaveRequests} className="w-full">
+            <Button onClick={fetchLeaveRequests} className="w-full rounded-xl">
               <Filter size={16} className="mr-2" />
               Apply Filters
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Pending Requests Section */}
       {selectedStatus === 'PENDING' && pendingRequests.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="p-6 border-b border-border bg-amber-50/50">
-            <h2 className="text-lg font-medium text-foreground">
+        <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+          <div className="border-b border-border/60 p-6 bg-warning/5">
+            <h2 className="text-lg font-semibold text-foreground">
               Pending Requests ({pendingRequests.length})
             </h2>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border/40">
             {pendingRequests.map((leave) => (
               <div key={leave.id} className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-medium text-foreground">{leave.user.name}</h3>
@@ -230,11 +252,11 @@ export default function LeaveAdminPage() {
                       <span className="text-sm text-foreground">{leave.reason}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-destructive border-destructive hover:bg-destructive/10"
+                      className="text-destructive border-destructive hover:bg-destructive/10 rounded-xl"
                       disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
@@ -246,7 +268,7 @@ export default function LeaveAdminPage() {
                     </Button>
                     <Button
                       size="sm"
-                      className="bg-success text-success-foreground hover:bg-success/90"
+                      className="bg-success text-success-foreground hover:bg-success/90 rounded-xl"
                       disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
@@ -261,26 +283,28 @@ export default function LeaveAdminPage() {
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* All Requests Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-medium text-foreground">
+      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+        <div className="border-b border-border/60 p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             All Requests ({leaveRequests.length})
           </h2>
         </div>
         {leaveRequests.length === 0 ? (
           <div className="p-12 text-center">
-            <Calendar size={48} className="mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No leave requests found</p>
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+              <Calendar size={48} className="mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No leave requests found</p>
+            </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-6">
             <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
+              <thead>
+                <tr className="border-b border-border/60">
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Start Date</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">End Date</th>
@@ -292,7 +316,7 @@ export default function LeaveAdminPage() {
               </thead>
               <tbody>
                 {leaveRequests.map((leave) => (
-                  <tr key={leave.id} className="border-b border-border last:border-0">
+                  <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
                     <td className="px-6 py-4 text-sm text-foreground">{leave.user.name}</td>
                     <td className="px-6 py-4 text-sm text-foreground">
                       {format(new Date(leave.startDate), 'MMM d, yyyy')}
@@ -327,7 +351,7 @@ export default function LeaveAdminPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Confirm Modal */}
       <ConfirmModal

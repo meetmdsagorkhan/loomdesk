@@ -3,8 +3,8 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
+import { createNotification } from '@/lib/notifications';
 
 const feedbackSchema = z.object({
   entryId: z.string(),
@@ -55,15 +55,13 @@ export async function POST(request: NextRequest) {
 
     // Send notification to member
     try {
-      if (supabase) {
-        const reportDate = format(new Date(entry.report.date), 'MMM d, yyyy');
-        await supabase.from('notifications').insert({
-          user_id: entry.report.userId,
-          type: 'NEW_FEEDBACK',
-          title: 'New Feedback',
-          message: `Admin left feedback on your ${reportDate} report`,
-        });
-      }
+      const reportDate = format(new Date(entry.report.date), 'MMM d, yyyy');
+      await createNotification({
+        userId: entry.report.userId,
+        type: 'NEW_FEEDBACK',
+        title: 'New Feedback',
+        message: `A reviewer left feedback on your ${reportDate} report.`,
+      });
     } catch (error) {
       console.error('Failed to send notification:', error);
       // Don't fail the request if notification fails

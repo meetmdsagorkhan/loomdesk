@@ -13,6 +13,8 @@ import { entrySchema, type EntryFormData } from '@/lib/validations/report';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+import { showToast } from '@/components/shared/Toast';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -65,10 +67,14 @@ export default function ReportsPage() {
   const fetchReport = async () => {
     try {
       const response = await fetch('/api/reports/today');
+      if (!response.ok) {
+        handleApiError('Failed to fetch report', 'Daily Report');
+        return;
+      }
       const data = await response.json();
       setReport(data);
     } catch (error) {
-      console.error('Failed to fetch report:', error);
+      handleApiError(error, 'Daily Report');
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +120,7 @@ export default function ReportsPage() {
 
       if (!response.ok) {
         const result = await response.json();
-        alert(result.error || 'Failed to add entry');
+        handleApiError(result.error || 'Failed to add entry', 'Daily Report');
         return;
       }
 
@@ -127,10 +133,10 @@ export default function ReportsPage() {
       setEntryForm(defaultEntryForm);
       setFieldErrors({});
       setShowSavedIndicator(true);
+      showToast('Entry added to today\'s report', 'success');
       setTimeout(() => setShowSavedIndicator(false), 2000);
     } catch (error) {
-      console.error('Failed to add entry:', error);
-      alert('Failed to add entry');
+      handleApiError(error, 'Daily Report');
     } finally {
       setIsSubmittingEntry(false);
     }
@@ -145,7 +151,7 @@ export default function ReportsPage() {
       });
 
       if (!response.ok) {
-        alert('Failed to delete entry');
+        handleApiError('Failed to delete entry', 'Daily Report');
         return;
       }
 
@@ -154,9 +160,9 @@ export default function ReportsPage() {
         entries: report.entries.filter((entry) => entry.id !== entryId),
       });
       setDeleteEntryId(null);
+      showToast('Entry removed', 'success');
     } catch (error) {
-      console.error('Failed to delete entry:', error);
-      alert('Failed to delete entry');
+      handleApiError(error, 'Daily Report');
     }
   };
 
@@ -172,16 +178,16 @@ export default function ReportsPage() {
 
       if (!response.ok) {
         const result = await response.json();
-        alert(result.error || 'Failed to submit report');
+        handleApiError(result.error || 'Failed to submit report', 'Daily Report');
         return;
       }
 
       const updatedReport = await response.json();
       setReport(updatedReport);
       setShowSubmitConfirm(false);
+      showToast('Report submitted successfully', 'success');
     } catch (error) {
-      console.error('Failed to submit report:', error);
-      alert('Failed to submit report');
+      handleApiError(error, 'Daily Report');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -235,7 +241,7 @@ export default function ReportsPage() {
       cell: ({ row }) => (
         <button
           onClick={() => setDeleteEntryId(row.original.id)}
-          className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+          className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
           disabled={report?.status === 'SUBMITTED'}
         >
           <Trash2 size={16} />
@@ -262,28 +268,37 @@ export default function ReportsPage() {
   const entryCount = report?.entries.length || 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Daily Report</h1>
-          <p className="text-muted-foreground mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+    <div className="space-y-8">
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+              Daily Report
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Track your daily work entries, add tickets and chats, and submit your report for review.
+            </p>
+          </div>
+          <Badge
+            variant={isSubmitted ? 'success' : 'warning'}
+            label={isSubmitted ? 'SUBMITTED' : 'DRAFT'}
+          />
         </div>
-        <Badge
-          variant={isSubmitted ? 'success' : 'warning'}
-          label={isSubmitted ? 'SUBMITTED' : 'DRAFT'}
-        />
-      </div>
+      </section>
 
       {isSubmitted && (
-        <div className="bg-amber-50 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm">
-          <AlertCircle size={20} />
-          <span className="text-sm">Report submitted. Contact admin to unlock.</span>
-        </div>
+        <section className="rounded-3xl border border-border/60 bg-warning/5 p-4 card-elevation-sm">
+          <div className="flex items-center gap-3">
+            <AlertCircle size={20} className="text-warning" />
+            <span className="text-sm text-foreground">Report submitted. Contact admin to unlock.</span>
+          </div>
+        </section>
       )}
 
       {!isSubmitted && (
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-medium text-foreground mb-4">Add Entry</h2>
+        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Add Entry</h2>
           <form onSubmit={onAddEntry} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -297,7 +312,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
+                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
                       Ticket
                     </div>
                   </label>
@@ -309,7 +324,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
+                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
                       Chat
                     </div>
                   </label>
@@ -325,7 +340,7 @@ export default function ReportsPage() {
                   value={entryForm.referenceId}
                   onChange={(event) => handleFieldChange('referenceId', event.target.value)}
                   placeholder="e.g. TKT-1042"
-                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
                 {fieldErrors.referenceId && (
                   <p className="text-destructive text-xs mt-1">{fieldErrors.referenceId}</p>
@@ -343,7 +358,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
+                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
                       Solved
                     </div>
                   </label>
@@ -355,7 +370,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
+                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
                       Pending
                     </div>
                   </label>
@@ -369,7 +384,7 @@ export default function ReportsPage() {
                 value={entryForm.note}
                 onChange={(event) => handleFieldChange('note', event.target.value)}
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
                 placeholder="Describe the work done..."
               />
               {fieldErrors.note && (
@@ -386,7 +401,7 @@ export default function ReportsPage() {
                   type="text"
                   value={entryForm.pendingReason ?? ''}
                   onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   placeholder="Why is this pending?"
                 />
                 {fieldErrors.pendingReason && (
@@ -396,7 +411,7 @@ export default function ReportsPage() {
             )}
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmittingEntry} className="min-w-[120px]">
+              <Button type="submit" disabled={isSubmittingEntry} className="min-w-[120px] rounded-xl">
                 {isSubmittingEntry ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -408,29 +423,31 @@ export default function ReportsPage() {
               </Button>
             </div>
           </form>
-        </div>
+        </section>
       )}
 
       {showSavedIndicator && (
-        <div className="fixed bottom-6 right-6 bg-success text-success-foreground px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 bg-success text-success-foreground px-4 py-2 rounded-xl flex items-center gap-2 card-elevation-md animate-in slide-in-from-bottom-4">
           <CheckCircle2 size={16} />
           <span className="text-sm font-medium">Saved</span>
         </div>
       )}
 
-      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
-        <div className="p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground">Entries</h2>
+      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+        <div className="border-b border-border/60 p-6">
+          <h2 className="text-lg font-semibold text-foreground">Entries</h2>
         </div>
 
         {entryCount === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-muted-foreground">No entries yet. Add your first entry above.</p>
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+              <p className="text-muted-foreground">No entries yet. Add your first entry above.</p>
+            </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-6">
             <table className="w-full">
-              <thead className="bg-muted/50">
+              <thead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
@@ -448,7 +465,7 @@ export default function ReportsPage() {
               </thead>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border last:border-0">
+                  <tr key={row.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-6 py-4 text-sm">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -460,9 +477,9 @@ export default function ReportsPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="flex items-center justify-between">
+      <section className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {entryCount} {entryCount === 1 ? 'entry' : 'entries'} added
         </p>
@@ -470,12 +487,12 @@ export default function ReportsPage() {
           <Button
             onClick={() => setShowSubmitConfirm(true)}
             disabled={entryCount === 0 || isSubmittingReport}
-            className="min-w-[140px]"
+            className="min-w-[140px] rounded-xl"
           >
             {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
           </Button>
         )}
-      </div>
+      </section>
 
       <ConfirmModal
         isOpen={!!deleteEntryId}

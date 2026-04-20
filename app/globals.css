@@ -41,76 +41,116 @@
   --color-card: var(--card);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-info: var(--info);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2);
 }
 
 :root {
-  --background: 210 40% 98%;
-  --foreground: 222.2 47.4% 11.2%;
+  /* Luro AI - Light Theme (Default) */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 47.4% 11.2%;
+  --card-foreground: 240 10% 3.9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 47.4% 11.2%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 93%;
+  --primary-light: 262 84% 66%;
+  --primary-light-foreground: 262 83% 75%;
+  --secondary: 256 42% 25%;
+  --secondary-foreground: 249 94% 93%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 217 91% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 262 83% 58%;
   --radius: 0.5rem;
-  --chart-1: 217 91% 60%;
-  --chart-2: 210 80% 55%;
-  --chart-3: 220 70% 50%;
-  --chart-4: 230 75% 60%;
-  --chart-5: 240 80% 55%;
+  
+  /* Chart colors */
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+  
+  /* Sidebar */
+  --sidebar: 240 4.8% 95.9%;
+  --sidebar-foreground: 240 10% 3.9%;
+  --sidebar-primary: 262 83% 58%;
+  --sidebar-primary-foreground: 0 0% 93%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 240 5.9% 90%;
+  --sidebar-ring: 262 83% 58%;
+  
+  /* Status colors */
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
+  --info: 199 89% 48%;
+  --info-foreground: 0 0% 98%;
 }
 
 .dark {
-  --background: 215 25% 8%;
-  --foreground: 210 40% 98%;
-  --card: 215 25% 10%;
-  --card-foreground: 210 40% 98%;
-  --popover: 215 25% 10%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 215 25% 15%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 215 25% 15%;
-  --muted-foreground: 215 20% 70%;
-  --accent: 215 25% 15%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 215 25% 15%;
-  --input: 215 25% 15%;
-  --ring: 217 91% 60%;
-  --chart-1: 217 91% 60%;
-  --chart-2: 215 80% 55%;
-  --chart-3: 225 70% 50%;
-  --chart-4: 235 75% 60%;
-  --chart-5: 245 80% 55%;
-  --sidebar: oklch(0.15 0.012 264);
-  --sidebar-foreground: oklch(0.97 0.002 264);
-  --sidebar-primary: oklch(0.65 0.22 264);
-  --sidebar-primary-foreground: oklch(0.12 0.012 264);
-  --sidebar-accent: oklch(0.24 0.01 264);
-  --sidebar-accent-foreground: oklch(0.97 0.002 264);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.22 264);
+  /* Luro AI - Dark Theme */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 93%;
+  --primary-light: 262 84% 66%;
+  --primary-light-foreground: 262 83% 75%;
+  --secondary: 256 42% 25%;
+  --secondary-foreground: 249 94% 93%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 262 83% 58%;
+  --radius: 0.5rem;
+  
+  /* Chart colors for dark theme */
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  
+  /* Sidebar for dark theme */
+  --sidebar: 240 3.7% 15.9%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 262 83% 58%;
+  --sidebar-primary-foreground: 0 0% 93%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 262 83% 58%;
+  
+  /* Status colors for dark theme */
+  --success: 142 71% 50%;
+  --success-foreground: 0 0% 98%;
+  --warning: 38 92% 55%;
+  --warning-foreground: 0 0% 98%;
+  --info: 199 89% 55%;
+  --info-foreground: 0 0% 98%;
 }
 
 @layer base {
@@ -122,26 +162,233 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 35%),
+      radial-gradient(circle at top right, hsl(var(--info) / 0.06), transparent 30%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background-attachment: fixed;
   }
-    h1,
+  
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.15), transparent 35%),
+      radial-gradient(circle at top right, hsl(var(--info) / 0.1), transparent 30%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+  }
+  h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
     font-family: var(--font-heading);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+  }
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+  }
+  h2 {
+    font-size: 1.75rem;
+    line-height: 1.3;
+  }
+  h3 {
+    font-size: 1.375rem;
+    line-height: 1.4;
   }
   ::selection {
-    background: oklch(0.72 0.11 205 / 0.25);
+    background: hsl(var(--primary) / 0.2);
+  }
+}
+
+@keyframes background-shine {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes ripple {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
   }
 }
 
 @layer components {
+  /* Table row hover with better contrast */
   tr:hover {
-    background-color: oklch(0.96 0.006 95 / 0.75);
+    background-color: hsl(var(--muted) / 0.5);
   }
   .dark tr:hover {
-    background-color: oklch(0.28 0.012 255 / 0.7);
+    background-color: hsl(var(--muted) / 0.4);
+  }
+  
+  /* Card elevation system */
+  .card-elevation-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+  .card-elevation-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  }
+  .card-elevation-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  }
+  .dark .card-elevation-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .dark .card-elevation-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  }
+  .dark .card-elevation-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Luro AI custom styles */
+  .heading {
+    background: linear-gradient(to bottom, hsl(var(--foreground)), hsl(var(--foreground) / 0.6));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .bento-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    position: relative;
+    z-index: 50;
+  }
+  
+  @media screen and (min-width: 768px) {
+    .bento-card {
+      padding: 1.5rem;
+    }
+  }
+  
+  .card {
+    background-color: rgba(255, 255, 255, 0.1);
+    height: 100%;
+    width: 100%;
+    position: relative;
+  }
+  
+  .content {
+    background: var(--content-background, #100F1B);
+    height: calc(100% - 2px);
+    width: calc(100% - 2px);
+    transform: translate(1px, 1px);
+    border-radius: inherit;
+  }
+  
+  .card:before,
+  .card:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transition: opacity 500ms cubic-bezier(0.075, 0.82, 0.165, 1);
+    border-radius: inherit;
+    opacity: 0;
+  }
+  
+  .card:after {
+    background: radial-gradient(var(--spot-light-size, 800px) circle at var(--pos-x, 50%) var(--pos-y, 50%),
+      var(--spot-light-color, rgba(139, 92, 246, 0.15)),
+      transparent 40%);
+  }
+  
+  .card:before {
+    background: radial-gradient(calc(var(--spot-light-size, 800px) / 2) circle at var(--pos-x, 50%) var(--pos-y, 50%),
+      var(--card-border-color, rgba(255, 255, 255, 0.4)),
+      transparent 40%);
+  }
+  
+  .card:hover:after,
+  .card:hover:before {
+    opacity: 1;
+  }
+  
+  .gradient {
+    background: conic-gradient(from 230.29deg at 51.63% 52.16%, rgb(36, 0, 255) 0deg, rgb(0, 135, 255) 67.5deg, rgb(108, 39, 157) 198.75deg, rgb(24, 38, 163) 251.25deg, rgb(54, 103, 196) 301.88deg, rgb(105, 30, 255) 360deg);
+  }
+  
+  .btn-primary {
+    z-index: 20;
+    color: #fff;
+    text-align: center;
+    background-image: radial-gradient(circle farthest-side at 30% 0, rgba(255, 255, 255, .12), transparent);
+    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, .24), 0 1px 3px hsl(var(--primary)/0.24), 0 2px 6px hsl(var(--primary)/0.24), 0 4px 8px rgba(96, 10, 255, 0.12), 0 16px 32px -8px hsl(var(--primary)/0.48)
+  }
+  
+  .btn-primary:hover {
+    background-color: #7c3aed;
+    color: #fff;
+    transform: scale(1.05) translateY(-4px);
+    box-shadow: inset 0 0 rgba(255, 255, 255, 0.24),
+      0 1px 3px rgba(124, 58, 237, 0.24),
+      0 2px 6px rgba(124, 58, 237, 0.24),
+      0 4px 8px rgba(124, 58, 237, 0.12),
+      0 20px 40px -8px rgba(124, 58, 237, 0.64);
+  }
+  
+  .btn-primary:active {
+    background-color: #7c3aed;
+    transform: scale(1) translate(0);
+    box-shadow: inset 0 0 rgba(255, 255, 255, 0.24),
+      0 1px 3px rgba(124, 58, 237, 0.48),
+      0 2px 6px rgba(124, 58, 237, 0.48),
+      0 4px 8px rgba(124, 58, 237, 0.48),
+      0 4px 12px -8px rgba(124, 58, 237, 1);
+  }
+  
+  .btn-secondary {
+    z-index: 20;
+    background-color: hsl(var(--background)/0.04);
+    color: #fff;
+    text-align: center;
+    background-image: radial-gradient(circle farthest-side at 35% -50%, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0));
+    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .2),
+      inset 1px 1px rgba(255, 255, 255, .08),
+      inset 0 0 0 1px rgba(255, 255, 255, .06);
+  }
+  
+  .btn-secondary:hover {
+    background-color: hsl(var(--background)/0.08);
+    color: #fff;
+    transform: scale(1.05) translateY(-4px);
+    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .32),
+      inset 1px 1px rgba(255, 255, 255, .08),
+      inset 0 0 0 1px rgba(255, 255, 255, .1);
+  }
+  
+  .btn-secondary:active {
+    background-color: hsl(var(--background)/0.08);
+    transform: scale(1) translateY(0);
+    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .32),
+      inset 1px 1px rgba(255, 255, 255, .08),
+      inset 0 0 0 1px rgba(255, 255, 255, .1);
+  }
+  
+  .badge {
+    box-shadow: 0 0 0 1px hsl(var(--primary));
+  }
+  
+  .th {
+    transition: height 0.3s ease;
   }
 }

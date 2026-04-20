@@ -31,19 +31,20 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="sm:max-w-[425px] rounded-2xl">
         <div className="animate-in zoom-in-95 fade-in duration-200">
           <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+            <DialogTitle className="text-lg">{title}</DialogTitle>
+            <DialogDescription className="text-sm">{description}</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={onCancel}>
+          <DialogFooter className="gap-3 sm:gap-0">
+            <Button variant="outline" onClick={onCancel} className="rounded-xl">
               Cancel
             </Button>
             <Button
               variant={variant === 'danger' ? 'destructive' : 'default'}
               onClick={onConfirm}
+              className="rounded-xl"
             >
               {confirmLabel}
             </Button>

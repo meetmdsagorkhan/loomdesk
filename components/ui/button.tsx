@@ -8,15 +8,23 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80 shadow-md",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground shadow-md",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        success:
+          "bg-success text-success-foreground hover:bg-success/80 focus-visible:border-success/40 focus-visible:ring-success/20 shadow-md",
+        warning:
+          "bg-warning text-warning-foreground hover:bg-warning/80 focus-visible:border-warning/40 focus-visible:ring-warning/20 shadow-md",
+        info:
+          "bg-info text-info-foreground hover:bg-info/80 focus-visible:border-info/40 focus-visible:ring-info/20 shadow-md",
+        gradient:
+          "bg-gradient-to-r from-primary via-primary/90 to-info text-primary-foreground hover:from-primary/90 hover:via-primary/80 hover:to-info/90 shadow-lg",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

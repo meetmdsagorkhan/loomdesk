@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import * as bcrypt from "bcryptjs";
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   email: z.string().email("Invalid email address").optional(),
+  currentPassword: z.string().min(1, "Current password is required").optional(),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").optional(),
+  emailNotifications: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -23,6 +27,7 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
+        emailNotifications: true,
         createdAt: true,
       },
     });
@@ -48,11 +53,12 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = updateProfileSchema.parse(body);
+    const { currentPassword, newPassword, ...profileUpdates } = validatedData;
 
     // Check if email is being changed and if it's already taken
-    if (validatedData.email && validatedData.email !== session.user.email) {
+    if (profileUpdates.email && profileUpdates.email !== session.user.email) {
       const existingUser = await prisma.user.findUnique({
-        where: { email: validatedData.email },
+        where: { email: profileUpdates.email },
       });
 
       if (existingUser) {
@@ -60,14 +66,41 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if ((currentPassword && !newPassword) || (!currentPassword && newPassword)) {
+      return NextResponse.json(
+        { error: "Provide both current and new password to change your password" },
+        { status: 400 }
+      );
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (currentPassword && newPassword) {
+      const isValidPassword = await bcrypt.compare(currentPassword, currentUser.password);
+
+      if (!isValidPassword) {
+        return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
+      }
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: validatedData,
+      data: {
+        ...profileUpdates,
+        ...(newPassword ? { password: await bcrypt.hash(newPassword, 10) } : {}),
+      },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        emailNotifications: true,
         createdAt: true,
       },
     });

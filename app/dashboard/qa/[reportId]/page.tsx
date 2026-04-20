@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
+import { showToast } from '@/components/shared/Toast';
 import {
   Dialog,
   DialogContent,
@@ -140,7 +141,7 @@ export default function QADetailPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Failed to deduct score');
+        showToast(error.error || 'Failed to deduct score', 'error');
         return;
       }
 
@@ -151,9 +152,10 @@ export default function QADetailPage() {
       setDeductReason('');
       setDeductAdminNote('');
       setDeductEntryId(null);
+      showToast('Score deduction recorded', 'success');
     } catch (error) {
       console.error('Failed to deduct score:', error);
-      alert('Failed to deduct score');
+      showToast('Failed to deduct score', 'error');
     } finally {
       setIsDeducting(false);
     }
@@ -174,16 +176,17 @@ export default function QADetailPage() {
       });
 
       if (!response.ok) {
-        alert('Failed to add feedback');
+        showToast('Failed to add feedback', 'error');
         return;
       }
 
       await fetchReport();
       setFeedbackComment('');
       setFeedbackEntryId(null);
+      showToast('Feedback added', 'success');
     } catch (error) {
       console.error('Failed to add feedback:', error);
-      alert('Failed to add feedback');
+      showToast('Failed to add feedback', 'error');
     } finally {
       setIsAddingFeedback(false);
     }
@@ -221,7 +224,7 @@ export default function QADetailPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push('/qa')}
+          onClick={() => router.push('/dashboard/qa')}
         >
           <ArrowLeft size={16} className="mr-2" />
           Back

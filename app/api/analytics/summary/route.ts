@@ -42,10 +42,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN and TEAM_LEAD can access analytics
-    if (!isAdmin(session) && !isTeamLead(session)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const canViewTeamAnalytics = isAdmin(session) || isTeamLead(session);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -56,6 +53,7 @@ export async function GET(request: NextRequest) {
 
     // Get all users
     const users: UserSummary[] = await prisma.user.findMany({
+      where: canViewTeamAnalytics ? { isActive: true } : { id: session.user.id, isActive: true },
       select: {
         id: true,
         name: true,
@@ -66,6 +64,7 @@ export async function GET(request: NextRequest) {
     const totalReports = await prisma.report.count({
       where: {
         status: 'SUBMITTED',
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
         date: {
           gte: start,
           lte: end,
@@ -77,6 +76,7 @@ export async function GET(request: NextRequest) {
     const reports: ReportSummary[] = await prisma.report.findMany({
       where: {
         status: 'SUBMITTED',
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
         date: {
           gte: start,
           lte: end,
@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
     const approvedLeaves: LeaveSummary[] = await prisma.leaveRequest.findMany({
       where: {
         status: 'APPROVED',
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
         OR: [
           { startDate: { gte: start, lte: end } },
           { endDate: { gte: start, lte: end } },
@@ -108,6 +109,7 @@ export async function GET(request: NextRequest) {
       where: {
         startDate: { lte: end },
         endDate: { gte: start },
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
       },
       select: {
         userId: true,
@@ -160,6 +162,7 @@ export async function GET(request: NextRequest) {
           gte: start,
           lte: end,
         },
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
       },
       select: {
         userId: true,
@@ -186,6 +189,7 @@ export async function GET(request: NextRequest) {
     const pendingLeaves = await prisma.leaveRequest.count({
       where: {
         status: 'PENDING',
+        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
       },
     });
 
@@ -298,6 +302,7 @@ export async function GET(request: NextRequest) {
     const entries: EntrySummary[] = await prisma.reportEntry.findMany({
       where: {
         report: {
+          ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
           date: {
             gte: start,
             lte: end,

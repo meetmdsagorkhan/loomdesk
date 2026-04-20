@@ -1,7 +1,7 @@
 import { Badge as ShadcnBadge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default';
+type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default' | 'purple' | 'pink' | 'orange' | 'teal';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -10,11 +10,15 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  success: 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20',
-  warning: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20 hover:bg-yellow-500/20',
-  danger: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20',
-  info: 'bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20',
-  default: 'bg-muted text-muted-foreground hover:bg-muted/80',
+  success: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-600 shadow-md hover:from-emerald-400 hover:to-green-400',
+  warning: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-600 shadow-md hover:from-amber-400 hover:to-yellow-400',
+  danger: 'bg-gradient-to-r from-red-500 to-rose-500 text-white border-red-600 shadow-md hover:from-red-400 hover:to-rose-400',
+  info: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600 shadow-md hover:from-blue-400 hover:to-cyan-400',
+  default: 'bg-gradient-to-r from-slate-600 to-slate-700 text-white border-slate-800 shadow-md hover:from-slate-500 hover:to-slate-600',
+  purple: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white border-purple-600 shadow-md hover:from-purple-400 hover:to-violet-400',
+  pink: 'bg-gradient-to-r from-pink-500 to-fuchsia-500 text-white border-pink-600 shadow-md hover:from-pink-400 hover:to-fuchsia-400',
+  orange: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-600 shadow-md hover:from-orange-400 hover:to-amber-400',
+  teal: 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white border-teal-600 shadow-md hover:from-teal-400 hover:to-cyan-400',
 };
 
 export default function Badge({ variant = 'default', label, className }: BadgeProps) {

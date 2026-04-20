@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   BarChart2,
+  CalendarDays,
   CalendarOff,
   CheckSquare,
   Clock,
@@ -17,14 +18,27 @@ import {
   TrendingUp,
   UserCheck,
   X,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { isNavItemActive, navItems, type NavIcon } from '@/lib/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { signOut } from '@/auth';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  user?: { name?: string; email?: string; role?: string; image?: string | null } | null;
 }
 
 const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -33,6 +47,7 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   qa: CheckSquare,
   leave: CalendarOff,
   shifts: Clock,
+  calendar: CalendarDays,
   attendance: UserCheck,
   analytics: BarChart2,
   messages: MessageSquare,
@@ -40,8 +55,21 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   settings: Settings,
 };
 
-export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = false, onToggleCollapse, user }: SidebarProps) {
   const pathname = usePathname();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirectTo: '/login' });
+  };
 
   const groupedItems = navItems.reduce<Record<string, typeof navItems>>((groups, item) => {
     groups[item.section] ??= [];
@@ -62,24 +90,27 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 border-r border-slate-200/70 bg-gradient-to-b from-slate-50 to-white backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950',
+          'fixed inset-y-0 left-0 z-50 border-r border-border/60 bg-sidebar/95 backdrop-blur-lg transition-all duration-300 dark:border-border/40',
           isCollapsed ? 'w-20' : 'w-72',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
+        style={{
+          backgroundImage: 'radial-gradient(circle at top left, hsl(var(--primary) / 0.05), transparent 40%)',
+        }}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between px-3 py-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/60 px-3 py-4">
             <Link href="/dashboard" className="flex items-center gap-3" onClick={onMobileClose}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 dark:from-blue-600 dark:to-blue-700">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg ring-2 ring-primary/20">
                 <Activity size={20} />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
                     LoomDesk
                   </p>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    Operations
+                  <p className="text-sm font-semibold text-sidebar-foreground">
+                    Executive Ops
                   </p>
                 </div>
               )}
@@ -88,14 +119,14 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
             <div className="flex gap-1 shrink-0">
               <button
                 type="button"
-                className="hidden lg:flex shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+                className="hidden shrink-0 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
                 onClick={onToggleCollapse}
               >
                 {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
               </button>
               <button
                 type="button"
-                className="shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                className="shrink-0 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
                 onClick={onMobileClose}
               >
                 <X size={18} />
@@ -104,55 +135,103 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
           </div>
 
           <nav className="flex-1 overflow-y-auto px-3 py-4">
-            {Object.entries(groupedItems).map(([section, items]) => (
-              <div key={section} className="mb-4">
-                {!isCollapsed && (
-                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    {section}
-                  </p>
-                )}
-                <div className="space-y-1">
-                  {items.map((item) => {
-                    const Icon = iconMap[item.icon];
-                    const isActive = isNavItemActive(pathname, item.href, item.matches);
+            {Object.entries(groupedItems).map(([section, items]) => {
+              const hasActiveItem = items.some(item => isNavItemActive(pathname, item.href, item.matches));
+              return (
+                <div key={section} className="mb-4">
+                  {!isCollapsed && (
+                    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/60">
+                      {section}
+                    </p>
+                  )}
+                  <div className="space-y-1">
+                    {items.map((item) => {
+                      const Icon = iconMap[item.icon];
+                      const isActive = isNavItemActive(pathname, item.href, item.matches);
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={onMobileClose}
-                        className={[
-                          'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
-                          isCollapsed ? 'justify-center' : '',
-                          isActive
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20 dark:from-blue-600 dark:to-blue-700'
-                            : 'text-slate-600 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-blue-900/10',
-                        ].join(' ')}
-                        title={isCollapsed ? item.label : undefined}
-                      >
-                        <div
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onMobileClose}
                           className={[
-                            'flex shrink-0 items-center justify-center rounded-lg transition-colors',
-                            isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
+                            'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all relative',
+                            isCollapsed ? 'justify-center' : '',
                             isActive
-                              ? 'bg-white/20 text-white'
-                              : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:group-hover:bg-blue-900/40',
+                              ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-800 shadow-md'
+                              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
                           ].join(' ')}
+                          title={isCollapsed ? item.label : undefined}
                         >
-                          <Icon size={isCollapsed ? 20 : 16} />
-                        </div>
-                        {!isCollapsed && (
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">{item.label}</p>
+                          <div
+                            className={[
+                              'flex shrink-0 items-center justify-center rounded-lg transition-colors',
+                              isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
+                              isActive
+                                ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
+                                : 'bg-sidebar-accent text-sidebar-foreground group-hover:bg-sidebar-accent/80',
+                            ].join(' ')}
+                          >
+                            <Icon size={isCollapsed ? 20 : 16} />
                           </div>
-                        )}
-                      </Link>
-                    );
-                  })}
+                          {!isCollapsed && (
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold">{item.label}</p>
+                              <p className="truncate text-xs text-current/70">{item.description}</p>
+                            </div>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
+
+          {/* Profile Button at Bottom - Floated inside sidebar */}
+          {user && (
+            <div className="p-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="w-full">
+                  <button className="flex items-center gap-3 w-full rounded-xl p-2 bg-slate-800 dark:bg-white shadow-md hover:bg-slate-700 dark:hover:bg-gray-100 transition-colors">
+                    <Avatar className="h-8 w-8 bg-slate-800 dark:bg-white shrink-0 rounded-full border-2 border-white dark:border-slate-800">
+                      {user.image ? (
+                        <AvatarImage src={user.image} alt={user.name || 'User'} />
+                      ) : (
+                        <AvatarFallback className="text-white dark:text-slate-800 text-sm font-medium">
+                          {getInitials(user.name || 'User')}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    {!isCollapsed && (
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium text-white dark:text-slate-800 truncate">{user.name}</p>
+                        <p className="text-xs text-white/70 dark:text-slate-800/70 capitalize truncate">{user.role?.toLowerCase().replace('_', ' ')}</p>
+                      </div>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User size={16} className="mr-2" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings size={16} className="mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                    <LogOut size={16} className="mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
       </aside>
     </>

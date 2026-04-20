@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -49,21 +50,31 @@ export default function AttendancePage() {
     if (userLoading) return;
     if (!mounted) return;
 
-    if (!user || !isAdmin({ user })) {
-      setSelectedUserId(user?.id || '');
+    if (!user) {
+      return;
     }
 
-    fetchMembers();
-    fetchAttendance();
+    if (isAdmin({ user })) {
+      setSelectedUserId((current) => current || user.id);
+      void fetchMembers();
+    } else {
+      setSelectedUserId(user.id);
+    }
+
+    void fetchAttendance();
   }, [user, userLoading, currentDate, selectedUserId, mounted]);
 
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/users');
+      if (!response.ok) {
+        handleApiError('Failed to fetch members', 'Attendance');
+        return;
+      }
       const data = await response.json();
       setMembers(data.users || []);
     } catch (error) {
-      console.error('Failed to fetch members:', error);
+      handleApiError(error, 'Attendance');
     }
   };
 
@@ -72,13 +83,17 @@ export default function AttendancePage() {
     try {
       const month = currentDate.getMonth() + 1;
       const year = currentDate.getFullYear();
-      const userId = isAdmin({ user }) && selectedUserId ? selectedUserId : user?.id;
+      const userId = isAdmin({ user }) ? selectedUserId || user?.id : user?.id;
 
       const response = await fetch(`/api/attendance?userId=${userId}&month=${month}&year=${year}`);
+      if (!response.ok) {
+        handleApiError('Failed to fetch attendance', 'Attendance');
+        return;
+      }
       const data = await response.json();
       setAttendance(data);
     } catch (error) {
-      console.error('Failed to fetch attendance:', error);
+      handleApiError(error, 'Attendance');
     } finally {
       setIsLoading(false);
     }
@@ -124,69 +139,78 @@ export default function AttendancePage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PRESENT':
-        return 'bg-green-500';
+        return 'bg-success text-success-foreground';
       case 'LATE':
-        return 'bg-amber-500';
+        return 'bg-warning text-warning-foreground';
       case 'ABSENT':
-        return 'bg-red-500';
+        return 'bg-destructive text-destructive-foreground';
       case 'LEAVE':
-        return 'bg-blue-500';
+        return 'bg-info text-info-foreground';
       case 'DAY_OFF':
-        return 'bg-gray-400';
+        return 'bg-muted text-muted-foreground';
       default:
-        return 'bg-gray-300';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Attendance Calendar</h1>
-        <p className="text-muted-foreground mt-1">Track team attendance</p>
-      </div>
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+            Attendance Calendar
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+            Track team attendance
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            View daily attendance records, monitor patterns, and track team presence over time.
+          </p>
+        </div>
+      </section>
 
       {/* Date Navigation */}
-      <div className="bg-card rounded-2xl border border-border p-4">
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-4 card-elevation-md backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={goToPreviousMonth}>
+            <Button size="sm" variant="outline" onClick={goToPreviousMonth} className="rounded-xl">
               <ChevronLeft size={16} />
             </Button>
-            <span className="text-lg font-medium text-foreground">
+            <span className="text-lg font-semibold text-foreground">
               {format(currentDate, 'MMMM yyyy')}
             </span>
-            <Button size="sm" variant="outline" onClick={goToNextMonth}>
+            <Button size="sm" variant="outline" onClick={goToNextMonth} className="rounded-xl">
               <ChevronRight size={16} />
             </Button>
           </div>
-          <Button size="sm" variant="outline" onClick={goToToday}>
+          <Button size="sm" variant="outline" onClick={goToToday} className="rounded-xl">
             Today
           </Button>
         </div>
-      </div>
+      </section>
 
       {/* User Selection for Admin */}
       {isAdmin({ user }) && (
-        <div className="bg-card rounded-2xl border border-border p-4">
+        <section className="rounded-3xl border border-border/60 bg-card/80 p-4 card-elevation-md backdrop-blur-sm">
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-input bg-background text-foreground"
+            className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           >
-            <option value="">All Members</option>
+            <option value={user?.id}>My attendance</option>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.name}
               </option>
             ))}
           </select>
-        </div>
+        </section>
       )}
 
       {/* Calendar Grid */}
       {attendance ? (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
           <div className="grid grid-cols-7 gap-1 p-4 bg-muted/50">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
               <div key={day} className="text-center text-sm font-medium text-muted-foreground">
@@ -198,44 +222,44 @@ export default function AttendancePage() {
             {attendance.days.map((day) => (
               <div
                 key={day.date}
-                className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium ${getStatusColor(day.status)} text-white`}
+                className={`aspect-square rounded-2xl flex items-center justify-center text-sm font-medium ${getStatusColor(day.status)}`}
                 title={day.details || day.status}
               >
                 {new Date(day.date).getDate()}
               </div>
             ))}
           </div>
-        </div>
+        </section>
       ) : (
-        <div className="bg-card rounded-2xl border border-border p-8 text-center">
+        <section className="rounded-3xl border border-border/60 bg-card/80 p-8 card-elevation-md backdrop-blur-sm text-center">
           <p className="text-muted-foreground">No attendance data available for this period.</p>
-        </div>
+        </section>
       )}
 
       {/* Stats */}
       {attendance && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-card rounded-2xl border border-border p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">{attendance.stats.present}</div>
+        <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
+            <div className="text-2xl font-bold text-success">{attendance.stats.present}</div>
             <div className="text-sm text-muted-foreground">Present</div>
           </div>
-          <div className="bg-card rounded-2xl border border-border p-4 text-center">
-            <div className="text-2xl font-bold text-amber-600">{attendance.stats.late}</div>
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
+            <div className="text-2xl font-bold text-warning">{attendance.stats.late}</div>
             <div className="text-sm text-muted-foreground">Late</div>
           </div>
-          <div className="bg-card rounded-2xl border border-border p-4 text-center">
-            <div className="text-2xl font-bold text-red-600">{attendance.stats.absent}</div>
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
+            <div className="text-2xl font-bold text-destructive">{attendance.stats.absent}</div>
             <div className="text-sm text-muted-foreground">Absent</div>
           </div>
-          <div className="bg-card rounded-2xl border border-border p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{attendance.stats.leave}</div>
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
+            <div className="text-2xl font-bold text-info">{attendance.stats.leave}</div>
             <div className="text-sm text-muted-foreground">Leave</div>
           </div>
-          <div className="bg-card rounded-2xl border border-border p-4 text-center">
+          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
             <div className="text-2xl font-bold text-foreground">{attendance.stats.attendanceRate}%</div>
             <div className="text-sm text-muted-foreground">Attendance Rate</div>
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

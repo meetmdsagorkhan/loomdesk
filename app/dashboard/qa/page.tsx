@@ -126,7 +126,7 @@ export default function QAPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => router.push(`/qa/${row.original.id}`)}
+          onClick={() => router.push(`/dashboard/qa/${row.original.id}`)}
         >
           <Eye size={16} className="mr-2" />
           View

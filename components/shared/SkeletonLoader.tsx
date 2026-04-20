@@ -11,20 +11,20 @@ export default function SkeletonLoader({ variant = 'text', count = 1 }: Skeleton
   const renderSkeleton = () => {
     switch (variant) {
       case 'text':
-        return <Skeleton className="h-4 w-full" />;
+        return <Skeleton className="h-4 w-full rounded-md" />;
       case 'card':
-        return <Skeleton className="h-32 w-full rounded-lg" />;
+        return <Skeleton className="h-32 w-full rounded-2xl" />;
       case 'table-row':
         return (
           <div className="flex items-center gap-4">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24 rounded-md" />
+            <Skeleton className="h-4 w-32 rounded-md" />
+            <Skeleton className="h-4 w-20 rounded-md" />
+            <Skeleton className="h-4 w-24 rounded-md" />
           </div>
         );
       default:
-        return <Skeleton className="h-4 w-full" />;
+        return <Skeleton className="h-4 w-full rounded-md" />;
     }
   };
 

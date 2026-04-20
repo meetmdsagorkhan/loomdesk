@@ -57,12 +57,12 @@ export default function DataTable({ columns, data, isLoading }: DataTableProps) 
   }
 
   return (
-    <div className="rounded-md shadow-lg">
+    <div className="rounded-md border border-border shadow-lg dark:border-border/50">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-border dark:border-border/30">
             {columns.map((column) => (
-              <TableHead key={column.key} className="font-semibold">
+              <TableHead key={column.key} className="font-semibold text-card-foreground">
                 {column.label}
               </TableHead>
             ))}
@@ -70,9 +70,9 @@ export default function DataTable({ columns, data, isLoading }: DataTableProps) 
         </TableHeader>
         <TableBody>
           {data.map((row, rowIndex) => (
-            <TableRow key={rowIndex}>
+            <TableRow key={rowIndex} className="border-border dark:border-border/30 hover:bg-muted/50 dark:hover:bg-muted/20">
               {columns.map((column) => (
-                <TableCell key={column.key}>{row[column.key]}</TableCell>
+                <TableCell key={column.key} className="text-card-foreground">{row[column.key]}</TableCell>
               ))}
             </TableRow>
           ))}

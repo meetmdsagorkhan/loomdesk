@@ -24,6 +24,8 @@ model User {
   leaveRequests LeaveRequest[]
   shifts        ShiftAssignment[]
   notifications  Notification[]
+  sentMessages  Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
   invitedBy     String?
   invitations   Invitation[] @relation("invitedBy")
 }
@@ -133,6 +135,21 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, read, createdAt])
 }
 
 enum Role {

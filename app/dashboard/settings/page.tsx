@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Users, Bell, Mail, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
+import { showToast } from '@/components/shared/Toast';
+import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -13,7 +14,6 @@ export const fetchCache = 'force-no-store';
 type Tab = 'profile' | 'team' | 'notifications';
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [mounted, setMounted] = useState(false);
@@ -31,17 +31,24 @@ export default function SettingsPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (userLoading) return;
-    if (!mounted) return;
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      if (!response.ok) {
+        handleApiError('Failed to fetch profile', 'Settings');
+        return;
+      }
 
-    if (!user) {
-      router.push('/login');
-      return;
+      const data = await response.json();
+      setProfileData((prev) => ({
+        ...prev,
+        name: data.user?.name || user?.name || '',
+      }));
+      setEmailNotifications(Boolean(data.user?.emailNotifications ?? true));
+    } catch (error) {
+      handleApiError(error, 'Settings');
     }
-
-    setProfileData((prev) => ({ ...prev, name: user.name || '' }));
-  }, [user, userLoading, router, mounted]);
+  }, [user?.name]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,19 +60,26 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: profileData.name,
+          currentPassword: profileData.currentPassword || undefined,
+          newPassword: profileData.newPassword || undefined,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Failed to update profile');
+        handleApiError(error.error || 'Failed to update profile', 'Settings');
         return;
       }
 
-      alert('Profile updated successfully!');
-      setProfileData({ name: user?.name || '', currentPassword: '', newPassword: '' });
-    } catch {
-      alert('Failed to update profile');
+      showToast('Profile updated successfully', 'success');
+      setProfileData((prev) => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+      }));
+      await fetchProfile();
+    } catch (error) {
+      handleApiError(error, 'Settings');
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -86,15 +100,14 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Failed to send invitation');
+        handleApiError(error.error || 'Failed to send invitation', 'Settings');
         return;
       }
 
-      alert('Invitation sent successfully');
+      showToast('Invitation sent successfully', 'success');
       setInviteData({ email: '', role: 'MEMBER' });
-    } catch {
-      console.error('Failed to invite member');
-      alert('Failed to invite member');
+    } catch (error) {
+      handleApiError(error, 'Settings');
     } finally {
       setIsInviting(false);
     }
@@ -103,12 +116,28 @@ export default function SettingsPage() {
   const handleNotificationToggle = async () => {
     setIsUpdatingNotifications(true);
     try {
-      // For now, store in localStorage. In production, this should be stored in user preferences database field
       const newValue = !emailNotifications;
+      const response = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailNotifications: newValue,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        handleApiError(error.error || 'Failed to update notifications', 'Settings');
+        return;
+      }
+
       setEmailNotifications(newValue);
-      localStorage.setItem('emailNotifications', String(newValue));
+      showToast(
+        newValue ? 'Email notifications enabled' : 'Email notifications disabled',
+        'success'
+      );
     } catch (error) {
-      console.error('Failed to update notifications:', error);
+      handleApiError(error, 'Settings');
     } finally {
       setIsUpdatingNotifications(false);
     }
@@ -132,21 +161,30 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your account and team settings</p>
-      </div>
+      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+            Settings
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+            Manage your account and team settings
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Update your profile, manage team members, and configure notification preferences.
+          </p>
+        </div>
+      </section>
 
           {/* Tabs */}
-          <div className="flex gap-2 shadow-sm p-2">
+          <section className="flex gap-2 p-2 bg-muted/30 rounded-2xl card-elevation-sm">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
                 activeTab === 'profile'
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <User size={16} />
@@ -155,10 +193,10 @@ export default function SettingsPage() {
             {isAdmin({ user }) && (
               <button
                 onClick={() => setActiveTab('team')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
                   activeTab === 'team'
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Users size={16} />
@@ -167,21 +205,21 @@ export default function SettingsPage() {
             )}
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
                 activeTab === 'notifications'
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Bell size={16} />
               Notifications
             </button>
-          </div>
+          </section>
 
           {/* Tab Content */}
           {activeTab === 'profile' && (
-            <div className="bg-card rounded-2xl p-6 shadow-lg">
-              <h2 className="text-lg font-medium text-foreground mb-4">Profile Settings</h2>
+            <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Profile Settings</h2>
               <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Name</label>
@@ -189,7 +227,7 @@ export default function SettingsPage() {
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -199,7 +237,7 @@ export default function SettingsPage() {
                     value={profileData.currentPassword}
                     onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -209,10 +247,10 @@ export default function SettingsPage() {
                     value={profileData.newPassword}
                     onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
-                <Button type="submit" disabled={isUpdatingProfile}>
+                <Button type="submit" disabled={isUpdatingProfile} className="rounded-xl">
                   {isUpdatingProfile ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
@@ -223,12 +261,12 @@ export default function SettingsPage() {
                   )}
                 </Button>
               </form>
-            </div>
+            </section>
           )}
 
           {activeTab === 'team' && isAdmin({ user }) && (
-            <div className="bg-card rounded-2xl p-6 shadow-lg">
-              <h2 className="text-lg font-medium text-foreground mb-4">Team Management</h2>
+            <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Team Management</h2>
               <form onSubmit={handleInvite} className="space-y-4 max-w-md">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Email</label>
@@ -237,7 +275,7 @@ export default function SettingsPage() {
                     value={inviteData.email}
                     onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
                     placeholder="Enter team member email"
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -245,14 +283,14 @@ export default function SettingsPage() {
                   <select
                     value={inviteData.role}
                     onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   >
                     <option value="MEMBER">Member</option>
                     <option value="TEAM_LEAD">Team Lead</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
-                <Button type="submit" disabled={isInviting}>
+                <Button type="submit" disabled={isInviting} className="rounded-xl">
                   {isInviting ? (
                     <>
                       <Loader2 size={16} className="mr-2 animate-spin" />
@@ -266,14 +304,14 @@ export default function SettingsPage() {
                   )}
                 </Button>
               </form>
-            </div>
+            </section>
           )}
 
           {activeTab === 'notifications' && (
-            <div className="bg-card rounded-2xl p-6 shadow-lg">
-              <h2 className="text-lg font-medium text-foreground mb-4">Notification Preferences</h2>
+            <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Notification Preferences</h2>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border border-border/40">
                   <div className="flex items-center gap-3">
                     <Mail size={20} className="text-primary" />
                     <div>
@@ -285,6 +323,7 @@ export default function SettingsPage() {
                     variant={emailNotifications ? 'default' : 'outline'}
                     onClick={handleNotificationToggle}
                     disabled={isUpdatingNotifications}
+                    className="rounded-xl"
                   >
                     {isUpdatingNotifications ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -296,7 +335,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </div>
-            </div>
+            </section>
           )}
         </div>
   );
