@@ -11,6 +11,7 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -25,9 +26,11 @@ export default function AppShell({ children }: AppShellProps) {
       <Sidebar
         isMobileOpen={isMobileMenuOpen}
         onMobileClose={() => setIsMobileMenuOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
       />
       <Navbar onMobileMenuToggle={() => setIsMobileMenuOpen((open) => !open)} />
-      <PageWrapper>{children}</PageWrapper>
+      <PageWrapper isSidebarCollapsed={isSidebarCollapsed}>{children}</PageWrapper>
     </div>
   );
 }

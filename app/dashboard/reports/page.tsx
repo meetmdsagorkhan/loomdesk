@@ -275,14 +275,14 @@ export default function ReportsPage() {
       </div>
 
       {isSubmitted && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3">
+        <div className="bg-amber-50 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm">
           <AlertCircle size={20} />
           <span className="text-sm">Report submitted. Contact admin to unlock.</span>
         </div>
       )}
 
       {!isSubmitted && (
-        <div className="bg-card rounded-2xl border border-border p-6">
+        <div className="bg-card rounded-2xl p-6 shadow-lg">
           <h2 className="text-lg font-medium text-foreground mb-4">Add Entry</h2>
           <form onSubmit={onAddEntry} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -297,7 +297,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
                       Ticket
                     </div>
                   </label>
@@ -309,7 +309,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
                       Chat
                     </div>
                   </label>
@@ -321,10 +321,11 @@ export default function ReportsPage() {
                   Reference ID
                 </label>
                 <input
+                  type="text"
                   value={entryForm.referenceId}
                   onChange={(event) => handleFieldChange('referenceId', event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="e.g. TKT-1042"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
                 {fieldErrors.referenceId && (
                   <p className="text-destructive text-xs mt-1">{fieldErrors.referenceId}</p>
@@ -342,7 +343,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
                       Solved
                     </div>
                   </label>
@@ -354,7 +355,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground transition-all shadow-sm">
                       Pending
                     </div>
                   </label>
@@ -368,7 +369,7 @@ export default function ReportsPage() {
                 value={entryForm.note}
                 onChange={(event) => handleFieldChange('note', event.target.value)}
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
                 placeholder="Describe the work done..."
               />
               {fieldErrors.note && (
@@ -382,9 +383,10 @@ export default function ReportsPage() {
                   Pending Reason <span className="text-destructive">*</span>
                 </label>
                 <input
+                  type="text"
                   value={entryForm.pendingReason ?? ''}
                   onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   placeholder="Why is this pending?"
                 />
                 {fieldErrors.pendingReason && (
@@ -416,8 +418,8 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground">Entries</h2>
         </div>
 

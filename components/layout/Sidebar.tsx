@@ -10,7 +10,11 @@ import {
   Clock,
   FileText,
   LayoutDashboard,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
   Settings,
+  TrendingUp,
   UserCheck,
   X,
 } from 'lucide-react';
@@ -19,6 +23,8 @@ import { isNavItemActive, navItems, type NavIcon } from '@/lib/navigation';
 interface SidebarProps {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -29,10 +35,12 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   shifts: Clock,
   attendance: UserCheck,
   analytics: BarChart2,
+  messages: MessageSquare,
+  scoring: TrendingUp,
   settings: Settings,
 };
 
-export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
 
   const groupedItems = navItems.reduce<Record<string, typeof navItems>>((groups, item) => {
@@ -54,42 +62,56 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-200/70 bg-white/88 backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/85',
+          'fixed inset-y-0 left-0 z-50 border-r border-slate-200/70 bg-gradient-to-b from-slate-50 to-white backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950',
+          isCollapsed ? 'w-20' : 'w-72',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-5 dark:border-white/10">
+          <div className="flex items-center justify-between px-3 py-4 shadow-sm">
             <Link href="/dashboard" className="flex items-center gap-3" onClick={onMobileClose}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-slate-950">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 dark:from-blue-600 dark:to-blue-700">
                 <Activity size={20} />
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                  LoomDesk
-                </p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Operations Console
-                </p>
-              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    LoomDesk
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Operations
+                  </p>
+                </div>
+              )}
             </Link>
 
-            <button
-              type="button"
-              className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-              onClick={onMobileClose}
-            >
-              <X size={18} />
-            </button>
+            <div className="flex gap-1 shrink-0">
+              <button
+                type="button"
+                className="hidden lg:flex shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+                onClick={onToggleCollapse}
+              >
+                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
+              <button
+                type="button"
+                className="shrink-0 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                onClick={onMobileClose}
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-5">
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
             {Object.entries(groupedItems).map(([section, items]) => (
-              <div key={section} className="mb-6">
-                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-                  {section}
-                </p>
-                <div className="space-y-1.5">
+              <div key={section} className="mb-4">
+                {!isCollapsed && (
+                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {section}
+                  </p>
+                )}
+                <div className="space-y-1">
                   {items.map((item) => {
                     const Icon = iconMap[item.icon];
                     const isActive = isNavItemActive(pathname, item.href, item.matches);
@@ -100,35 +122,30 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                         href={item.href}
                         onClick={onMobileClose}
                         className={[
-                          'group flex items-start gap-3 rounded-2xl border px-3.5 py-3 transition-all',
+                          'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
+                          isCollapsed ? 'justify-center' : '',
                           isActive
-                            ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/12 dark:border-white dark:bg-white dark:text-slate-950'
-                            : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:hover:border-white/10 dark:hover:bg-white/5',
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20 dark:from-blue-600 dark:to-blue-700'
+                            : 'text-slate-600 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-blue-900/10',
                         ].join(' ')}
+                        title={isCollapsed ? item.label : undefined}
                       >
                         <div
                           className={[
-                            'mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
+                            'flex shrink-0 items-center justify-center rounded-lg transition-colors',
+                            isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
                             isActive
-                              ? 'bg-white/12 text-white dark:bg-slate-900/10 dark:text-slate-950'
-                              : 'bg-slate-100 text-slate-600 group-hover:bg-white dark:bg-white/5 dark:text-slate-300',
+                              ? 'bg-white/20 text-white'
+                              : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:group-hover:bg-blue-900/40',
                           ].join(' ')}
                         >
-                          <Icon size={18} />
+                          <Icon size={isCollapsed ? 20 : 16} />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{item.label}</p>
-                          <p
-                            className={[
-                              'mt-0.5 text-xs leading-5',
-                              isActive
-                                ? 'text-slate-200 dark:text-slate-700'
-                                : 'text-slate-500 dark:text-slate-400',
-                            ].join(' ')}
-                          >
-                            {item.description}
-                          </p>
-                        </div>
+                        {!isCollapsed && (
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{item.label}</p>
+                          </div>
+                        )}
                       </Link>
                     );
                   })}

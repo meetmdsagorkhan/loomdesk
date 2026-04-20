@@ -167,7 +167,7 @@ export default function QAPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-card rounded-2xl border border-border p-6">
+      <div className="bg-card rounded-2xl p-6 shadow-lg">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Date Picker */}
           <div>
@@ -176,7 +176,7 @@ export default function QAPage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
 
@@ -186,7 +186,7 @@ export default function QAPage() {
             <select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             >
               <option value="">All Members</option>
               {members.map((member) => (
@@ -203,7 +203,7 @@ export default function QAPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             >
               <option value="SUBMITTED">Submitted</option>
               <option value="DRAFT">Draft</option>
@@ -222,7 +222,7 @@ export default function QAPage() {
       </div>
 
       {/* Reports Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
         {reports.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-muted-foreground">No reports found matching your filters.</p>

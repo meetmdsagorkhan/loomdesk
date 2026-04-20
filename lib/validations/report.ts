@@ -4,7 +4,7 @@ export const entrySchema = z.object({
   type: z.enum(['TICKET', 'CHAT']),
   referenceId: z.string().min(1, 'Reference ID is required'),
   status: z.enum(['SOLVED', 'PENDING']),
-  note: z.string().min(5, 'Note must be at least 5 characters'),
+  note: z.string().optional(),
   pendingReason: z.string().optional(),
 }).refine(
   (data) => {

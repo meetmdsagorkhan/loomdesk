@@ -1,6 +1,15 @@
 'use client';
 
 import { ReactNode } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Column {
   key: string;
@@ -16,16 +25,26 @@ interface DataTableProps {
 export default function DataTable({ columns, data, isLoading }: DataTableProps) {
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 p-4 border-b border-border">
-            <div className="animate-pulse bg-muted h-4 w-24 rounded" />
-            <div className="animate-pulse bg-muted h-4 w-32 rounded" />
-            <div className="animate-pulse bg-muted h-4 w-20 rounded" />
-            <div className="animate-pulse bg-muted h-4 w-24 rounded" />
-          </div>
-        ))}
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.key}>{column.label}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={i}>
+              {columns.map((column) => (
+                <TableCell key={column.key}>
+                  <Skeleton className="h-4 w-full" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     );
   }
 
@@ -38,32 +57,27 @@ export default function DataTable({ columns, data, isLoading }: DataTableProps) 
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border">
+    <div className="rounded-md shadow-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
             {columns.map((column) => (
-              <th key={column.key} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <TableHead key={column.key} className="font-semibold">
                 {column.label}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {data.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="border-b border-border hover:bg-muted/50 transition-colors"
-            >
+            <TableRow key={rowIndex}>
               {columns.map((column) => (
-                <td key={column.key} className="py-3 px-4 text-sm text-card-foreground">
-                  {row[column.key]}
-                </td>
+                <TableCell key={column.key}>{row[column.key]}</TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

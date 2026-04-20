@@ -58,7 +58,7 @@ export async function POST(
         type,
         referenceId,
         status,
-        note,
+        note: note || '',
         pendingReason: status === 'PENDING' ? pendingReason : null,
       },
     });

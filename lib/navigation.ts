@@ -6,6 +6,8 @@ export type NavIcon =
   | 'shifts'
   | 'attendance'
   | 'analytics'
+  | 'messages'
+  | 'scoring'
   | 'settings';
 
 export type NavItem = {
@@ -72,6 +74,22 @@ export const navItems: NavItem[] = [
     icon: 'analytics',
     section: 'Admin',
     matches: ['/dashboard/analytics'],
+  },
+  {
+    href: '/messages',
+    label: 'Messages',
+    description: 'Team communication',
+    icon: 'messages',
+    section: 'Operations',
+    matches: ['/dashboard/messages'],
+  },
+  {
+    href: '/scoring',
+    label: 'Scoring',
+    description: 'Performance metrics',
+    icon: 'scoring',
+    section: 'Workflows',
+    matches: ['/dashboard/scoring'],
   },
   {
     href: '/settings',
@@ -181,6 +199,14 @@ const routeOverrides: Array<{
       title: 'Analytics',
       description: 'Follow performance trends, quality shifts, and operational pressure points.',
       href: '/analytics',
+    },
+  },
+  {
+    test: (pathname) => pathname === '/calendar' || pathname === '/dashboard/calendar',
+    meta: {
+      title: 'Calendar',
+      description: 'View your schedule, leaves, and team activities in a unified calendar view.',
+      href: '/calendar',
     },
   },
   {

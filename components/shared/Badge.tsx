@@ -1,31 +1,26 @@
+import { Badge as ShadcnBadge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default';
-type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
   variant?: BadgeVariant;
-  size?: BadgeSize;
   label: string;
+  className?: string;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  success: 'bg-success/10 text-success border-success/20',
-  warning: 'bg-warning/10 text-warning border-warning/20',
-  danger: 'bg-destructive/10 text-destructive border-destructive/20',
-  info: 'bg-accent/10 text-accent border-accent/20',
-  default: 'bg-muted text-muted-foreground border-border',
+  success: 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20',
+  warning: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20 hover:bg-yellow-500/20',
+  danger: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20',
+  info: 'bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20',
+  default: 'bg-muted text-muted-foreground hover:bg-muted/80',
 };
 
-const sizeStyles: Record<BadgeSize, string> = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-sm',
-};
-
-export default function Badge({ variant = 'default', size = 'md', label }: BadgeProps) {
+export default function Badge({ variant = 'default', label, className }: BadgeProps) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border font-medium ${variantStyles[variant]} ${sizeStyles[size]}`}
-    >
+    <ShadcnBadge className={cn(variantStyles[variant], className)}>
       {label}
-    </span>
+    </ShadcnBadge>
   );
 }

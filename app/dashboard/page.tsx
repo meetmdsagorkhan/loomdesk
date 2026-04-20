@@ -5,17 +5,19 @@ import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   BarChart2,
+  Calendar,
   CalendarOff,
   CheckSquare,
   Clock,
   FileText,
   LayoutDashboard,
   Loader2,
+  MessageSquare,
   Settings,
+  TrendingUp,
   UserCheck,
   Users,
   CheckCircle,
-  TrendingUp,
 } from 'lucide-react';
 import StatCard from '@/components/shared/StatCard';
 import Card from '@/components/shared/Card';
@@ -49,6 +51,8 @@ const iconMap: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
   shifts: Clock,
   attendance: UserCheck,
   analytics: BarChart2,
+  messages: MessageSquare,
+  scoring: TrendingUp,
   settings: Settings,
 };
 
@@ -136,70 +140,82 @@ export default function DashboardPage() {
   }
 
   const workspaces = navItems.filter((item) => item.href !== '/dashboard');
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <div className="space-y-8">
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)]">
-        <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-[0_28px_80px_-36px_rgba(15,23,42,0.55)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-            Team Control Center
+        <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-500 via-blue-600 to-slate-700 p-6 text-white shadow-[0_28px_80px_-36px_rgba(37,99,235,0.55)] sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">
+            {isAdmin ? 'Admin Dashboard' : 'Member Dashboard'}
           </p>
           <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white">
             {user?.name
-              ? `${user.name}, here is the fastest route through today's work.`
+              ? `${user.name}, ${isAdmin ? 'manage your team' : 'track your progress'} efficiently.`
               : 'Everything important is now one click away.'}
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Each function now has its own workspace route, clearer navigation, and less dashboard nesting.
-            Jump straight into reporting, review, scheduling, or approvals without hunting through stacked pages.
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100">
+            {isAdmin
+              ? 'Oversee team performance, manage reports, review QA, and handle administrative tasks from your centralized dashboard.'
+              : 'Track your reports, view your QA scores, manage your schedule, and access all your work tools in one place.'}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/reports"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition-transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition-transform hover:-translate-y-0.5"
             >
-              Open reports
+              {isAdmin ? 'Manage Reports' : 'My Reports'}
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              href="/qa"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/14"
-            >
-              Review QA
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/qa"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/14"
+              >
+                Review QA
+              </Link>
+            )}
             <Link
               href="/analytics"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-semibold text-blue-100 transition-colors hover:bg-white/10"
             >
-              View analytics
+              {isAdmin ? 'Team Analytics' : 'My Analytics'}
             </Link>
           </div>
         </div>
 
         <Card
-          title="Operational Pulse"
-          subtitle="What needs attention first"
-          className="border-slate-200/80 bg-white/90 dark:bg-slate-950/75"
+          title={isAdmin ? 'Admin Overview' : 'Your Overview'}
+          subtitle={isAdmin ? 'Team performance at a glance' : 'Your activity at a glance'}
+          className="bg-white/90 dark:bg-slate-950/75"
         >
           <div className="space-y-4">
-            <div className="rounded-3xl border border-border bg-secondary/70 p-4">
-              <p className="text-sm font-medium text-muted-foreground">Open workflows</p>
+            <div className="rounded-3xl bg-blue-50/70 p-4 shadow-sm dark:bg-blue-900/20">
+              <p className="text-sm font-medium text-muted-foreground">
+                {isAdmin ? 'Active Workflows' : 'Your Tasks'}
+              </p>
               <p className="mt-2 text-3xl font-semibold text-card-foreground">{workspaces.length}</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Reports, QA, leave, shifts, attendance, analytics, and settings are available as separate pages.
+                {isAdmin
+                  ? 'Reports, QA, leave, shifts, attendance, analytics, and settings available.'
+                  : 'Reports, leave, shifts, attendance, and analytics available.'}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-border p-4">
+              <div className="rounded-3xl p-4 shadow-sm">
                 <p className="text-sm font-medium text-muted-foreground">Role</p>
                 <p className="mt-2 text-lg font-semibold text-card-foreground">
                   {user?.role?.replace('_', ' ') || 'Team member'}
                 </p>
               </div>
-              <div className="rounded-3xl border border-border p-4">
-                <p className="text-sm font-medium text-muted-foreground">Top route</p>
-                <p className="mt-2 text-lg font-semibold text-card-foreground">/reports</p>
+              <div className="rounded-3xl p-4 shadow-sm">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {isAdmin ? 'Team Size' : 'Status'}
+                </p>
+                <p className="mt-2 text-lg font-semibold text-card-foreground">
+                  {isAdmin ? analytics?.kpi.activeMembers || 0 : 'Active'}
+                </p>
               </div>
             </div>
           </div>
@@ -216,7 +232,7 @@ export default function DashboardPage() {
         <Card
           title="Team Leaderboard"
           subtitle="Recent activity and score trends"
-          className="border-slate-200/80 bg-white/90 dark:bg-slate-950/75"
+          className="bg-white/90 dark:bg-slate-950/75"
         >
           <DataTable columns={reportColumns} data={reportData} isLoading={isLoading} />
         </Card>
@@ -224,7 +240,7 @@ export default function DashboardPage() {
         <Card
           title="Workspace Map"
           subtitle="Direct entry points for each function"
-          className="border-slate-200/80 bg-white/90 dark:bg-slate-950/75"
+          className="bg-white/90 dark:bg-slate-950/75"
         >
           <div className="grid gap-3">
             {workspaces.map((item) => {
@@ -234,10 +250,10 @@ export default function DashboardPage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group flex items-center justify-between rounded-[1.5rem] border border-border bg-background/70 px-4 py-4 transition-colors hover:border-slate-300 hover:bg-white dark:hover:border-white/15 dark:hover:bg-white/[0.04]"
+                  className="group flex items-center justify-between rounded-[1.5rem] bg-background/70 px-4 py-4 transition-colors hover:bg-white dark:hover:bg-white/[0.04]"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                    <div className="rounded-2xl bg-blue-100 p-3 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>

@@ -6,6 +6,9 @@ import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { Calendar } from '@/components/ui/calendar';
+import { Card } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -120,9 +123,76 @@ export default function LeavePage() {
         )}
       </div>
 
+      {/* Calendar View */}
+      {!showCreateForm && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="bg-card rounded-2xl p-6 shadow-lg">
+            <h2 className="text-lg font-medium text-foreground mb-4">Leave Calendar</h2>
+            <Calendar
+              mode="single"
+              selected={newLeave.startDate ? new Date(newLeave.startDate) : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  setNewLeave({ ...newLeave, startDate: date.toISOString().split('T')[0] });
+                  setShowCreateForm(true);
+                }
+              }}
+              className="rounded-md border-0"
+              modifiers={{
+                booked: leaveRequests
+                  .filter((leave) => leave.status === 'APPROVED')
+                  .flatMap((leave) => {
+                    const dates = [];
+                    const start = new Date(leave.startDate);
+                    const end = new Date(leave.endDate);
+                    const current = new Date(start);
+                    while (current <= end) {
+                      dates.push(new Date(current));
+                      current.setDate(current.getDate() + 1);
+                    }
+                    return dates;
+                  }),
+              }}
+              modifiersStyles={{
+                booked: {
+                  backgroundColor: 'rgb(59 130 246 / 0.2)',
+                  color: 'rgb(37 99 235)',
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          </div>
+
+          <div className="bg-card rounded-2xl p-6 shadow-lg">
+            <h2 className="text-lg font-medium text-foreground mb-4">Upcoming Leave</h2>
+            <div className="space-y-3">
+              {leaveRequests
+                .filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date())
+                .slice(0, 5)
+                .map((leave) => (
+                  <div key={leave.id} className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 shadow-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                      <Plus size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{leave.reason}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(leave.startDate), 'MMM d')} - {format(new Date(leave.endDate), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              {leaveRequests.filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date()).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">No upcoming leave</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Leave Form */}
       {showCreateForm && (
-        <div className="bg-card rounded-2xl border border-border p-6">
+        <div className="bg-card rounded-2xl p-6 shadow-lg">
           <h2 className="text-lg font-medium text-foreground mb-4">Submit Leave Request</h2>
           <form onSubmit={handleSubmitLeave} className="space-y-4 max-w-md">
             <div>
@@ -131,7 +201,7 @@ export default function LeavePage() {
                 type="date"
                 value={newLeave.startDate}
                 onChange={(e) => setNewLeave({ ...newLeave, startDate: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 required
               />
             </div>
@@ -142,7 +212,7 @@ export default function LeavePage() {
                 value={newLeave.endDate}
                 onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
                 min={newLeave.startDate}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 required
               />
             </div>
@@ -152,7 +222,7 @@ export default function LeavePage() {
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}
                 placeholder="Provide reason for leave"
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all min-h-[100px]"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all min-h-[100px]"
                 required
               />
             </div>
@@ -183,8 +253,8 @@ export default function LeavePage() {
       )}
 
       {/* Leave Requests Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground">My Leave Requests</h2>
         </div>
         {leaveRequests.length === 0 ? (
@@ -192,7 +262,7 @@ export default function LeavePage() {
             <p className="text-muted-foreground">No leave requests found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto px-6 pb-6">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>

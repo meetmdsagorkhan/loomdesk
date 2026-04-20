@@ -230,7 +230,7 @@ export default function ShiftsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Shifts Panel */}
-        <div className="bg-card rounded-2xl border border-border p-6">
+        <div className="bg-card rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">Shift Templates</h2>
             {!showCreateShift && (
@@ -243,7 +243,7 @@ export default function ShiftsPage() {
 
           {/* Create Shift Form */}
           {showCreateShift && (
-            <form onSubmit={handleCreateShift} className="space-y-4 mb-6 p-4 bg-muted/50 rounded-xl">
+            <form onSubmit={handleCreateShift} className="space-y-4 mb-6 p-4 bg-muted/50 rounded-xl shadow-sm">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Name</label>
                 <input
@@ -251,7 +251,7 @@ export default function ShiftsPage() {
                   value={newShift.name}
                   onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
                   placeholder="e.g., Morning Shift"
-                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -261,7 +261,7 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.startTime}
                     onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -270,7 +270,7 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.endTime}
                     onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -279,12 +279,12 @@ export default function ShiftsPage() {
                     type="time"
                     value={newShift.reportDeadline}
                     onChange={(e) => setNewShift({ ...newShift, reportDeadline: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
               {error && (
-                <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-xl text-sm">
+                <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm shadow-sm">
                   {error}
                 </div>
               )}
@@ -342,7 +342,7 @@ export default function ShiftsPage() {
         </div>
 
         {/* Assign Shift Panel */}
-        <div className="bg-card rounded-2xl border border-border p-6">
+        <div className="bg-card rounded-2xl p-6 shadow-lg">
           <h2 className="text-lg font-medium text-foreground mb-4">Assign Shift</h2>
           <form onSubmit={handleAssignShift} className="space-y-4">
             <div>
@@ -350,7 +350,7 @@ export default function ShiftsPage() {
               <select
                 value={assignForm.userId}
                 onChange={(e) => setAssignForm({ ...assignForm, userId: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">Select member</option>
                 {members.map((member) => (
@@ -366,7 +366,7 @@ export default function ShiftsPage() {
               <select
                 value={assignForm.shiftId}
                 onChange={(e) => setAssignForm({ ...assignForm, shiftId: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">Select shift</option>
                 {shifts.map((shift) => (
@@ -384,7 +384,7 @@ export default function ShiftsPage() {
                   type="date"
                   value={assignForm.startDate}
                   onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
               <div>
@@ -394,13 +394,13 @@ export default function ShiftsPage() {
                   value={assignForm.endDate}
                   onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
                   min={assignForm.startDate}
-                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-xl text-sm">
+              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm shadow-sm">
                 {error}
               </div>
             )}
@@ -420,8 +420,8 @@ export default function ShiftsPage() {
       </div>
 
       {/* Current Assignments Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground">Current Assignments</h2>
         </div>
         {assignments.length === 0 ? (

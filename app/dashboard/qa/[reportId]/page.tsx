@@ -233,7 +233,7 @@ export default function QADetailPage() {
       </div>
 
       {/* Report Header */}
-      <div className="bg-card rounded-2xl border border-border p-6">
+      <div className="bg-card rounded-2xl p-6 shadow-lg">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
@@ -255,8 +255,8 @@ export default function QADetailPage() {
       </div>
 
       {/* Entries Table */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground">Entries ({report.entries.length})</h2>
         </div>
         <div className="divide-y divide-border">
@@ -327,7 +327,7 @@ export default function QADetailPage() {
                           onChange={(e) => setFeedbackComment(e.target.value)}
                           placeholder="Add your feedback..."
                           rows={2}
-                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none"
+                          className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                         />
                         <div className="flex gap-2">
                           <Button
@@ -386,8 +386,8 @@ export default function QADetailPage() {
       </div>
 
       {/* Score History */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
-        <div className="p-6 border-b border-border">
+      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground">Score History</h2>
         </div>
         {scoreEvents.length > 0 ? (
@@ -456,7 +456,7 @@ export default function QADetailPage() {
                     onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
                     className="peer sr-only"
                   />
-                  <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground peer-checked:border-destructive transition-all">
+                  <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground transition-all shadow-sm">
                     Minor (-0.5)
                   </div>
                 </label>
@@ -468,7 +468,7 @@ export default function QADetailPage() {
                     onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
                     className="peer sr-only"
                   />
-                  <div className="px-4 py-2.5 rounded-xl border border-input text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground peer-checked:border-destructive transition-all">
+                  <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground transition-all shadow-sm">
                     Major (-1.0)
                   </div>
                 </label>
@@ -480,7 +480,7 @@ export default function QADetailPage() {
               <select
                 value={deductReason}
                 onChange={(e) => setDeductReason(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">Select a reason</option>
                 <option value="Incorrect resolution">Incorrect resolution</option>
@@ -497,7 +497,7 @@ export default function QADetailPage() {
                 onChange={(e) => setDeductAdminNote(e.target.value)}
                 placeholder="Additional notes..."
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
               />
             </div>
           </div>

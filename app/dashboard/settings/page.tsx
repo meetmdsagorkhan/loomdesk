@@ -140,13 +140,13 @@ export default function SettingsPage() {
       </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 border-b border-border">
+          <div className="flex gap-2 shadow-sm p-2">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                 activeTab === 'profile'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
               <User size={16} />
@@ -155,10 +155,10 @@ export default function SettingsPage() {
             {isAdmin({ user }) && (
               <button
                 onClick={() => setActiveTab('team')}
-                className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                   activeTab === 'team'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Users size={16} />
@@ -167,10 +167,10 @@ export default function SettingsPage() {
             )}
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                 activeTab === 'notifications'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
               <Bell size={16} />
@@ -180,7 +180,7 @@ export default function SettingsPage() {
 
           {/* Tab Content */}
           {activeTab === 'profile' && (
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card rounded-2xl p-6 shadow-lg">
               <h2 className="text-lg font-medium text-foreground mb-4">Profile Settings</h2>
               <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
                 <div>
@@ -189,7 +189,7 @@ export default function SettingsPage() {
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -199,7 +199,7 @@ export default function SettingsPage() {
                     value={profileData.currentPassword}
                     onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -209,7 +209,7 @@ export default function SettingsPage() {
                     value={profileData.newPassword}
                     onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <Button type="submit" disabled={isUpdatingProfile}>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'team' && isAdmin({ user }) && (
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card rounded-2xl p-6 shadow-lg">
               <h2 className="text-lg font-medium text-foreground mb-4">Team Management</h2>
               <form onSubmit={handleInvite} className="space-y-4 max-w-md">
                 <div>
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                     value={inviteData.email}
                     onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
                     placeholder="Enter team member email"
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <div>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                   <select
                     value={inviteData.role}
                     onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   >
                     <option value="MEMBER">Member</option>
                     <option value="TEAM_LEAD">Team Lead</option>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === 'notifications' && (
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card rounded-2xl p-6 shadow-lg">
               <h2 className="text-lg font-medium text-foreground mb-4">Notification Preferences</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
