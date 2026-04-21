@@ -52,8 +52,8 @@
 }
 
 :root {
-  /* Luro AI - Light Theme (Default) */
-  --background: 0 0% 100%;
+  /* Liquid Glass - Light Theme (Default) */
+  --background: 230 20% 97%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
@@ -74,7 +74,7 @@
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 262 83% 58%;
-  --radius: 0.5rem;
+  --radius: 1rem;
   
   /* Chart colors */
   --chart-1: 12 76% 61%;
@@ -100,11 +100,17 @@
   --warning-foreground: 0 0% 98%;
   --info: 199 89% 48%;
   --info-foreground: 0 0% 98%;
+  
+  /* Liquid Glass specific */
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  --glass-highlight: rgba(255, 255, 255, 0.6);
 }
 
 .dark {
-  /* Luro AI - Dark Theme */
-  --background: 240 10% 3.9%;
+  /* Liquid Glass - Dark Theme */
+  --background: 230 15% 8%;
   --foreground: 0 0% 98%;
   --card: 240 10% 3.9%;
   --card-foreground: 0 0% 98%;
@@ -125,7 +131,7 @@
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
   --ring: 262 83% 58%;
-  --radius: 0.5rem;
+  --radius: 1rem;
   
   /* Chart colors for dark theme */
   --chart-1: 220 70% 50%;
@@ -151,6 +157,12 @@
   --warning-foreground: 0 0% 98%;
   --info: 199 89% 55%;
   --info-foreground: 0 0% 98%;
+  
+  /* Liquid Glass specific for dark theme */
+  --glass-bg: rgba(30, 30, 50, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-highlight: rgba(255, 255, 255, 0.1);
 }
 
 @layer base {
@@ -162,18 +174,25 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 35%),
-      radial-gradient(circle at top right, hsl(var(--info) / 0.06), transparent 30%),
-      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background: 
+      radial-gradient(ellipse at 0% 0%, hsla(262, 83%, 58%, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, hsla(199, 89%, 48%, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, hsla(262, 83%, 58%, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 100%, hsla(199, 89%, 48%, 0.08) 0%, transparent 50%),
+      hsl(var(--background));
     background-attachment: fixed;
+    background-size: 100% 100%;
   }
   
   .dark body {
-    background-image:
-      radial-gradient(circle at top left, hsl(var(--primary) / 0.15), transparent 35%),
-      radial-gradient(circle at top right, hsl(var(--info) / 0.1), transparent 30%),
-      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background: 
+      radial-gradient(ellipse at 0% 0%, hsla(262, 83%, 58%, 0.25) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, hsla(199, 89%, 48%, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, hsla(262, 83%, 58%, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 100%, hsla(199, 89%, 48%, 0.12) 0%, transparent 50%),
+      hsl(var(--background));
+    background-attachment: fixed;
+    background-size: 100% 100%;
   }
   h1,
   h2,
@@ -235,24 +254,58 @@
     background-color: hsl(var(--muted) / 0.4);
   }
   
+  /* Liquid Glass Card System */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--glass-highlight),
+      transparent
+    );
+    transform: skewX(-20deg);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  
+  .glass-card:hover::before {
+    opacity: 0.3;
+  }
+  
   /* Card elevation system */
   .card-elevation-sm {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   }
   .card-elevation-md {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
   }
   .card-elevation-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 16px 48px rgba(31, 38, 135, 0.15), 0 8px 24px rgba(0, 0, 0, 0.08);
   }
   .dark .card-elevation-sm {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.3);
   }
   .dark .card-elevation-md {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
   }
   .dark .card-elevation-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.4);
   }
   
   /* Luro AI custom styles */
@@ -270,9 +323,14 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 1rem;
-    border-radius: 0.75rem;
+    border-radius: 1rem;
     position: relative;
     z-index: 50;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   
   @media screen and (min-width: 768px) {
@@ -282,10 +340,14 @@
   }
   
   .card {
-    background-color: rgba(255, 255, 255, 0.1);
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     height: 100%;
     width: 100%;
     position: relative;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   
   .content {
@@ -327,65 +389,71 @@
     background: conic-gradient(from 230.29deg at 51.63% 52.16%, rgb(36, 0, 255) 0deg, rgb(0, 135, 255) 67.5deg, rgb(108, 39, 157) 198.75deg, rgb(24, 38, 163) 251.25deg, rgb(54, 103, 196) 301.88deg, rgb(105, 30, 255) 360deg);
   }
   
+  /* Liquid Glass Button Styles */
   .btn-primary {
     z-index: 20;
     color: #fff;
     text-align: center;
-    background-image: radial-gradient(circle farthest-side at 30% 0, rgba(255, 255, 255, .12), transparent);
-    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, .24), 0 1px 3px hsl(var(--primary)/0.24), 0 2px 6px hsl(var(--primary)/0.24), 0 4px 8px rgba(96, 10, 255, 0.12), 0 16px 32px -8px hsl(var(--primary)/0.48)
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 4px 16px rgba(139, 92, 246, 0.3),
+      0 2px 8px rgba(139, 92, 246, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .btn-primary:hover {
-    background-color: #7c3aed;
+    background: linear-gradient(135deg, hsl(var(--primary-light)) 0%, hsl(var(--primary)) 100%);
     color: #fff;
-    transform: scale(1.05) translateY(-4px);
-    box-shadow: inset 0 0 rgba(255, 255, 255, 0.24),
-      0 1px 3px rgba(124, 58, 237, 0.24),
-      0 2px 6px rgba(124, 58, 237, 0.24),
-      0 4px 8px rgba(124, 58, 237, 0.12),
-      0 20px 40px -8px rgba(124, 58, 237, 0.64);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 
+      0 8px 24px rgba(139, 92, 246, 0.4),
+      0 4px 12px rgba(139, 92, 246, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
   
   .btn-primary:active {
-    background-color: #7c3aed;
-    transform: scale(1) translate(0);
-    box-shadow: inset 0 0 rgba(255, 255, 255, 0.24),
-      0 1px 3px rgba(124, 58, 237, 0.48),
-      0 2px 6px rgba(124, 58, 237, 0.48),
-      0 4px 8px rgba(124, 58, 237, 0.48),
-      0 4px 12px -8px rgba(124, 58, 237, 1);
+    transform: translateY(0) scale(0.98);
+    box-shadow: 
+      0 2px 8px rgba(139, 92, 246, 0.3),
+      0 1px 4px rgba(139, 92, 246, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   
   .btn-secondary {
     z-index: 20;
-    background-color: hsl(var(--background)/0.04);
-    color: #fff;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    color: hsl(var(--foreground));
     text-align: center;
-    background-image: radial-gradient(circle farthest-side at 35% -50%, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0));
-    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .2),
-      inset 1px 1px rgba(255, 255, 255, .08),
-      inset 0 0 0 1px rgba(255, 255, 255, .06);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .btn-secondary:hover {
-    background-color: hsl(var(--background)/0.08);
-    color: #fff;
-    transform: scale(1.05) translateY(-4px);
-    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .32),
-      inset 1px 1px rgba(255, 255, 255, .08),
-      inset 0 0 0 1px rgba(255, 255, 255, .1);
+    background: var(--glass-highlight);
+    color: hsl(var(--foreground));
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 
+      0 12px 32px rgba(31, 38, 135, 0.2),
+      0 6px 16px rgba(0, 0, 0, 0.1);
   }
   
   .btn-secondary:active {
-    background-color: hsl(var(--background)/0.08);
-    transform: scale(1) translateY(0);
-    box-shadow: 0 8px 40px -20px rgba(255, 255, 255, .32),
-      inset 1px 1px rgba(255, 255, 255, .08),
-      inset 0 0 0 1px rgba(255, 255, 255, .1);
+    transform: translateY(0) scale(0.98);
   }
   
   .badge {
-    box-shadow: 0 0 0 1px hsl(var(--primary));
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
   
   .th {

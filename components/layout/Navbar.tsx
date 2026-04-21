@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Loader2, Sun, Moon, Menu } from 'lucide-react';
+import { Bell, Check, Loader2, Sun, Moon, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from 'next-themes';
+import { signOut } from '@/auth';
 
 interface NavbarProps {
   onMobileMenuToggle?: () => void;
@@ -194,19 +195,19 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="rounded-full bg-slate-800 dark:bg-white shadow-md w-12 h-12 flex items-center justify-center hover:bg-slate-700 dark:hover:bg-gray-200"
+          className="glass-card rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20"
         >
-          <Sun size={20} className="hidden dark:block text-slate-800" />
-          <Moon size={20} className="block dark:hidden text-white" />
+          <Sun size={20} className="hidden dark:block text-foreground" />
+          <Moon size={20} className="block dark:hidden text-foreground" />
         </Button>
 
         {/* Notifications */}
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger>
-            <button className="relative rounded-full bg-slate-800 dark:bg-white shadow-md w-12 h-12 flex items-center justify-center hover:bg-slate-700 dark:hover:bg-gray-200 transition-colors">
-              <Bell size={20} className="text-white dark:text-slate-800" />
+            <button className="glass-card relative rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20 transition-colors">
+              <Bell size={20} className="text-foreground" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm">
                   {unreadCount}
                 </span>
               )}

@@ -90,18 +90,15 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 border-r border-border/60 bg-sidebar/95 backdrop-blur-lg transition-all duration-300 dark:border-border/40',
+          'fixed inset-y-0 left-0 z-50 border-r border-white/10 glass-card transition-all duration-300',
           isCollapsed ? 'w-20' : 'w-72',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
-        style={{
-          backgroundImage: 'radial-gradient(circle at top left, hsl(var(--primary) / 0.05), transparent 40%)',
-        }}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-border/60 px-3 py-4">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-4">
             <Link href="/dashboard" className="flex items-center gap-3" onClick={onMobileClose}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg ring-2 ring-primary/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg ring-2 ring-white/20 backdrop-blur-sm">
                 <Activity size={20} />
               </div>
               {!isCollapsed && (
@@ -158,8 +155,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                             'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all relative',
                             isCollapsed ? 'justify-center' : '',
                             isActive
-                              ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-800 shadow-md'
-                              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                              ? 'glass-card bg-primary/20 text-white dark:bg-white/20 dark:text-slate-800 shadow-md'
+                              : 'text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground',
                           ].join(' ')}
                           title={isCollapsed ? item.label : undefined}
                         >
@@ -168,8 +165,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                               'flex shrink-0 items-center justify-center rounded-lg transition-colors',
                               isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
                               isActive
-                                ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
-                                : 'bg-sidebar-accent text-sidebar-foreground group-hover:bg-sidebar-accent/80',
+                                ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900 backdrop-blur-sm'
+                                : 'bg-white/10 text-sidebar-foreground group-hover:bg-white/20 backdrop-blur-sm',
                             ].join(' ')}
                           >
                             <Icon size={isCollapsed ? 20 : 16} />
@@ -194,8 +191,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
             <div className="p-3">
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full">
-                  <button className="flex items-center gap-3 w-full rounded-xl p-2 bg-slate-800 dark:bg-white shadow-md hover:bg-slate-700 dark:hover:bg-gray-100 transition-colors">
-                    <Avatar className="h-8 w-8 bg-slate-800 dark:bg-white shrink-0 rounded-full border-2 border-white dark:border-slate-800">
+                  <button className="glass-card flex items-center gap-3 w-full rounded-xl p-2 hover:bg-white/20 transition-colors">
+                    <Avatar className="h-8 w-8 bg-white/10 dark:bg-white/20 shrink-0 rounded-full border-2 border-white/30 backdrop-blur-sm">
                       {user.image ? (
                         <AvatarImage src={user.image} alt={user.name || 'User'} />
                       ) : (
@@ -206,8 +203,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                     </Avatar>
                     {!isCollapsed && (
                       <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium text-white dark:text-slate-800 truncate">{user.name}</p>
-                        <p className="text-xs text-white/70 dark:text-slate-800/70 capitalize truncate">{user.role?.toLowerCase().replace('_', ' ')}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize truncate">{user.role?.toLowerCase().replace('_', ' ')}</p>
                       </div>
                     )}
                   </button>
