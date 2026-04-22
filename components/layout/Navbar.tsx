@@ -191,15 +191,13 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
       {/* Floating Buttons at Bottom Right - Vertical */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="glass-card rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20"
+          className="glass-card rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20 transition-colors"
         >
-          <Sun size={20} className="hidden dark:block text-foreground" />
-          <Moon size={20} className="block dark:hidden text-foreground" />
-        </Button>
+          <Sun size={20} className="hidden dark:block text-white" />
+          <Moon size={20} className="block dark:hidden text-slate-800" />
+        </button>
 
         {/* Notifications */}
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

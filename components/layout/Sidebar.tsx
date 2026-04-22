@@ -11,8 +11,9 @@ import {
   Clock,
   FileText,
   LayoutDashboard,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeft,
+  PanelLeftClose,
+  PanelRightClose,
   MessageSquare,
   Settings,
   TrendingUp,
@@ -119,7 +120,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                 className="hidden shrink-0 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
                 onClick={onToggleCollapse}
               >
-                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                {isCollapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
               </button>
               <button
                 type="button"
@@ -131,7 +132,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <nav className={["flex-1 px-3 py-4", isCollapsed ? "" : "overflow-y-auto"].join(" ")}>
             {Object.entries(groupedItems).map(([section, items]) => {
               const hasActiveItem = items.some(item => isNavItemActive(pathname, item.href, item.matches));
               return (
@@ -155,8 +156,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                             'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all relative',
                             isCollapsed ? 'justify-center' : '',
                             isActive
-                              ? 'glass-card bg-primary/20 text-white dark:bg-white/20 dark:text-slate-800 shadow-md'
-                              : 'text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground',
+                              ? 'bg-primary/20 text-slate-800 dark:bg-white/20 dark:text-white'
+                              : 'text-sidebar-foreground/70 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-sidebar-foreground',
                           ].join(' ')}
                           title={isCollapsed ? item.label : undefined}
                         >
@@ -165,8 +166,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                               'flex shrink-0 items-center justify-center rounded-lg transition-colors',
                               isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
                               isActive
-                                ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900 backdrop-blur-sm'
-                                : 'bg-white/10 text-sidebar-foreground group-hover:bg-white/20 backdrop-blur-sm',
+                                ? 'bg-primary/20 text-primary dark:bg-primary/20 dark:text-primary backdrop-blur-sm'
+                                : 'bg-white/10 text-sidebar-foreground group-hover:bg-slate-200 dark:group-hover:bg-white/20 backdrop-blur-sm',
                             ].join(' ')}
                           >
                             <Icon size={isCollapsed ? 20 : 16} />
@@ -188,19 +189,21 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
 
           {/* Profile Button at Bottom - Floated inside sidebar */}
           {user && (
-            <div className="p-3">
+            <div className="p-3 sticky bottom-0">
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full">
-                  <button className="glass-card flex items-center gap-3 w-full rounded-xl p-2 hover:bg-white/20 transition-colors">
-                    <Avatar className="h-8 w-8 bg-white/10 dark:bg-white/20 shrink-0 rounded-full border-2 border-white/30 backdrop-blur-sm">
-                      {user.image ? (
-                        <AvatarImage src={user.image} alt={user.name || 'User'} />
-                      ) : (
-                        <AvatarFallback className="text-white dark:text-slate-800 text-sm font-medium">
-                          {getInitials(user.name || 'User')}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
+                  <button className="flex items-center gap-3 w-full rounded-xl p-2 hover:bg-white/10 transition-colors">
+                    <div className="flex shrink-0 items-center justify-center rounded-full transition-colors h-8 w-8 bg-white/10 hover:bg-white/20 backdrop-blur-sm">
+                      <Avatar className="h-8 w-8 bg-primary/10 dark:bg-primary/20 shrink-0 rounded-full border-2 border-white/30">
+                        {user.image ? (
+                          <AvatarImage src={user.image} alt={user.name || 'User'} />
+                        ) : (
+                          <AvatarFallback className="text-slate-800 dark:text-white text-sm font-medium">
+                            {getInitials(user.name || 'User')}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                    </div>
                     {!isCollapsed && (
                       <div className="flex-1 min-w-0 text-left">
                         <p className="text-sm font-medium text-foreground truncate">{user.name}</p>

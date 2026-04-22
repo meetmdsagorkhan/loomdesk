@@ -52,7 +52,7 @@ export default function ProfileModal({ open, onClose, user }: ProfileModalProps)
         
         <div className="space-y-6 mt-4">
           <div className="flex flex-col items-center space-y-4">
-            <Avatar className="h-24 w-24 bg-slate-900 text-white dark:bg-white dark:text-slate-950">
+            <Avatar className="h-24 w-24 bg-primary text-white">
               <AvatarFallback className="text-2xl font-semibold">
                 {getInitials(user.name)}
               </AvatarFallback>
