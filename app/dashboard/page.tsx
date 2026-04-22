@@ -157,10 +157,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="hidden md:block p-4 md:p-6">
-            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                  <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Member
                     </th>
@@ -179,17 +179,17 @@ export default function DashboardPage() {
                   {reportData.map((row, index) => (
                     <tr
                       key={`${row.member}-${index}`}
-                      className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5"
+                      className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm"
                     >
                       <td className="px-5 py-3.5 text-sm font-semibold text-foreground">{row.member}</td>
                       <td className="px-5 py-3.5 text-sm text-foreground">{row.reports}</td>
                       <td className="px-5 py-3.5 text-sm text-foreground">
-                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300 backdrop-blur-sm">
                           {row.avgScore}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-foreground">
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300 backdrop-blur-sm">
                           {row.attendanceRate}
                         </span>
                       </td>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
             {reportData.map((row, index) => (
               <div
                 key={`${row.member}-${index}`}
-                className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
+                className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:shadow-none backdrop-blur-sm"
               >
                 <p className="text-sm font-semibold text-foreground">{row.member}</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">

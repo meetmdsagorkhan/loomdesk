@@ -416,10 +416,10 @@ function AnalyticsContent() {
         </div>
 
         <div className="hidden md:block p-4 md:p-6">
-          <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+          <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Rank</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Member</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reports</th>
@@ -432,7 +432,7 @@ function AnalyticsContent() {
                 {analytics.leaderboard.map((member, index) => (
                   <tr
                     key={index}
-                    className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5"
+                    className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm"
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
@@ -472,7 +472,7 @@ function AnalyticsContent() {
           {analytics.leaderboard.map((member, index) => (
             <div
               key={`${member.name}-${index}`}
-              className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
+              className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:shadow-none backdrop-blur-sm"
             >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">{member.name}</p>

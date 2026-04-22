@@ -255,7 +255,7 @@ export default function CalendarPage() {
                 {error}
               </div>
             ) : eventsForSelectedDay.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-background/70 p-6 text-center">
+              <div className="rounded-2xl border border-dashed border-slate-300/50 p-6 text-center backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
                 <p className="text-sm font-medium text-foreground">No scheduled activity</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   This day is currently clear based on available shift, leave, and report data.
@@ -268,7 +268,7 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={event.id}
-                    className="rounded-2xl border border-border bg-background/75 p-4 shadow-sm"
+                    className="rounded-2xl border-border bg-background/75 p-4 shadow-sm backdrop-blur-sm"
                   >
                     <div className="flex items-start gap-3">
                       <div className={`rounded-2xl border p-3 ${eventTone[event.type]}`}>

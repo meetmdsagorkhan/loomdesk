@@ -40,6 +40,7 @@ export default function QAPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('SUBMITTED');
@@ -77,6 +78,24 @@ export default function QAPage() {
       setIsLoading(false);
     }
   }, [selectedDate, selectedUserId, selectedStatus]);
+
+  const handleApplyFilters = async () => {
+    setIsFilterLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedDate) params.append('date', selectedDate);
+      if (selectedUserId) params.append('userId', selectedUserId);
+      if (selectedStatus) params.append('status', selectedStatus);
+
+      const response = await fetch(`/api/qa/reports?${params}`);
+      const data = await response.json();
+      setReports(data.reports || []);
+    } catch (error) {
+      console.error('Failed to fetch reports:', error);
+    } finally {
+      setIsFilterLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (userLoading) return;
@@ -143,7 +162,7 @@ export default function QAPage() {
     getCoreRowModel: getCoreRowModel(),
   });
   const filterInputClass =
-    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all';
+    'w-full rounded-xl border border-slate-300/50 bg-gradient-to-br from-white/90 via-white/70 to-white/90 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 backdrop-blur-md transition-all dark:border-slate-600/50 dark:from-slate-800/90 dark:via-slate-900/70 dark:to-slate-800/90';
 
   // Prevent SSR rendering
   if (!mounted) {
@@ -208,9 +227,13 @@ export default function QAPage() {
 
             {/* Apply Button */}
             <div className="flex items-end">
-              <Button onClick={fetchReports} className="w-full">
-                <Filter size={16} className="mr-2" />
-                Apply Filters
+              <Button onClick={handleApplyFilters} disabled={isFilterLoading} className="w-full">
+                {isFilterLoading ? (
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <Filter size={16} className="mr-2" />
+                )}
+                {isFilterLoading ? 'Applying...' : 'Apply Filters'}
               </Button>
             </div>
           </div>
@@ -223,13 +246,15 @@ export default function QAPage() {
           </div>
           {reports.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-muted-foreground">No reports found matching your filters.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
+                <p className="text-muted-foreground">No reports found matching your filters.</p>
+              </div>
             </div>
           ) : (
             <div className="p-4 md:p-6">
-              <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+              <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
               <table className="w-full">
-                <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
@@ -247,7 +272,7 @@ export default function QAPage() {
                 </thead>
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                    <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-5 py-3.5 text-sm">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -318,9 +343,13 @@ export default function QAPage() {
 
           {/* Apply Button */}
           <div className="flex items-end">
-            <Button onClick={fetchReports} className="w-full">
-              <Filter size={16} className="mr-2" />
-              Apply Filters
+            <Button onClick={handleApplyFilters} disabled={isFilterLoading} className="w-full">
+              {isFilterLoading ? (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              ) : (
+                <Filter size={16} className="mr-2" />
+              )}
+              {isFilterLoading ? 'Applying...' : 'Apply Filters'}
             </Button>
           </div>
         </div>
@@ -333,13 +362,15 @@ export default function QAPage() {
         </div>
         {reports.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-muted-foreground">No reports found matching your filters.</p>
+            <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
+              <p className="text-muted-foreground">No reports found matching your filters.</p>
+            </div>
           </div>
         ) : (
           <div className="p-4 md:p-6">
-            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
             <table className="w-full">
-              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
@@ -357,7 +388,7 @@ export default function QAPage() {
               </thead>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                  <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-5 py-3.5 text-sm">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

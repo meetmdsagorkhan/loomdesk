@@ -271,7 +271,7 @@ export default function ReportsPage() {
   const isSubmitted = report?.status === 'SUBMITTED';
   const entryCount = report?.entries.length || 0;
   const segmentClassName =
-    'rounded-xl border border-border bg-background/50 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer hover:bg-muted/50 peer-checked:border-primary peer-checked:bg-primary/15 peer-checked:text-foreground peer-checked:ring-1 peer-checked:ring-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring';
+    'rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600 peer-focus-visible:ring-2 peer-focus-visible:ring-purple-500';
 
   return (
     <div className="space-y-8">
@@ -430,7 +430,7 @@ export default function ReportsPage() {
       )}
 
       {showSavedIndicator && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-success/30 bg-success/90 px-4 py-2 text-success-foreground card-elevation-md animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/90 via-emerald-600/90 to-emerald-500/90 px-4 py-2 text-white backdrop-blur-md shadow-[0_8px_32px_rgba(16,185,129,0.3)] animate-in slide-in-from-bottom-4">
           <CheckCircle2 size={16} />
           <span className="text-sm font-medium">Saved</span>
         </div>
@@ -446,17 +446,17 @@ export default function ReportsPage() {
 
         {entryCount === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8">
+            <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
               <p className="text-muted-foreground">No entries yet. Add your first entry above.</p>
             </div>
           </div>
         ) : (
           <div className="hidden p-4 md:block md:p-6">
-            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
               <table className="w-full">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                    <tr key={headerGroup.id} className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
@@ -474,7 +474,7 @@ export default function ReportsPage() {
                   {table.getRowModel().rows.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-white/15 text-foreground transition-colors last:border-0 hover:bg-white/35 dark:hover:bg-white/5"
+                      className="border-b border-white/15 text-foreground transition-colors last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm"
                     >
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-5 py-3.5 text-sm">
@@ -494,7 +494,7 @@ export default function ReportsPage() {
             {table.getRowModel().rows.map((row) => (
               <div
                 key={row.id}
-                className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
+                className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:shadow-none backdrop-blur-sm"
               >
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Entry {row.index + 1}
@@ -535,7 +535,7 @@ export default function ReportsPage() {
         )}
       </GlassCard>
 
-      <section className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/25 px-5 py-4 dark:bg-slate-900/30">
+      <section className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-gradient-to-br from-white/30 via-white/15 to-white/30 px-5 py-4 dark:from-slate-800/30 dark:via-slate-900/15 dark:to-slate-800/30 backdrop-blur-sm shadow-sm">
         <p className="text-sm font-medium text-muted-foreground">
           {entryCount} {entryCount === 1 ? 'entry' : 'entries'} added
         </p>

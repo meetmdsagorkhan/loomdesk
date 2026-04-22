@@ -162,13 +162,13 @@ export default function AttendancePage() {
         title="Monthly attendance overview"
         subtitle="View and track team attendance patterns across the month with detailed statistics."
         actions={
-          isAdmin && (
+          isAdmin({ user }) && (
             <div className="flex items-center gap-2">
               <label className="text-sm text-foreground">Select User:</label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="px-4 py-2 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="border-border/70 bg-background/60 p-4 shadow-sm transition-all hover:bg-background/75 cursor-pointer backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               >
                 <option value="">All Users</option>
                 {members.map((member) => (
@@ -225,7 +225,7 @@ export default function AttendancePage() {
         </GlassCard>
       ) : (
         <GlassCard variant="default" padding="lg">
-          <p className="text-muted-foreground text-center">No attendance data available for this period.</p>
+          <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 text-center backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">No attendance data available for this period.</div>
         </GlassCard>
       )}
 

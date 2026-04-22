@@ -61,14 +61,14 @@ export default function ForgotPasswordPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm mb-6 flex items-center gap-3">
+        <div className="bg-red-50/80 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm mb-6 flex items-center gap-3 backdrop-blur-sm">
           <AlertCircle size={18} />
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-xl text-sm mb-6 space-y-3">
+        <div className="bg-emerald-50/80 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-300 px-4 py-3 rounded-xl text-sm mb-6 space-y-3 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <CheckCircle2 size={18} />
             <span>{successMessage}</span>

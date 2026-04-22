@@ -13,6 +13,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Calendar } from '@/components/ui/calendar';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -25,6 +26,23 @@ type LeaveRequest = {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
 };
+
+type Holiday = {
+  date: string;
+  name: string;
+  description: string;
+};
+
+const bangladeshHolidays: Holiday[] = [
+  { date: '2026-02-21', name: 'International Mother Language Day', description: 'Commemorates language martyrs of 1952' },
+  { date: '2026-03-17', name: 'Birthday of Bangabandhu', description: 'Father of the Nation\'s birthday' },
+  { date: '2026-03-26', name: 'Independence Day', description: 'Bangladesh declared independence in 1971' },
+  { date: '2026-04-14', name: 'Bengali New Year', description: 'Traditional Bengali New Year celebration' },
+  { date: '2026-05-01', name: 'Labor Day', description: 'International Workers\' Day' },
+  { date: '2026-08-15', name: 'National Mourning Day', description: 'Martyrdom of Bangabandhu' },
+  { date: '2026-12-16', name: 'Victory Day', description: 'Victory in the Liberation War' },
+  { date: '2026-12-25', name: 'Christmas Day', description: 'Birth of Jesus Christ' },
+];
 
 export default function LeavePage() {
   const { user, isLoading: userLoading } = useCurrentUser();
@@ -116,7 +134,7 @@ export default function LeavePage() {
   }
 
   const inputClassName =
-    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all';
+    'w-full rounded-xl border border-slate-300/50 bg-gradient-to-br from-white/90 via-white/70 to-white/90 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 backdrop-blur-md transition-all dark:border-slate-600/50 dark:from-slate-800/90 dark:via-slate-900/70 dark:to-slate-800/90';
 
   return (
     <div className="space-y-8">
@@ -144,12 +162,32 @@ export default function LeavePage() {
               selected={newLeave.startDate ? new Date(newLeave.startDate) : undefined}
               onSelect={(date) => {
                 if (date) {
-                  setNewLeave({ ...newLeave, startDate: date.toISOString().split('T')[0] });
-                  setShowCreateForm(true);
+                  const formatDate = (d: Date) => {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+                  const dateStr = formatDate(date);
+                  if (!newLeave.startDate) {
+                    setNewLeave({ ...newLeave, startDate: dateStr });
+                  } else if (!newLeave.endDate && new Date(dateStr) >= new Date(newLeave.startDate)) {
+                    setNewLeave({ ...newLeave, endDate: dateStr });
+                    setShowCreateForm(true);
+                  } else {
+                    setNewLeave({ ...newLeave, startDate: dateStr, endDate: '' });
+                  }
                 }
               }}
-              className="rounded-2xl border-0"
+              className="rounded-2xl border-0 [--cell-size:2.5rem] w-full"
+              numberOfMonths={2}
+              classNames={{
+                day: "h-full w-full aspect-square p-0 hover:bg-primary/10 transition-colors",
+                day_button: "h-full w-full aspect-square hover:bg-primary/10",
+              }}
               modifiers={{
+                selected: newLeave.startDate ? new Date(newLeave.startDate) : undefined,
+                end: newLeave.endDate ? new Date(newLeave.endDate) : undefined,
                 booked: leaveRequests
                   .filter((leave) => leave.status === 'APPROVED')
                   .flatMap((leave) => {
@@ -163,8 +201,21 @@ export default function LeavePage() {
                     }
                     return dates;
                   }),
+                  holiday: bangladeshHolidays.map((holiday) => new Date(holiday.date)),
               }}
               modifiersStyles={{
+                selected: {
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                  fontWeight: 'bold',
+                  borderRadius: '50%',
+                },
+                end: {
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                  fontWeight: 'bold',
+                  borderRadius: '50%',
+                },
                 booked: {
                   backgroundColor: 'hsl(var(--primary) / 0.15)',
                   color: 'hsl(var(--primary))',
@@ -181,7 +232,7 @@ export default function LeavePage() {
                 .filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date())
                 .slice(0, 5)
                 .map((leave) => (
-                  <div key={leave.id} className="flex items-start gap-3 rounded-2xl border border-white/20 bg-white/25 p-4 dark:bg-slate-900/30">
+                  <div key={leave.id} className="flex items-start gap-3 rounded-2xl border border-white/20 bg-white/25 p-4 dark:bg-slate-900/30 backdrop-blur-sm">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <CalendarIcon size={18} />
                     </div>
@@ -194,7 +245,7 @@ export default function LeavePage() {
                   </div>
                 ))}
               {leaveRequests.filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date()).length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 text-center">
+                <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 text-center backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
                   <p className="text-sm text-muted-foreground">No upcoming leave</p>
                 </div>
               )}
@@ -275,16 +326,16 @@ export default function LeavePage() {
         </div>
         {leaveRequests.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 backdrop-blur-sm">
               <p className="text-sm text-muted-foreground">No leave requests found</p>
             </div>
           </div>
         ) : (
           <div className="p-4 md:p-6">
-            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Start Date</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">End Date</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reason</th>
@@ -294,7 +345,7 @@ export default function LeavePage() {
               </thead>
               <tbody>
                 {leaveRequests.map((leave) => (
-                  <tr key={leave.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                  <tr key={leave.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
                     <td className="px-5 py-3.5 text-sm text-foreground">
                       {format(new Date(leave.startDate), 'MMM d, yyyy')}
                     </td>

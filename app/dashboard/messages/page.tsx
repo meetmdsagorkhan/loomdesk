@@ -193,17 +193,19 @@ export default function MessagesPage() {
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                No conversations found
+              <div className="p-4 text-center">
+                <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
+                  <p className="text-muted-foreground">No conversations found</p>
+                </div>
               </div>
             ) : (
               filteredConversations.map((conv) => (
                 <button
                   key={conv.userId}
                   onClick={() => setSelectedConversation(conv.userId)}
-                  className={`w-full p-4 border-b border-border hover:bg-muted/50 transition-colors text-left ${
+                  className="border-b border-border hover:bg-muted/50 backdrop-blur-sm transition-colors text-left ${
                     selectedConversation === conv.userId ? 'bg-muted' : ''
-                  }`}
+                  }"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 bg-primary/10 text-primary">

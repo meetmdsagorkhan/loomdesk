@@ -147,7 +147,7 @@ export default function ScoringPage() {
             {scoringData.recentScores.map((report) => (
               <div
                 key={report.reportId}
-                className="glass-card flex items-center justify-between rounded-2xl border border-white/20 bg-gradient-to-r from-white/35 via-white/20 to-transparent p-4"
+                className="glass-card flex items-center justify-between rounded-2xl border border-white/20 bg-gradient-to-r from-white/35 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:shadow-none backdrop-blur-sm"
               >
                 <div>
                   <p className="font-medium text-foreground">
@@ -171,7 +171,11 @@ export default function ScoringPage() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-8">No reports scored yet</p>
+          <div className="text-center py-8">
+            <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
+              <p className="text-muted-foreground">No reports scored yet</p>
+            </div>
+          </div>
         )}
         </div>
       </GlassCard>
@@ -190,7 +194,7 @@ export default function ScoringPage() {
               {scoringData.recentScores[0].scoreEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="glass-card flex items-start gap-3 rounded-xl border border-white/20 bg-white/30 p-3"
+                  className="glass-card flex items-start gap-3 rounded-xl border border-white/20 bg-white/30 p-3 backdrop-blur-sm"
                 >
                   <div
                     className={`mt-1 px-2 py-1 rounded-md text-xs font-semibold ${

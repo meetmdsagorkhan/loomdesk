@@ -337,7 +337,7 @@ export default function ShiftsPage() {
           {/* Shifts List */}
           {shifts.length === 0 ? (
             <div className="text-center py-8">
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+              <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
                 <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No shift templates created yet</p>
               </div>
@@ -448,7 +448,7 @@ export default function ShiftsPage() {
         </div>
         {assignments.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
               <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No shift assignments yet</p>
             </div>

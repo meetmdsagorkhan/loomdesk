@@ -520,10 +520,10 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
                       emailVerified
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                        ? 'bg-emerald-100/80 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
+                        : 'bg-amber-100/80 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300'
                     }`}
                   >
                     {emailVerified ? 'Verified' : 'Pending'}
@@ -542,10 +542,10 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
                       twoFactorEnabled
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-                        : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                        ? 'bg-emerald-100/80 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
+                        : 'bg-slate-200/80 text-slate-600 dark:bg-slate-800 dark:text-slate-200'
                     }`}
                   >
                     {twoFactorEnabled ? 'Enabled' : 'Disabled'}
@@ -716,7 +716,7 @@ export default function SettingsPage() {
                 )}
 
                 {generatedRecoveryCodes.length > 0 && (
-                  <div className="rounded-2xl border border-amber-300/40 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+                  <div className="rounded-2xl border border-amber-300/40 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 backdrop-blur-sm">
                     <p className="font-medium text-foreground">Save these recovery codes now</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Each code can be used once if you lose access to your authenticator app.

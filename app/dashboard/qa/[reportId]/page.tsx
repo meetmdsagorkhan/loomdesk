@@ -296,7 +296,7 @@ export default function QADetailPage() {
               {expandedEntries.has(entry.id) && (
                 <div className="px-4 pb-4 pl-14 space-y-4">
                   {entry.pendingReason && (
-                    <div className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25">
+                    <div className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25 backdrop-blur-sm">
                       <p className="text-sm font-medium text-foreground mb-1">Pending Reason</p>
                       <p className="text-sm text-muted-foreground">{entry.pendingReason}</p>
                     </div>
@@ -311,7 +311,7 @@ export default function QADetailPage() {
                     {entry.feedback.length > 0 ? (
                       <div className="space-y-2">
                         {entry.feedback.map((fb) => (
-                          <div key={fb.id} className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25">
+                          <div key={fb.id} className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25 backdrop-blur-sm">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-medium text-foreground">{fb.author.name}</span>
                               <span className="text-xs text-muted-foreground">
@@ -399,9 +399,9 @@ export default function QADetailPage() {
         </div>
         {scoreEvents.length > 0 ? (
           <div className="overflow-x-auto p-4 md:p-6">
-            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 dark:bg-slate-900/30">
+            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 dark:bg-slate-900/30 backdrop-blur-sm">
             <table className="w-full">
-              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
                 <tr>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Date</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Severity</th>
@@ -412,7 +412,7 @@ export default function QADetailPage() {
               </thead>
               <tbody>
                 {scoreEvents.map((event) => (
-                  <tr key={event.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                  <tr key={event.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
                     <td className="px-5 py-3.5 text-sm text-foreground">
                       {format(new Date(event.createdAt), 'MMM d, yyyy HH:mm')}
                     </td>
@@ -465,7 +465,7 @@ export default function QADetailPage() {
                     onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
                     className="peer sr-only"
                   />
-                  <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground transition-all shadow-sm">
+                  <div className="px-4 py-2.5 rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 text-center cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600">
                     Minor (-0.5)
                   </div>
                 </label>
@@ -477,7 +477,7 @@ export default function QADetailPage() {
                     onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
                     className="peer sr-only"
                   />
-                  <div className="px-4 py-2.5 rounded-xl bg-background text-center cursor-pointer peer-checked:bg-destructive peer-checked:text-destructive-foreground transition-all shadow-sm">
+                  <div className="px-4 py-2.5 rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 text-center cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600">
                     Major (-1.0)
                   </div>
                 </label>

@@ -71,12 +71,12 @@ export default function VerifyEmailPage() {
       </div>
 
       <div
-        className={`px-4 py-4 rounded-xl text-sm mb-6 flex items-start gap-3 ${
+        className={`px-4 py-4 rounded-xl text-sm mb-6 flex items-start gap-3 backdrop-blur-sm ${
           displayStatus === 'success'
-            ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300'
+            ? 'bg-emerald-50/80 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-300'
             : displayStatus === 'error'
-              ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400'
-              : 'bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-200'
+              ? 'bg-red-50/80 dark:bg-red-950/20 text-red-600 dark:text-red-400'
+              : 'bg-slate-50/80 dark:bg-slate-900/30 text-slate-600 dark:text-slate-200'
         }`}
       >
         {displayStatus === 'loading' ? (

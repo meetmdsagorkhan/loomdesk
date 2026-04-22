@@ -418,14 +418,15 @@
 
   .glass-pill {
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 50%),
-      linear-gradient(135deg, var(--glass-bg-strong), var(--glass-bg));
-    border: 1px solid var(--glass-border-soft);
-    backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(120%);
-    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(120%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.25), transparent 50%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      var(--glass-shadow);
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      0 4px 16px rgba(0, 0, 0, 0.04);
     transition:
       transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 0.3s ease,
@@ -434,9 +435,15 @@
   }
 
   .glass-pill:hover {
+    background:
+      linear-gradient(180deg, hsl(var(--primary) / 0.2), transparent 50%),
+      linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05));
     transform: translateY(-2px);
-    border-color: var(--glass-border);
-    box-shadow: var(--glass-shadow-hover);
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 12px 48px rgba(99, 102, 241, 0.15),
+      0 6px 24px rgba(99, 102, 241, 0.1);
   }
 
   .liquid-shell {
@@ -572,55 +579,64 @@
     color: #fff;
     text-align: center;
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 
-      0 4px 16px rgba(139, 92, 246, 0.3),
-      0 2px 8px rgba(139, 92, 246, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 8px 32px rgba(99, 102, 241, 0.3),
+      0 4px 16px rgba(99, 102, 241, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .btn-primary:hover {
     background: linear-gradient(135deg, hsl(var(--primary-light)) 0%, hsl(var(--primary)) 100%);
     color: #fff;
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 
-      0 8px 24px rgba(139, 92, 246, 0.4),
-      0 4px 12px rgba(139, 92, 246, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 12px 48px rgba(99, 102, 241, 0.4),
+      0 6px 24px rgba(99, 102, 241, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
-  
+
   .btn-primary:active {
     transform: translateY(0) scale(0.98);
-    box-shadow: 
-      0 2px 8px rgba(139, 92, 246, 0.3),
-      0 1px 4px rgba(139, 92, 246, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 4px 16px rgba(99, 102, 241, 0.3),
+      0 2px 8px rgba(99, 102, 241, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15);
   }
   
   .btn-secondary {
     z-index: 20;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     color: hsl(var(--foreground));
     text-align: center;
-    box-shadow: var(--glass-shadow);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .btn-secondary:hover {
-    background: var(--glass-highlight);
-    color: hsl(var(--foreground));
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(var(--primary) / 0.05) 100%);
+    color: hsl(var(--primary));
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 
-      0 12px 32px rgba(31, 38, 135, 0.2),
-      0 6px 16px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 12px 48px rgba(99, 102, 241, 0.15),
+      0 6px 24px rgba(99, 102, 241, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
   }
-  
+
   .btn-secondary:active {
     transform: translateY(0) scale(0.98);
   }
@@ -691,7 +707,17 @@
 
   /* Standardized form utilities */
   .form-input {
-    @apply w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full px-4 py-3 rounded-xl border border-slate-300/50 bg-gradient-to-br from-white/90 via-white/70 to-white/90 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 backdrop-blur-md transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-600/50 dark:from-slate-800/90 dark:via-slate-900/70 dark:to-slate-800/90;
+  }
+
+  .form-input:focus {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .form-input:focus {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
   }
 
   .form-label {
