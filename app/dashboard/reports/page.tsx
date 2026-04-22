@@ -268,6 +268,10 @@ export default function ReportsPage() {
 
   const isSubmitted = report?.status === 'SUBMITTED';
   const entryCount = report?.entries.length || 0;
+  const inputClassName =
+    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-foreground placeholder:text-muted-foreground shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/40';
+  const segmentClassName =
+    'rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer peer-checked:border-primary/70 peer-checked:bg-primary peer-checked:text-primary-foreground';
 
   return (
     <div className="space-y-8">
@@ -284,7 +288,7 @@ export default function ReportsPage() {
       />
 
       {isSubmitted && (
-        <GlassCard variant="bordered" padding="sm" className="bg-warning/5">
+        <GlassCard variant="panel" padding="sm" className="border border-warning/30 bg-warning/10">
           <div className="flex items-center gap-3">
             <AlertCircle size={20} className="text-warning" />
             <span className="text-sm text-foreground">Report submitted. Contact admin to unlock.</span>
@@ -293,10 +297,15 @@ export default function ReportsPage() {
       )}
 
       {!isSubmitted && (
-        <GlassCard variant="default" padding="md">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Add Entry</h2>
-          <form onSubmit={onAddEntry} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <GlassCard variant="panel" padding="none" className="overflow-hidden">
+          <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">
+            <h2 className="text-lg font-semibold text-foreground">Add Entry</h2>
+            <span className="glass-pill rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
+              Auto-save ready
+            </span>
+          </div>
+          <form onSubmit={onAddEntry} className="space-y-5 p-5 md:p-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Type</label>
                 <div className="flex gap-2">
@@ -308,7 +317,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className={segmentClassName}>
                       Ticket
                     </div>
                   </label>
@@ -320,7 +329,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('type', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className={segmentClassName}>
                       Chat
                     </div>
                   </label>
@@ -336,7 +345,7 @@ export default function ReportsPage() {
                   value={entryForm.referenceId}
                   onChange={(event) => handleFieldChange('referenceId', event.target.value)}
                   placeholder="e.g. TKT-1042"
-                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className={inputClassName}
                 />
                 {fieldErrors.referenceId && (
                   <p className="text-destructive text-xs mt-1">{fieldErrors.referenceId}</p>
@@ -354,7 +363,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className={segmentClassName}>
                       Solved
                     </div>
                   </label>
@@ -366,7 +375,7 @@ export default function ReportsPage() {
                       onChange={(event) => handleFieldChange('status', event.target.value)}
                       className="peer sr-only"
                     />
-                    <div className="px-4 py-3 rounded-xl bg-background border border-border text-center cursor-pointer peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-all">
+                    <div className={segmentClassName}>
                       Pending
                     </div>
                   </label>
@@ -380,7 +389,7 @@ export default function ReportsPage() {
                 value={entryForm.note}
                 onChange={(event) => handleFieldChange('note', event.target.value)}
                 rows={2}
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                className={`${inputClassName} resize-none`}
                 placeholder="Describe the work done..."
               />
               {fieldErrors.note && (
@@ -397,7 +406,7 @@ export default function ReportsPage() {
                   type="text"
                   value={entryForm.pendingReason ?? ''}
                   onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className={inputClassName}
                   placeholder="Why is this pending?"
                 />
                 {fieldErrors.pendingReason && (
@@ -423,60 +432,113 @@ export default function ReportsPage() {
       )}
 
       {showSavedIndicator && (
-        <div className="fixed bottom-6 right-6 bg-success text-success-foreground px-4 py-2 rounded-xl flex items-center gap-2 card-elevation-md animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-success/30 bg-success/90 px-4 py-2 text-success-foreground card-elevation-md animate-in slide-in-from-bottom-4">
           <CheckCircle2 size={16} />
           <span className="text-sm font-medium">Saved</span>
         </div>
       )}
 
-      <GlassCard variant="default" padding="none">
-        <div className="border-b border-border/60 p-6">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-semibold text-foreground">Entries</h2>
+          <span className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            {entryCount} Total
+          </span>
         </div>
 
         {entryCount === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8">
               <p className="text-muted-foreground">No entries yet. Add your first entry above.</p>
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto p-6">
-            <table className="w-full">
-              <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-6 py-3 text-left text-sm font-medium text-muted-foreground"
+          <div className="hidden p-4 md:block md:p-6">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+              <table className="w-full">
+                <thead>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id} className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-white/15 text-foreground transition-colors last:border-0 hover:bg-white/35 dark:hover:bg-white/5"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-5 py-3.5 text-sm">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {entryCount > 0 && (
+          <div className="space-y-3 p-4 md:hidden">
+            {table.getRowModel().rows.map((row) => (
+              <div
+                key={row.id}
+                className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
+              >
+                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Entry {row.index + 1}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Type</span>
+                    <span className="text-sm">{row.original.type}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Ref</span>
+                    <span className="text-sm">{row.original.referenceId}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Status</span>
+                    <Badge
+                      variant={row.original.status === 'SOLVED' ? 'success' : 'warning'}
+                      label={row.original.status}
+                      className="text-[10px]"
+                    />
+                  </div>
+                  <div className="pt-1 text-xs text-muted-foreground">{row.original.note}</div>
+                  {!isSubmitted && (
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setDeleteEntryId(row.original.id)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-6 py-4 text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </GlassCard>
 
-      <section className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+      <section className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/25 px-5 py-4 dark:bg-slate-900/30">
+        <p className="text-sm font-medium text-muted-foreground">
           {entryCount} {entryCount === 1 ? 'entry' : 'entries'} added
         </p>
         {!isSubmitted && (

@@ -142,6 +142,8 @@ export default function QAPage() {
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+  const filterInputClass =
+    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all';
 
   // Prevent SSR rendering
   if (!mounted) {
@@ -160,7 +162,7 @@ export default function QAPage() {
           title="Review submitted reports"
           subtitle="Review and score team member reports to ensure quality and provide feedback."
         />
-        <GlassCard>
+        <GlassCard variant="panel" padding="md">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Date Picker */}
             <div>
@@ -169,7 +171,7 @@ export default function QAPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className={filterInputClass}
               />
             </div>
 
@@ -179,7 +181,7 @@ export default function QAPage() {
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className={filterInputClass}
               >
                 <option value="">All Members</option>
                 {members.map((member) => (
@@ -196,7 +198,7 @@ export default function QAPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className={filterInputClass}
               >
                 <option value="SUBMITTED">Submitted</option>
                 <option value="DRAFT">Draft</option>
@@ -215,8 +217,8 @@ export default function QAPage() {
         </GlassCard>
 
         {/* Reports Table */}
-        <GlassCard variant="default" padding="none">
-          <div className="border-b border-border/60 p-6">
+        <GlassCard variant="panel" padding="none" className="overflow-hidden">
+          <div className="border-b border-white/15 px-5 py-4 md:px-6">
             <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
           </div>
           {reports.length === 0 ? (
@@ -224,15 +226,16 @@ export default function QAPage() {
               <p className="text-muted-foreground">No reports found matching your filters.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="p-4 md:p-6">
+              <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
               <table className="w-full">
-                <thead className="bg-muted/50">
+                <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
-                          className="px-6 py-3 text-left text-sm font-medium text-muted-foreground"
+                          className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
                         >
                           {header.isPlaceholder
                             ? null
@@ -244,9 +247,9 @@ export default function QAPage() {
                 </thead>
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="border-b border-border last:border-0">
+                    <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-6 py-4 text-sm">
+                        <td key={cell.id} className="px-5 py-3.5 text-sm">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -254,6 +257,7 @@ export default function QAPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </GlassCard>
@@ -268,7 +272,7 @@ export default function QAPage() {
         title="Review submitted reports"
         subtitle="Review and score team member reports to ensure quality and provide feedback."
       />
-      <GlassCard>
+      <GlassCard variant="panel" padding="md">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Date Picker */}
           <div>
@@ -277,7 +281,7 @@ export default function QAPage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              className={filterInputClass}
             />
           </div>
 
@@ -287,7 +291,7 @@ export default function QAPage() {
             <select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              className={filterInputClass}
             >
               <option value="">All Members</option>
               {members.map((member) => (
@@ -304,7 +308,7 @@ export default function QAPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              className={filterInputClass}
             >
               <option value="SUBMITTED">Submitted</option>
               <option value="DRAFT">Draft</option>
@@ -323,8 +327,8 @@ export default function QAPage() {
       </GlassCard>
 
       {/* Reports Table */}
-      <GlassCard variant="default" padding="none">
-        <div className="border-b border-border/60 p-6">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
         </div>
         {reports.length === 0 ? (
@@ -332,15 +336,16 @@ export default function QAPage() {
             <p className="text-muted-foreground">No reports found matching your filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="p-4 md:p-6">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
             <table className="w-full">
-              <thead className="bg-muted/50">
+              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="px-6 py-3 text-left text-sm font-medium text-muted-foreground"
+                        className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
                       >
                         {header.isPlaceholder
                           ? null
@@ -352,9 +357,9 @@ export default function QAPage() {
               </thead>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border last:border-0">
+                  <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-6 py-4 text-sm">
+                      <td key={cell.id} className="px-5 py-3.5 text-sm">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -362,6 +367,7 @@ export default function QAPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </GlassCard>

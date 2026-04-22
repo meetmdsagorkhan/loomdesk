@@ -407,48 +407,93 @@ function AnalyticsContent() {
       </section>
 
       {/* Member Leaderboard */}
-      <GlassCard variant="default" padding="none">
-        <div className="border-b border-border/60 p-6">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-semibold text-foreground">Member Leaderboard</h2>
+          <span className="glass-pill rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
+            Ranked by score
+          </span>
         </div>
-        <div className="overflow-x-auto p-6">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/60">
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Rank</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Reports</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Avg Score</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Deductions</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Attendance Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics.leaderboard.map((member, index) => (
-                <tr key={index} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {index === 0 && <Crown size={16} className="text-warning" />}
-                      <span className="text-sm font-medium text-foreground">{index + 1}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-foreground">{member.name}</td>
-                  <td className="px-6 py-4 text-sm text-foreground">{member.reports}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-sm font-medium ${
-                      member.avgScore >= 90 ? 'text-success' :
-                      member.avgScore >= 70 ? 'text-warning' :
-                      'text-destructive'
-                    }`}>
-                      {member.avgScore}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-destructive">{member.deductions}</td>
-                  <td className="px-6 py-4 text-sm text-foreground">{member.attendanceRate}%</td>
+
+        <div className="hidden md:block p-4 md:p-6">
+          <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Rank</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Member</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reports</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Avg Score</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Deductions</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Attendance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {analytics.leaderboard.map((member, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5"
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        {index === 0 && <Crown size={16} className="text-warning" />}
+                        <span className="text-sm font-semibold text-foreground">{index + 1}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-sm font-medium text-foreground">{member.name}</td>
+                    <td className="px-5 py-3.5 text-sm text-foreground">{member.reports}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        member.avgScore >= 90 ? 'bg-success/20 text-success' :
+                        member.avgScore >= 70 ? 'bg-warning/20 text-warning' :
+                        'bg-destructive/20 text-destructive'
+                      }`}>
+                        {member.avgScore}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
+                        {member.deductions}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+                        {member.attendanceRate}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-4 md:hidden">
+          {analytics.leaderboard.map((member, index) => (
+            <div
+              key={`${member.name}-${index}`}
+              className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">{member.name}</p>
+                <span className="text-xs font-semibold text-muted-foreground">#{index + 1}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Reports</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{member.reports}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Score</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{member.avgScore}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Attendance</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{member.attendanceRate}%</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </GlassCard>
     </div>

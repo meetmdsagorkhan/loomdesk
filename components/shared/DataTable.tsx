@@ -147,7 +147,7 @@ export default function DataTable({
     return (
       <GlassCard variant="minimal" padding="lg" className="text-center">
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <div className="h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center">
+          <div className="glass-card flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/30">
             <Search className="h-8 w-8 text-muted-foreground" />
           </div>
           <div>
@@ -179,16 +179,16 @@ export default function DataTable({
 
       <>
         {/* Desktop Table View */}
-        <div className="hidden md:block rounded-md border border-border shadow-lg dark:border-border/50 overflow-hidden">
+        <div className="hidden overflow-hidden rounded-2xl border border-white/20 bg-white/20 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 md:block">
           <Table>
             <TableHeader>
-              <TableRow className="border-border dark:border-border/30">
+              <TableRow className="border-b border-white/20 bg-white/35 dark:bg-white/5">
                 {columns.map((column) => (
                   <TableHead
                     key={column.key}
-                    className={`font-semibold text-card-foreground ${
+                    className={`py-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground ${
                       sortable && column.sortable !== false
-                        ? 'cursor-pointer hover:bg-muted/50 transition-colors'
+                        ? 'cursor-pointer transition-colors hover:bg-white/40 dark:hover:bg-white/10'
                         : ''
                     }`}
                     onClick={() => sortable && column.sortable !== false && handleSort(column.key)}
@@ -213,10 +213,10 @@ export default function DataTable({
               {paginatedData.map((row, rowIndex) => (
                 <TableRow
                   key={rowIndex}
-                  className="border-border dark:border-border/30 hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors"
+                  className="border-b border-white/15 transition-colors last:border-0 hover:bg-white/35 dark:hover:bg-white/5"
                 >
                   {columns.map((column) => (
-                    <TableCell key={column.key} className="text-card-foreground">
+                    <TableCell key={column.key} className="py-3.5 text-card-foreground">
                       {row[column.key]}
                     </TableCell>
                   ))}
@@ -227,18 +227,18 @@ export default function DataTable({
         </div>
 
         {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
+        <div className="space-y-4 md:hidden">
           {paginatedData.map((row, rowIndex) => (
             <GlassCard
               key={rowIndex}
               variant="minimal"
               padding="md"
-              className="p-4"
+              className="border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4"
             >
               {columns.map((column) => (
                 <div
                   key={column.key}
-                  className="flex justify-between py-2 border-b border-border/40 last:border-0"
+                  className="flex justify-between border-b border-white/20 py-2 last:border-0"
                 >
                   <span className="text-sm font-medium text-muted-foreground">
                     {column.label}

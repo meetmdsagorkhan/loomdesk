@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { signOut } from '@/auth';
+import { signOut } from 'next-auth/react';
 
 interface SidebarProps {
   isMobileOpen?: boolean;

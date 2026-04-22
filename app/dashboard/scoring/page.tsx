@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Award, Loader2, Target } from 'lucide-react';
+import { TrendingUp, Award, Loader2, Target, Trophy } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { format } from 'date-fns';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
+import StatCard from '@/components/shared/StatCard';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -89,70 +92,62 @@ export default function ScoringPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">My Scoring</h1>
-        <p className="text-muted-foreground mt-1">Track your performance and quality metrics</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        badge="My Scoring"
+        title="Performance and quality metrics"
+        subtitle="Track your score trends, deductions, and ranking within the team."
+      />
 
       {/* Score Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Target className="text-primary" size={20} />
-            <p className="text-sm text-muted-foreground">Current Score</p>
-          </div>
-          <p className={`text-3xl font-bold ${getScoreColor(scoringData?.currentScore || 0)}`}>
-            {scoringData?.currentScore || 0}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {getScoreBadge(scoringData?.currentScore || 0)}
-          </p>
-        </div>
-
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Award className="text-primary" size={20} />
-            <p className="text-sm text-muted-foreground">Total Reports</p>
-          </div>
-          <p className="text-3xl font-bold text-foreground">
-            {scoringData?.totalReports || 0}
-          </p>
-        </div>
-
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-primary" size={20} />
-            <p className="text-sm text-muted-foreground">Average Score</p>
-          </div>
-          <p className={`text-3xl font-bold ${getScoreColor(scoringData?.averageScore || 0)}`}>
-            {scoringData?.averageScore?.toFixed(1) || 0}
-          </p>
-        </div>
-
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Award className="text-primary" size={20} />
-            <p className="text-sm text-muted-foreground">Team Rank</p>
-          </div>
-          <p className="text-3xl font-bold text-foreground">
-            #{scoringData?.rank || 0}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            of {scoringData?.totalMembers || 0} members
-          </p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Current Score"
+          value={scoringData?.currentScore || 0}
+          icon={<Target size={18} />}
+          color="primary"
+        />
+        <StatCard
+          title="Total Reports"
+          value={scoringData?.totalReports || 0}
+          icon={<Award size={18} />}
+          color="accent"
+        />
+        <StatCard
+          title="Average Score"
+          value={scoringData?.averageScore?.toFixed(1) || 0}
+          icon={<TrendingUp size={18} />}
+          color="warning"
+        />
+        <StatCard
+          title="Team Rank"
+          value={`#${scoringData?.rank || 0}`}
+          icon={<Trophy size={18} />}
+          color="success"
+        />
       </div>
 
+      <GlassCard variant="minimal" padding="sm">
+        <p className={`text-sm font-medium ${getScoreColor(scoringData?.currentScore || 0)}`}>
+          {getScoreBadge(scoringData?.currentScore || 0)}
+          <span className="ml-2 text-muted-foreground">
+            (of {scoringData?.totalMembers || 0} team members)
+          </span>
+        </p>
+      </GlassCard>
+
       {/* Recent Scores */}
-      <div className="bg-card rounded-2xl p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Recent Report Scores</h2>
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="border-b border-white/15 px-5 py-4 md:px-6">
+          <h2 className="text-lg font-semibold text-foreground">Recent Report Scores</h2>
+        </div>
+        <div className="p-4 md:p-6">
         {scoringData?.recentScores && scoringData.recentScores.length > 0 ? (
           <div className="space-y-4">
             {scoringData.recentScores.map((report) => (
               <div
                 key={report.reportId}
-                className="flex items-center justify-between p-4 bg-muted/50 rounded-xl"
+                className="glass-card flex items-center justify-between rounded-2xl border border-white/20 bg-gradient-to-r from-white/35 via-white/20 to-transparent p-4"
               >
                 <div>
                   <p className="font-medium text-foreground">
@@ -178,20 +173,24 @@ export default function ScoringPage() {
         ) : (
           <p className="text-center text-muted-foreground py-8">No reports scored yet</p>
         )}
-      </div>
+        </div>
+      </GlassCard>
 
       {/* Score Details for Latest Report */}
       {scoringData?.recentScores && scoringData.recentScores.length > 0 && (
-        <div className="bg-card rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-semibold text-foreground mb-4">
-            Latest Report Details - {format(new Date(scoringData.recentScores[0].date), 'MMM d, yyyy')}
-          </h2>
+        <GlassCard variant="panel" padding="none" className="overflow-hidden">
+          <div className="border-b border-white/15 px-5 py-4 md:px-6">
+            <h2 className="text-lg font-semibold text-foreground">
+              Latest Report Details - {format(new Date(scoringData.recentScores[0].date), 'MMM d, yyyy')}
+            </h2>
+          </div>
+          <div className="p-4 md:p-6">
           {scoringData.recentScores[0].scoreEvents.length > 0 ? (
             <div className="space-y-3">
               {scoringData.recentScores[0].scoreEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="flex items-start gap-3 p-3 bg-muted/50 rounded-xl shadow-sm"
+                  className="glass-card flex items-start gap-3 rounded-xl border border-white/20 bg-white/30 p-3"
                 >
                   <div
                     className={`mt-1 px-2 py-1 rounded-md text-xs font-semibold ${
@@ -216,7 +215,8 @@ export default function ScoringPage() {
               No deductions - perfect score!
             </p>
           )}
-        </div>
+          </div>
+        </GlassCard>
       )}
     </div>
   );

@@ -7,6 +7,8 @@ import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2,
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import { showToast } from '@/components/shared/Toast';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import {
   Dialog,
   DialogContent,
@@ -220,23 +222,25 @@ export default function QADetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push('/dashboard/qa')}
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Report Review</h1>
-          <p className="text-muted-foreground mt-1">Review and score submitted report</p>
-        </div>
-      </div>
+      <PageHeader
+        badge="QA Review"
+        title="Report Review"
+        subtitle="Review entries, add feedback, and apply score deductions."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/dashboard/qa')}
+            className="rounded-xl"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            Back
+          </Button>
+        }
+      />
 
       {/* Report Header */}
-      <div className="bg-card rounded-2xl p-6 shadow-lg">
+      <GlassCard variant="panel" padding="md">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
@@ -255,20 +259,20 @@ export default function QADetailPage() {
             <p className="text-sm text-muted-foreground">Current Score</p>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Entries Table */}
-      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
-        <div className="p-6 shadow-sm">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-medium text-foreground">Entries ({report.entries.length})</h2>
         </div>
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-white/15">
           {report.entries.map((entry) => (
-            <div key={entry.id} className="border-b border-border last:border-0">
+            <div key={entry.id} className="border-b border-white/15 last:border-0">
               <div className="p-4 flex items-center gap-4">
                 <button
                   onClick={() => toggleEntry(entry.id)}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                  className="rounded-lg p-2 transition-colors hover:bg-white/30 dark:hover:bg-white/10"
                 >
                   {expandedEntries.has(entry.id) ? (
                     <ChevronUp size={20} />
@@ -292,7 +296,7 @@ export default function QADetailPage() {
               {expandedEntries.has(entry.id) && (
                 <div className="px-4 pb-4 pl-14 space-y-4">
                   {entry.pendingReason && (
-                    <div className="bg-muted/50 rounded-lg p-3">
+                    <div className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25">
                       <p className="text-sm font-medium text-foreground mb-1">Pending Reason</p>
                       <p className="text-sm text-muted-foreground">{entry.pendingReason}</p>
                     </div>
@@ -308,6 +312,7 @@ export default function QADetailPage() {
                       <div className="space-y-2">
                         {entry.feedback.map((fb) => (
                           <div key={fb.id} className="bg-muted/50 rounded-lg p-3">
+                          <div key={fb.id} className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-medium text-foreground">{fb.author.name}</span>
                               <span className="text-xs text-muted-foreground">
@@ -331,6 +336,7 @@ export default function QADetailPage() {
                           placeholder="Add your feedback..."
                           rows={2}
                           className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                          className="w-full rounded-lg border border-white/20 bg-background/70 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                         />
                         <div className="flex gap-2">
                           <Button
@@ -386,48 +392,50 @@ export default function QADetailPage() {
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Score History */}
-      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
-        <div className="p-6 shadow-sm">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-medium text-foreground">Score History</h2>
         </div>
         {scoreEvents.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-4 md:p-6">
+            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 dark:bg-slate-900/30">
             <table className="w-full">
-              <thead className="bg-muted/50">
+              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Severity</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Reason</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Admin Note</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Deduction</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Severity</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reason</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Admin Note</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Deduction</th>
                 </tr>
               </thead>
               <tbody>
                 {scoreEvents.map((event) => (
-                  <tr key={event.id} className="border-b border-border last:border-0">
-                    <td className="px-6 py-4 text-sm text-foreground">
+                  <tr key={event.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                    <td className="px-5 py-3.5 text-sm text-foreground">
                       {format(new Date(event.createdAt), 'MMM d, yyyy HH:mm')}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <Badge variant={event.severity === 'MAJOR' ? 'danger' : 'warning'} label={event.severity} />
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground">{event.reason}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{event.adminNote || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-destructive font-medium">-{event.deduction}</td>
+                    <td className="px-5 py-3.5 text-sm text-foreground">{event.reason}</td>
+                    <td className="px-5 py-3.5 text-sm text-muted-foreground">{event.adminNote || '-'}</td>
+                    <td className="px-5 py-3.5 text-sm font-medium text-destructive">-{event.deduction}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <div className="p-12 text-center">
             <p className="text-muted-foreground">No score deductions yet</p>
           </div>
         )}
-      </div>
+      </GlassCard>
 
       {/* Deduct Score Modal */}
       <Dialog open={showDeductModal} onOpenChange={setShowDeductModal}>

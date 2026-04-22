@@ -113,6 +113,9 @@ export default function LeavePage() {
     );
   }
 
+  const inputClassName =
+    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all';
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -132,7 +135,7 @@ export default function LeavePage() {
       {/* Calendar View */}
       {!showCreateForm && (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <GlassCard variant="default" padding="md">
+          <GlassCard variant="panel" padding="md">
             <h2 className="text-lg font-semibold text-foreground mb-4">Leave Calendar</h2>
             <Calendar
               mode="single"
@@ -169,14 +172,14 @@ export default function LeavePage() {
             />
           </GlassCard>
 
-          <GlassCard variant="default" padding="md">
+          <GlassCard variant="panel" padding="md">
             <h2 className="text-lg font-semibold text-foreground mb-4">Upcoming Leave</h2>
             <div className="space-y-3">
               {leaveRequests
                 .filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date())
                 .slice(0, 5)
                 .map((leave) => (
-                  <div key={leave.id} className="flex items-start gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                  <div key={leave.id} className="flex items-start gap-3 rounded-2xl border border-white/20 bg-white/25 p-4 dark:bg-slate-900/30">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <CalendarIcon size={18} />
                     </div>
@@ -189,7 +192,7 @@ export default function LeavePage() {
                   </div>
                 ))}
               {leaveRequests.filter((leave) => leave.status === 'APPROVED' && new Date(leave.startDate) >= new Date()).length === 0 && (
-                <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center">
+                <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 text-center">
                   <p className="text-sm text-muted-foreground">No upcoming leave</p>
                 </div>
               )}
@@ -200,16 +203,18 @@ export default function LeavePage() {
 
       {/* Create Leave Form */}
       {showCreateForm && (
-        <GlassCard variant="default" padding="md">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Submit Leave Request</h2>
-          <form onSubmit={handleSubmitLeave} className="space-y-6 max-w-md">
+        <GlassCard variant="panel" padding="none" className="overflow-hidden">
+          <div className="border-b border-white/15 px-5 py-4 md:px-6">
+            <h2 className="text-lg font-semibold text-foreground">Submit Leave Request</h2>
+          </div>
+          <form onSubmit={handleSubmitLeave} className="max-w-md space-y-6 p-5 md:p-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
               <input
                 type="date"
                 value={newLeave.startDate}
                 onChange={(e) => setNewLeave({ ...newLeave, startDate: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className={inputClassName}
                 required
               />
             </div>
@@ -220,7 +225,7 @@ export default function LeavePage() {
                 value={newLeave.endDate}
                 onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
                 min={newLeave.startDate}
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className={inputClassName}
                 required
               />
             </div>
@@ -230,7 +235,7 @@ export default function LeavePage() {
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}
                 placeholder="Provide reason for leave"
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all min-h-[100px] resize-none"
+                className={`${inputClassName} min-h-[100px] resize-none`}
                 required
               />
             </div>
@@ -262,41 +267,42 @@ export default function LeavePage() {
       )}
 
       {/* Leave Requests Table */}
-      <GlassCard variant="default" padding="none">
-        <div className="border-b border-border/60 p-6">
+      <GlassCard variant="panel" padding="none" className="overflow-hidden">
+        <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-semibold text-foreground">My Leave Requests</h2>
         </div>
         {leaveRequests.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8">
               <p className="text-sm text-muted-foreground">No leave requests found</p>
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto p-6">
+          <div className="p-4 md:p-6">
+            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border/60">
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Start Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">End Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Reason</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Applied On</th>
+                <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Start Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">End Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reason</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Applied On</th>
                 </tr>
               </thead>
               <tbody>
                 {leaveRequests.map((leave) => (
-                  <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
-                    <td className="px-6 py-4 text-sm text-foreground">
+                  <tr key={leave.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5">
+                    <td className="px-5 py-3.5 text-sm text-foreground">
                       {format(new Date(leave.startDate), 'MMM d, yyyy')}
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground">
+                    <td className="px-5 py-3.5 text-sm text-foreground">
                       {format(new Date(leave.endDate), 'MMM d, yyyy')}
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">
+                    <td className="max-w-xs truncate px-5 py-3.5 text-sm text-muted-foreground">
                       {leave.reason}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <Badge
                         variant={
                           leave.status === 'APPROVED'
@@ -308,13 +314,14 @@ export default function LeavePage() {
                         label={leave.status}
                       />
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-5 py-3.5 text-sm text-muted-foreground">
                       {format(new Date(leave.createdAt), 'MMM d, yyyy')}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </GlassCard>

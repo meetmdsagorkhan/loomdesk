@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { z } from 'zod';
 
 const optionalString = <Schema extends z.ZodTypeAny>(schema: Schema) =>
