@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Activity, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
@@ -58,10 +58,9 @@ export default function VerifyEmailPage() {
   const displayMessage = hasToken ? message : 'Verification token is missing.';
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+    <div className="glass-card rounded-2xl p-8">
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <Activity className="w-8 h-8 text-primary" />
-        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+        <img src="/logo.png" alt="LoomDesk" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="text-center mb-8">
@@ -93,14 +92,14 @@ export default function VerifyEmailPage() {
       <div className="space-y-3">
         <Link
           href="/login?verified=1"
-          className="inline-flex w-full h-12 items-center justify-center rounded-xl bg-slate-800 text-base font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+          className="btn-primary inline-flex w-full h-12 items-center justify-center rounded-xl text-base font-medium"
         >
           Back to sign in
         </Link>
         {displayStatus === 'error' && (
           <Link
             href="/resend-verification"
-            className="inline-flex w-full h-12 items-center justify-center rounded-xl border border-input bg-background text-base font-medium text-foreground transition-colors hover:bg-muted"
+            className="glass-pill inline-flex w-full h-12 items-center justify-center rounded-xl text-base font-medium"
           >
             Send a new verification link
           </Link>

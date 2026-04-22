@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { format, differenceInDays } from 'date-fns';
 import { Check, X, Loader2, Calendar, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -152,7 +153,7 @@ export default function LeaveAdminPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+      <section className="glass-card rounded-3xl p-6 card-elevation-md">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
             Leave Management
@@ -167,30 +168,30 @@ export default function LeaveAdminPage() {
       </section>
 
       {/* Filter Bar */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+      <section className="glass-card rounded-3xl p-6 card-elevation-md">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-            <select
+            <Select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              className="form-input"
             >
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
               <option value="all">All</option>
-            </select>
+            </Select>
           </div>
 
           {/* Member Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Member</label>
-            <select
+            <Select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              className="form-input"
             >
               <option value="">All Members</option>
               {members.map((member) => (
@@ -198,7 +199,7 @@ export default function LeaveAdminPage() {
                   {member.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Apply Button */}
@@ -213,7 +214,7 @@ export default function LeaveAdminPage() {
 
       {/* Pending Requests Section */}
       {selectedStatus === 'PENDING' && pendingRequests.length > 0 && (
-        <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+        <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
           <div className="border-b border-border/60 p-6 bg-warning/5">
             <h2 className="text-lg font-semibold text-foreground">
               Pending Requests ({pendingRequests.length})
@@ -287,7 +288,7 @@ export default function LeaveAdminPage() {
       )}
 
       {/* All Requests Table */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+      <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
         <div className="border-b border-border/60 p-6">
           <h2 className="text-lg font-semibold text-foreground">
             All Requests ({leaveRequests.length})

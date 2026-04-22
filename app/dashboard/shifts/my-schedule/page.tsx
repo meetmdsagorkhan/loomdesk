@@ -131,7 +131,7 @@ export default function MySchedulePage() {
       </div>
 
       {/* Weekly Calendar */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border">
           {weekDays.map((date) => (
             <div

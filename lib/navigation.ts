@@ -128,121 +128,121 @@ const routeOverrides: Array<{
   test: (pathname: string) => boolean;
   meta: RouteMeta;
 }> = [
-  {
-    test: (pathname) => pathname === '/dashboard',
-    meta: {
-      title: 'Overview',
-      description: 'Track the team at a glance and spot what needs attention first.',
-      href: '/dashboard',
+    {
+      test: (pathname) => pathname === '/dashboard',
+      meta: {
+        title: 'Overview',
+        description: 'Track the team at a glance and spot what needs attention first.',
+        href: '/dashboard',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/reports' || pathname === '/dashboard/reports',
-    meta: {
-      title: 'Reports',
-      description: 'Create, review, and submit daily work logs without leaving the workflow.',
-      href: '/reports',
+    {
+      test: (pathname) => pathname === '/reports' || pathname === '/dashboard/reports',
+      meta: {
+        title: 'Reports',
+        description: 'Create, review, and submit daily work logs without leaving the workflow.',
+        href: '/reports',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/qa' || pathname === '/dashboard/qa',
-    meta: {
-      title: 'QA Review',
-      description: 'Inspect submitted reports, leave feedback, and apply score deductions cleanly.',
-      href: '/qa',
+    {
+      test: (pathname) => pathname === '/qa' || pathname === '/dashboard/qa',
+      meta: {
+        title: 'QA Review',
+        description: 'Inspect submitted reports, leave feedback, and apply score deductions cleanly.',
+        href: '/qa',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname.startsWith('/qa/') || pathname.startsWith('/dashboard/qa/'),
-    meta: {
-      title: 'QA Detail',
-      description: 'A focused review surface for one report, its entries, and score history.',
-      href: '/qa',
+    {
+      test: (pathname) => pathname.startsWith('/qa/') || pathname.startsWith('/dashboard/qa/'),
+      meta: {
+        title: 'QA Detail',
+        description: 'A focused review surface for one report, its entries, and score history.',
+        href: '/qa',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/leave' || pathname === '/dashboard/leave',
-    meta: {
-      title: 'Leave',
-      description: 'Request time off, review status, and keep team coverage visible.',
-      href: '/leave',
+    {
+      test: (pathname) => pathname === '/leave' || pathname === '/dashboard/leave',
+      meta: {
+        title: 'Leave',
+        description: 'Request time off, review status, and keep team coverage visible.',
+        href: '/leave',
+      },
     },
-  },
-  {
-    test: (pathname) =>
-      pathname === '/leave/admin' || pathname === '/dashboard/leave/admin',
-    meta: {
-      title: 'Leave Admin',
-      description: 'Approve or reject requests from a queue built for quick decisions.',
-      href: '/leave/admin',
+    {
+      test: (pathname) =>
+        pathname === '/leave/admin' || pathname === '/dashboard/leave/admin',
+      meta: {
+        title: 'Leave Admin',
+        description: 'Approve or reject requests from a queue built for quick decisions.',
+        href: '/leave/admin',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/shifts' || pathname === '/dashboard/shifts',
-    meta: {
-      title: 'Shifts',
-      description: 'Manage shift templates and assignments from one operational hub.',
-      href: '/shifts',
+    {
+      test: (pathname) => pathname === '/shifts' || pathname === '/dashboard/shifts',
+      meta: {
+        title: 'Shifts',
+        description: 'Manage shift templates and assignments from one operational hub.',
+        href: '/shifts',
+      },
     },
-  },
-  {
-    test: (pathname) =>
-      pathname === '/shifts/my-schedule' || pathname === '/dashboard/shifts/my-schedule',
-    meta: {
-      title: 'My Schedule',
-      description: 'See your assigned shifts and upcoming coverage windows clearly.',
-      href: '/shifts/my-schedule',
+    {
+      test: (pathname) =>
+        pathname === '/shifts/my-schedule' || pathname === '/dashboard/shifts/my-schedule',
+      meta: {
+        title: 'My Schedule',
+        description: 'See your assigned shifts and upcoming coverage windows clearly.',
+        href: '/shifts/my-schedule',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/attendance' || pathname === '/dashboard/attendance',
-    meta: {
-      title: 'Attendance',
-      description: 'Monitor presence patterns, late submissions, and missed days.',
-      href: '/attendance',
+    {
+      test: (pathname) => pathname === '/attendance' || pathname === '/dashboard/attendance',
+      meta: {
+        title: 'Attendance',
+        description: 'Monitor presence patterns, late submissions, and missed days.',
+        href: '/attendance',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/analytics' || pathname === '/dashboard/analytics',
-    meta: {
-      title: 'Analytics',
-      description: 'Follow performance trends, quality shifts, and operational pressure points.',
-      href: '/analytics',
+    {
+      test: (pathname) => pathname === '/analytics' || pathname === '/dashboard/analytics',
+      meta: {
+        title: 'Analytics',
+        description: 'Follow performance trends, quality shifts, and operational pressure points.',
+        href: '/analytics',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/calendar' || pathname === '/dashboard/calendar',
-    meta: {
-      title: 'Calendar',
-      description: 'View your schedule, leaves, and team activities in a unified calendar view.',
-      href: '/calendar',
+    {
+      test: (pathname) => pathname === '/calendar' || pathname === '/dashboard/calendar',
+      meta: {
+        title: 'Calendar',
+        description: 'View your schedule, leaves, and team activities in a unified calendar view.',
+        href: '/calendar',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
-    meta: {
-      title: 'Messages',
-      description: 'Stay aligned with teammates through direct conversation threads.',
-      href: '/messages',
+    {
+      test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
+      meta: {
+        title: 'Messages',
+        description: 'Stay aligned with teammates through direct conversation threads.',
+        href: '/messages',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/scoring' || pathname === '/dashboard/scoring',
-    meta: {
-      title: 'Scoring',
-      description: 'Track your current score, historical trends, and ranking context.',
-      href: '/scoring',
+    {
+      test: (pathname) => pathname === '/scoring' || pathname === '/dashboard/scoring',
+      meta: {
+        title: 'Scoring',
+        description: 'Track your current score, historical trends, and ranking context.',
+        href: '/scoring',
+      },
     },
-  },
-  {
-    test: (pathname) => pathname === '/settings' || pathname === '/dashboard/settings',
-    meta: {
-      title: 'Settings',
-      description: 'Update profile details and tune the workspace to your preferences.',
-      href: '/settings',
+    {
+      test: (pathname) => pathname === '/settings' || pathname === '/dashboard/settings',
+      meta: {
+        title: 'Settings',
+        description: 'Update profile details and tune the workspace to your preferences.',
+        href: '/settings',
+      },
     },
-  },
-];
+  ];
 
 export function getRouteMeta(pathname: string): RouteMeta {
   const match = routeOverrides.find((route) => route.test(pathname));

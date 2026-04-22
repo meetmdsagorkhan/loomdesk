@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { Activity, AlertCircle, CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -46,10 +48,9 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+    <div className="glass-card rounded-2xl p-8">
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <Activity className="w-8 h-8 text-primary" />
-        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+        <img src="/logo.png" alt="LoomDesk" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="text-center mb-8">
@@ -85,19 +86,20 @@ export default function ForgotPasswordPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+          <Label htmlFor="email">
             Email
-          </label>
+          </Label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
+            <Input
               id="email"
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-12"
               placeholder="you@example.com"
               disabled={isLoading}
+              required
             />
           </div>
         </div>

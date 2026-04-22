@@ -3,9 +3,11 @@
 import { useState, useEffect, Suspense, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Activity, Eye, EyeOff, Loader2, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { inviteSignupSchema, type InviteSignupFormData } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Badge from '@/components/shared/Badge';
 
 function InviteSignupContent() {
@@ -124,10 +126,9 @@ function InviteSignupContent() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+    <div className="glass-card rounded-2xl p-8">
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <Activity className="w-8 h-8 text-primary" />
-        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+        <img src="/logo.png" alt="LoomDesk" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="text-center mb-6">
@@ -183,17 +184,17 @@ function InviteSignupContent() {
       {!isValidating && !inviteError && !successMessage && (
         <form onSubmit={onSubmit} className="space-y-5">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-foreground mb-2">
+            <Label htmlFor="fullName" className="mb-2">
               Full Name
-            </label>
+            </Label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
+              <Input
                 id="fullName"
                 type="text"
                 value={formData.fullName}
                 onChange={(event) => handleFieldChange('fullName', event.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="pl-12"
                 placeholder="John Doe"
                 disabled={isLoading}
               />
@@ -204,16 +205,16 @@ function InviteSignupContent() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+            <Label htmlFor="password" className="mb-2">
               Password
-            </label>
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(event) => handleFieldChange('password', event.target.value)}
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="pr-12"
                 placeholder="Password"
                 disabled={isLoading}
               />
@@ -231,21 +232,21 @@ function InviteSignupContent() {
           </div>
 
           <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-foreground mb-2"
-            >
+            <Label
+                htmlFor="confirmPassword"
+                className="mb-2"
+              >
               Confirm Password
-            </label>
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={formData.confirmPassword}
                 onChange={(event) =>
                   handleFieldChange('confirmPassword', event.target.value)
                 }
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="pr-12"
                 placeholder="Confirm password"
                 disabled={isLoading}
               />
@@ -283,13 +284,13 @@ function InviteSignupContent() {
         <div className="space-y-3">
           <Link
             href="/resend-verification"
-            className="inline-flex w-full h-12 items-center justify-center rounded-xl bg-slate-800 text-base font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+            className="btn-primary inline-flex w-full h-12 items-center justify-center rounded-xl text-base font-medium"
           >
             Resend verification email
           </Link>
           <Link
             href="/login"
-            className="inline-flex w-full h-12 items-center justify-center rounded-xl border border-input bg-background text-base font-medium text-foreground transition-colors hover:bg-muted"
+            className="glass-pill inline-flex w-full h-12 items-center justify-center rounded-xl text-base font-medium"
           >
             Back to sign in
           </Link>

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Activity,
   BarChart2,
   CalendarDays,
   CalendarOff,
@@ -138,15 +137,13 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-4">
             <Link href="/dashboard" className="flex items-center gap-3 min-h-[44px]" onClick={onMobileClose}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary-light to-info text-primary-foreground shadow-[0_20px_45px_rgba(99,102,241,0.32)] ring-1 ring-white/30">
-                <Activity size={20} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+                <img src="/icon.png" alt="Icon" className="w-10 h-10 object-contain drop-shadow-sm" />
               </div>
               {!isCollapsed && (
-                <div className="flex flex-col">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                    LoomDesk
-                  </p>
-                  <p className="text-sm font-semibold text-sidebar-foreground">
+                <div className="flex flex-col justify-center">
+                  <img src="/logo.png" alt="LoomDesk" className="h-6 w-auto object-contain ml-1" />
+                  <p className="text-[10px] font-medium text-sidebar-foreground/60 ml-2 tracking-wider uppercase mt-0.5">
                     Executive Ops
                   </p>
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -173,16 +174,16 @@ export default function MessagesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
         {/* Conversations List */}
-        <div className="bg-card rounded-2xl overflow-hidden flex flex-col shadow-lg">
+        <div className="glass-panel rounded-2xl overflow-hidden flex flex-col shadow-lg">
           <div className="p-4 shadow-sm">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <input
+              <Input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="form-input pl-10"
               />
             </div>
           </div>
@@ -232,7 +233,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Messages Area */}
-        <div className="lg:col-span-2 bg-card rounded-2xl overflow-hidden flex flex-col shadow-lg">
+        <div className="lg:col-span-2 glass-panel rounded-2xl overflow-hidden flex flex-col shadow-lg">
           {selectedConversation ? (
             <>
               <div className="p-4 shadow-sm">
@@ -264,12 +265,12 @@ export default function MessagesPage() {
               </div>
               <form onSubmit={sendMessage} className="p-4 shadow-sm">
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 px-4 py-2 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="form-input flex-1 py-2"
                   />
                   <Button type="submit" disabled={isSending || !newMessage.trim()}>
                     {isSending ? (

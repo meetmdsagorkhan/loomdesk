@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Badge from '@/components/shared/Badge';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
@@ -209,8 +211,8 @@ export default function LeavePage() {
           </div>
           <form onSubmit={handleSubmitLeave} className="max-w-md space-y-6 p-5 md:p-6">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Start Date</label>
-              <input
+              <Label className="block text-sm font-medium text-foreground mb-2">Start Date</Label>
+              <Input
                 type="date"
                 value={newLeave.startDate}
                 onChange={(e) => setNewLeave({ ...newLeave, startDate: e.target.value })}
@@ -219,8 +221,8 @@ export default function LeavePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">End Date</label>
-              <input
+              <Label className="block text-sm font-medium text-foreground mb-2">End Date</Label>
+              <Input
                 type="date"
                 value={newLeave.endDate}
                 onChange={(e) => setNewLeave({ ...newLeave, endDate: e.target.value })}
@@ -230,7 +232,7 @@ export default function LeavePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Reason</label>
+              <Label className="block text-sm font-medium text-foreground mb-2">Reason</Label>
               <textarea
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}

@@ -4,9 +4,12 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { Activity, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -91,10 +94,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+    <div className="glass-card rounded-2xl p-8">
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <Activity className="w-8 h-8 text-primary" />
-        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+        <img src="/logo.png" alt="LoomDesk" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="text-center mb-8">
@@ -117,15 +119,14 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+          <Label htmlFor="email" className="mb-2">
             Email
-          </label>
-          <input
+          </Label>
+          <Input
             id="email"
             type="email"
             value={formData.email}
             onChange={(event) => handleFieldChange('email', event.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="you@example.com"
             disabled={isLoading}
             suppressHydrationWarning
@@ -136,16 +137,16 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+          <Label htmlFor="password" className="mb-2">
             Password
-          </label>
+          </Label>
           <div className="relative">
-            <input
+            <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={(event) => handleFieldChange('password', event.target.value)}
-              className="w-full px-4 py-3 pr-12 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="pr-12"
               placeholder="Password"
               disabled={isLoading}
               suppressHydrationWarning
@@ -164,16 +165,14 @@ export default function LoginPage() {
         </div>
 
         <div className="text-right">
-          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground float-left">
-            <input
-              type="checkbox"
+          <Label className="inline-flex items-center gap-2 text-sm text-muted-foreground float-left">
+            <Checkbox
               checked={formData.rememberMe}
               onChange={(event) => handleFieldChange('rememberMe', event.target.checked)}
               disabled={isLoading}
-              className="h-4 w-4 rounded border border-input"
             />
             Remember me
-          </label>
+          </Label>
           <Link
             href="/forgot-password"
             className="text-sm text-primary hover:underline transition-colors"
@@ -201,15 +200,14 @@ export default function LoginPage() {
         {showTwoFactorFields && (
           <div className="space-y-5 rounded-xl border border-border bg-muted/20 p-4">
             <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-foreground mb-2">
+              <Label htmlFor="otp" className="mb-2">
                 Authentication Code
-              </label>
-              <input
+              </Label>
+              <Input
                 id="otp"
                 type="text"
                 value={formData.otp ?? ''}
                 onChange={(event) => handleFieldChange('otp', event.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="123456"
                 disabled={isLoading}
                 inputMode="numeric"
@@ -217,18 +215,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label
+              <Label
                 htmlFor="recoveryCode"
-                className="block text-sm font-medium text-foreground mb-2"
+                className="mb-2"
               >
                 Recovery Code
-              </label>
-              <input
+              </Label>
+              <Input
                 id="recoveryCode"
                 type="text"
                 value={formData.recoveryCode ?? ''}
                 onChange={(event) => handleFieldChange('recoveryCode', event.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="ABCD-1234"
                 disabled={isLoading}
               />
@@ -242,7 +239,8 @@ export default function LoginPage() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-12 text-base font-medium rounded-xl bg-slate-800 text-white dark:bg-white dark:text-neutral-900 hover:bg-slate-700 dark:hover:bg-white/90"
+          variant="default"
+          className="w-full h-12 text-base font-medium"
         >
           {isLoading ? (
             <>

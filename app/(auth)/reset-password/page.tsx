@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Activity, AlertCircle, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -88,10 +90,9 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+    <div className="glass-card rounded-2xl p-8">
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <Activity className="w-8 h-8 text-primary" />
-        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+        <img src="/logo.png" alt="LoomDesk" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="text-center mb-8">
@@ -124,16 +125,16 @@ function ResetPasswordContent() {
       {!isChecking && !successMessage && !error && (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
-              New password
-            </label>
+            <Label htmlFor="password">
+              New Password
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="pr-12"
                 placeholder="New password"
                 disabled={isLoading}
               />
@@ -148,17 +149,17 @@ function ResetPasswordContent() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-2">
-              Confirm password
-            </label>
+            <Label htmlFor="confirmPassword">
+              Confirm New Password
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="Confirm password"
+                className="pr-12"
+                placeholder="Confirm new password"
                 disabled={isLoading}
               />
               <button
@@ -197,7 +198,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+        <div className="glass-card rounded-2xl p-8">
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>

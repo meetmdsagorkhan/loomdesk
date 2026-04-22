@@ -311,7 +311,6 @@ export default function QADetailPage() {
                     {entry.feedback.length > 0 ? (
                       <div className="space-y-2">
                         {entry.feedback.map((fb) => (
-                          <div key={fb.id} className="bg-muted/50 rounded-lg p-3">
                           <div key={fb.id} className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-medium text-foreground">{fb.author.name}</span>
@@ -335,7 +334,6 @@ export default function QADetailPage() {
                           onChange={(e) => setFeedbackComment(e.target.value)}
                           placeholder="Add your feedback..."
                           rows={2}
-                          className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                           className="w-full rounded-lg border border-white/20 bg-background/70 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                         />
                         <div className="flex gap-2">

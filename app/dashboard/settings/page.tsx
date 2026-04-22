@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Users, Bell, Mail, Loader2, Plus, ShieldCheck, KeyRound, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -381,32 +384,32 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold text-foreground mb-4">Profile Settings</h2>
               <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Name</label>
-                  <input
+                  <Label className="form-label">Name</Label>
+                  <Input
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Current Password</label>
-                  <input
+                  <Label className="form-label">Current Password</Label>
+                  <Input
                     type="password"
                     value={profileData.currentPassword}
                     onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">New Password</label>
-                  <input
+                  <Label className="form-label">New Password</Label>
+                  <Input
                     type="password"
                     value={profileData.newPassword}
                     onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="form-input"
                   />
                 </div>
                 <Button type="submit" disabled={isUpdatingProfile} className="rounded-xl">
@@ -428,26 +431,26 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold text-foreground mb-4">Team Management</h2>
               <form onSubmit={handleInvite} className="space-y-4 max-w-md">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-                  <input
+                  <Label className="form-label">Email</Label>
+                  <Input
                     type="email"
                     value={inviteData.email}
                     onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
                     placeholder="Enter team member email"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Role</label>
-                  <select
+                  <Label className="form-label">Role</Label>
+                  <Select
                     value={inviteData.role}
                     onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    className="form-input"
                   >
                     <option value="MEMBER">Member</option>
                     <option value="TEAM_LEAD">Team Lead</option>
                     <option value="ADMIN">Admin</option>
-                  </select>
+                  </Select>
                 </div>
                 <Button type="submit" disabled={isInviting} className="rounded-xl">
                   {isInviting ? (
@@ -590,15 +593,15 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <Label className="form-label">
                         Step 2: Enter the 6-digit code from your authenticator app
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         type="text"
                         value={twoFactorOtp}
                         onChange={(e) => setTwoFactorOtp(e.target.value)}
                         placeholder="123456"
-                        className="w-full max-w-xs px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                        className="form-input max-w-xs"
                       />
                     </div>
 
@@ -633,41 +636,41 @@ export default function SettingsPage() {
                   <div className="space-y-4 rounded-2xl border border-border/50 bg-background/80 p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <Label className="form-label">
                           Current Password
-                        </label>
-                        <input
+                        </Label>
+                        <Input
                           type="password"
                           value={twoFactorPassword}
                           onChange={(e) => setTwoFactorPassword(e.target.value)}
                           placeholder="Required for security changes"
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                          className="form-input"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <Label className="form-label">
                           Authenticator Code
-                        </label>
-                        <input
+                        </Label>
+                        <Input
                           type="text"
                           value={twoFactorOtp}
                           onChange={(e) => setTwoFactorOtp(e.target.value)}
                           placeholder="123456"
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                          className="form-input"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <Label className="form-label">
                         Or Use a Recovery Code
-                      </label>
-                      <input
+                      </Label>
+                      <Input
                         type="text"
                         value={twoFactorRecoveryCode}
                         onChange={(e) => setTwoFactorRecoveryCode(e.target.value)}
                         placeholder="ABCD-1234"
-                        className="w-full max-w-xs px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                        className="form-input max-w-xs"
                       />
                     </div>
 

@@ -11,6 +11,8 @@ import {
 } from '@tanstack/react-table';
 import { entrySchema, type EntryFormData } from '@/lib/validations/report';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Badge from '@/components/shared/Badge';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
@@ -268,10 +270,8 @@ export default function ReportsPage() {
 
   const isSubmitted = report?.status === 'SUBMITTED';
   const entryCount = report?.entries.length || 0;
-  const inputClassName =
-    'w-full rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-foreground placeholder:text-muted-foreground shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/40';
   const segmentClassName =
-    'rounded-xl border border-white/20 bg-background/70 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer peer-checked:border-primary/70 peer-checked:bg-primary peer-checked:text-primary-foreground';
+    'rounded-xl border border-border bg-background/50 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer hover:bg-muted/50 peer-checked:border-primary peer-checked:bg-primary/15 peer-checked:text-foreground peer-checked:ring-1 peer-checked:ring-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring';
 
   return (
     <div className="space-y-8">
@@ -307,7 +307,7 @@ export default function ReportsPage() {
           <form onSubmit={onAddEntry} className="space-y-5 p-5 md:p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Type</label>
+                <Label className="mb-2">Type</Label>
                 <div className="flex gap-2">
                   <label className="flex-1">
                     <input
@@ -337,15 +337,14 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <Label className="mb-2">
                   Reference ID
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={entryForm.referenceId}
                   onChange={(event) => handleFieldChange('referenceId', event.target.value)}
                   placeholder="e.g. TKT-1042"
-                  className={inputClassName}
                 />
                 {fieldErrors.referenceId && (
                   <p className="text-destructive text-xs mt-1">{fieldErrors.referenceId}</p>
@@ -353,7 +352,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+                <Label className="mb-2">Status</Label>
                 <div className="flex gap-2">
                   <label className="flex-1">
                     <input
@@ -384,12 +383,12 @@ export default function ReportsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Note</label>
+              <Label className="mb-2">Note</Label>
               <textarea
                 value={entryForm.note}
                 onChange={(event) => handleFieldChange('note', event.target.value)}
                 rows={2}
-                className={`${inputClassName} resize-none`}
+                className="form-input resize-none"
                 placeholder="Describe the work done..."
               />
               {fieldErrors.note && (
@@ -399,14 +398,13 @@ export default function ReportsPage() {
 
             {entryForm.status === 'PENDING' && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <Label className="mb-2">
                   Pending Reason <span className="text-destructive">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={entryForm.pendingReason ?? ''}
                   onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
-                  className={inputClassName}
                   placeholder="Why is this pending?"
                 />
                 {fieldErrors.pendingReason && (
