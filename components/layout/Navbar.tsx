@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Bell, Check, Loader2, Sun, Moon, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +15,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from 'next-themes';
-import { signOut } from '@/auth';
 
 interface NavbarProps {
   onMobileMenuToggle?: () => void;
@@ -31,7 +30,7 @@ interface Notification {
 }
 
 export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
-  const { user, isLoading } = useCurrentUser();
+  const { user } = useCurrentUser();
   const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -39,39 +38,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!supabase || !user) return;
-
-    // Fetch initial notifications
-    fetchNotifications();
-
-    // Subscribe to real-time notifications
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotification = payload.new as Notification;
-          setNotifications((prev) => [newNotification, ...prev]);
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [supabase, user]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useEffectEvent(async () => {
     try {
       if (!supabase || !user) return;
 
@@ -99,7 +66,37 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
-  };
+  });
+
+  useEffect(() => {
+    if (!supabase || !user) return;
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification;
+          setNotifications((prev) => [newNotification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [user]);
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -150,19 +147,6 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
     setIsOpen(false);
   };
 
-  const handleLogout = async () => {
-    await signOut({ redirectTo: '/login' });
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'SCORE_DEDUCTION':
@@ -183,7 +167,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         variant="ghost"
         size="icon"
         onClick={onMobileMenuToggle}
-        className="lg:hidden fixed top-4 left-4 z-50 rounded-xl bg-white dark:bg-gray-800 shadow-md"
+        className="glass-pill lg:hidden fixed top-4 left-4 z-50 rounded-2xl"
       >
         <Menu size={20} className="text-foreground" />
       </Button>
@@ -193,7 +177,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="glass-card rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20 transition-colors"
+          className="glass-pill flex h-12 w-12 items-center justify-center rounded-full"
         >
           <Sun size={20} className="hidden dark:block text-white" />
           <Moon size={20} className="block dark:hidden text-slate-800" />
@@ -202,16 +186,20 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         {/* Notifications */}
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger>
-            <button className="glass-card relative rounded-full w-12 h-12 flex items-center justify-center hover:bg-white/20 transition-colors">
+            <button className="glass-pill relative flex h-12 w-12 items-center justify-center rounded-full">
               <Bell size={20} className="text-foreground" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg backdrop-blur-sm">
                   {unreadCount}
                 </span>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto" ref={dropdownRef}>
+          <DropdownMenuContent
+            align="end"
+            className="glass-panel w-80 max-h-[400px] overflow-y-auto rounded-3xl p-2"
+            ref={dropdownRef}
+          >
             <DropdownMenuLabel className="flex items-center justify-between">
               <span>Notifications</span>
               {unreadCount > 0 && (
@@ -237,7 +225,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
               notifications.map((notification) => (
                 <DropdownMenuItem
                   key={notification.id}
-                  className="p-3 cursor-pointer"
+                  className="cursor-pointer rounded-2xl p-3"
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3 w-full">

@@ -34,7 +34,7 @@ export function BentoCard({ children, className, colSpan = 1, rowSpan = 1 }: Ben
 
   return (
     <div className={cn(
-      "rounded-xl lg:rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm p-4 md:p-6 transition-all hover:shadow-lg",
+      "glass-card rounded-[1.4rem] p-4 md:p-6",
       colSpanClasses[colSpan],
       rowSpanClasses[rowSpan],
       className

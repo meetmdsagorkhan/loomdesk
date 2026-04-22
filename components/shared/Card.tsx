@@ -10,7 +10,7 @@ interface CardProps {
 
 export default function Card({ title, subtitle, children, className, action }: CardProps) {
   return (
-    <div className={`glass-card rounded-3xl card-elevation-md ${className || ''}`}>
+    <div className={`glass-card rounded-[1.75rem] ${className || ''}`}>
       {(title || subtitle || action) && (
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>

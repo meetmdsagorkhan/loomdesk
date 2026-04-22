@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 const markReadSchema = z.object({
   userId: z.string().min(1, 'userId is required'),
@@ -35,7 +36,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
     }
 
-    console.error('Mark messages read error:', error);
+    logger.error('Mark messages read error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to update messages' }, { status: 500 });
   }
 }

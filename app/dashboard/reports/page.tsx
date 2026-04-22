@@ -12,6 +12,8 @@ import {
 import { entrySchema, type EntryFormData } from '@/lib/validations/report';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
@@ -269,35 +271,29 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-              Daily Report
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{format(new Date(), 'EEEE, MMMM d, yyyy')}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Track your daily work entries, add tickets and chats, and submit your report for review.
-            </p>
-          </div>
+      <PageHeader
+        badge="Daily Report"
+        title={format(new Date(), 'EEEE, MMMM d, yyyy')}
+        subtitle="Track your daily work entries, add tickets and chats, and submit your report for review."
+        actions={
           <Badge
             variant={isSubmitted ? 'success' : 'warning'}
             label={isSubmitted ? 'SUBMITTED' : 'DRAFT'}
           />
-        </div>
-      </section>
+        }
+      />
 
       {isSubmitted && (
-        <section className="rounded-3xl border border-border/60 bg-warning/5 p-4 card-elevation-sm">
+        <GlassCard variant="bordered" padding="sm" className="bg-warning/5">
           <div className="flex items-center gap-3">
             <AlertCircle size={20} className="text-warning" />
             <span className="text-sm text-foreground">Report submitted. Contact admin to unlock.</span>
           </div>
-        </section>
+        </GlassCard>
       )}
 
       {!isSubmitted && (
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <GlassCard variant="default" padding="md">
           <h2 className="text-lg font-semibold text-foreground mb-4">Add Entry</h2>
           <form onSubmit={onAddEntry} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -423,7 +419,7 @@ export default function ReportsPage() {
               </Button>
             </div>
           </form>
-        </section>
+        </GlassCard>
       )}
 
       {showSavedIndicator && (
@@ -433,7 +429,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+      <GlassCard variant="default" padding="none">
         <div className="border-b border-border/60 p-6">
           <h2 className="text-lg font-semibold text-foreground">Entries</h2>
         </div>
@@ -477,7 +473,7 @@ export default function ReportsPage() {
             </table>
           </div>
         )}
-      </section>
+      </GlassCard>
 
       <section className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">

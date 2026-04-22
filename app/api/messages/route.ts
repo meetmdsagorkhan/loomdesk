@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
+import { env } from '@/lib/env.server';
+import { logger } from '@/lib/logger';
+import { consumeRateLimitPersistent } from '@/lib/rate-limit';
+import type { Prisma } from '@prisma/client';
 
 const createMessageSchema = z.object({
   receiverId: z.string().min(1, 'Receiver is required'),
@@ -28,7 +32,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: params.error.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
     }
 
-    const messages = await prisma.message.findMany({
+    const messages: Prisma.MessageGetPayload<{
+      include: {
+        sender: {
+          select: {
+            id: true;
+            name: true;
+            email: true;
+          };
+        };
+      };
+    }>[] = await prisma.message.findMany({
       where: {
         OR: [
           { senderId: session.user.id, receiverId: params.data.userId },
@@ -60,7 +74,9 @@ export async function GET(request: NextRequest) {
       }))
     );
   } catch (error) {
-    console.error('Get messages error:', error);
+    logger.error('Get messages error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
   }
 }
@@ -71,6 +87,19 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const messageRateLimit = await consumeRateLimitPersistent(`messages:${session.user.id}`, {
+      limit: env.MESSAGE_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: env.MESSAGE_RATE_LIMIT_WINDOW_MS,
+      blockDurationMs: env.MESSAGE_RATE_LIMIT_WINDOW_MS,
+    });
+
+    if (!messageRateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many messages sent. Please wait before trying again.' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -120,7 +149,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
     }
 
-    console.error('Create message error:', error);
+    logger.error('Create message error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
 }

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
@@ -236,28 +238,19 @@ export default function ShiftsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-            Shift Management
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            Create shift templates and assign to team members
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Define work schedules, assign shifts to team members, and track all assignments from one centralized location.
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        badge="Shift Management"
+        title="Create shift templates and assign to team members"
+        subtitle="Define work schedules, assign shifts to team members, and track all assignments from one centralized location."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Shifts Panel */}
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <GlassCard variant="default" padding="md">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Shift Templates</h2>
             {!showCreateShift && (
-              <Button size="sm" onClick={() => setShowCreateShift(true)} className="rounded-xl">
+              <Button size="sm" onClick={() => setShowCreateShift(true)}>
                 <Plus size={16} className="mr-2" />
                 Create Shift
               </Button>
@@ -365,10 +358,10 @@ export default function ShiftsPage() {
               ))}
             </div>
           )}
-        </section>
+        </GlassCard>
 
         {/* Assign Shift Panel */}
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <GlassCard variant="default" padding="md">
           <h2 className="text-lg font-semibold text-foreground mb-4">Assign Shift</h2>
           <form onSubmit={handleAssignShift} className="space-y-4">
             <div>
@@ -442,11 +435,11 @@ export default function ShiftsPage() {
               )}
             </Button>
           </form>
-        </section>
+        </GlassCard>
       </div>
 
       {/* Current Assignments Table */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+      <GlassCard variant="default" padding="none">
         <div className="border-b border-border/60 p-6">
           <h2 className="text-lg font-semibold text-foreground">Current Assignments</h2>
         </div>
@@ -497,7 +490,7 @@ export default function ShiftsPage() {
             </table>
           </div>
         )}
-      </section>
+      </GlassCard>
 
       {/* Delete Confirm Modal */}
       <ConfirmModal

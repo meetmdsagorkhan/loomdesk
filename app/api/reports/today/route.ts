@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -46,7 +47,9 @@ export async function GET() {
 
     return NextResponse.json(report);
   } catch (error) {
-    console.error('Fetch today report error:', error);
+    logger.error('Fetch today report error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch report' }, { status: 500 });
   }
 }

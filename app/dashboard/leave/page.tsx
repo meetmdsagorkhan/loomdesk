@@ -5,6 +5,8 @@ import { format } from 'date-fns';
 import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Calendar } from '@/components/ui/calendar';
 import { showToast } from '@/components/shared/Toast';
@@ -113,33 +115,24 @@ export default function LeavePage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-              Leave Management
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-              View and manage your leave requests
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Submit new requests, track approval status, and view your leave history from one place.
-            </p>
-          </div>
-          {!showCreateForm && (
-            <Button onClick={() => setShowCreateForm(true)} className="rounded-xl">
+      <PageHeader
+        badge="Leave Management"
+        title="View and manage your leave requests"
+        subtitle="Submit new requests, track approval status, and view your leave history from one place."
+        actions={
+          !showCreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
               <Plus size={16} className="mr-2" />
               New Request
             </Button>
-          )}
-        </div>
-      </section>
+          )
+        }
+      />
 
       {/* Calendar View */}
       {!showCreateForm && (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+          <GlassCard variant="default" padding="md">
             <h2 className="text-lg font-semibold text-foreground mb-4">Leave Calendar</h2>
             <Calendar
               mode="single"
@@ -174,9 +167,9 @@ export default function LeavePage() {
                 },
               }}
             />
-          </div>
+          </GlassCard>
 
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+          <GlassCard variant="default" padding="md">
             <h2 className="text-lg font-semibold text-foreground mb-4">Upcoming Leave</h2>
             <div className="space-y-3">
               {leaveRequests
@@ -201,13 +194,13 @@ export default function LeavePage() {
                 </div>
               )}
             </div>
-          </div>
+          </GlassCard>
         </section>
       )}
 
       {/* Create Leave Form */}
       {showCreateForm && (
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
+        <GlassCard variant="default" padding="md">
           <h2 className="text-lg font-semibold text-foreground mb-6">Submit Leave Request</h2>
           <form onSubmit={handleSubmitLeave} className="space-y-6 max-w-md">
             <div>
@@ -265,11 +258,11 @@ export default function LeavePage() {
               </Button>
             </div>
           </form>
-        </section>
+        </GlassCard>
       )}
 
       {/* Leave Requests Table */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+      <GlassCard variant="default" padding="none">
         <div className="border-b border-border/60 p-6">
           <h2 className="text-lg font-semibold text-foreground">My Leave Requests</h2>
         </div>
@@ -324,7 +317,7 @@ export default function LeavePage() {
             </table>
           </div>
         )}
-      </section>
+      </GlassCard>
     </div>
   );
 }

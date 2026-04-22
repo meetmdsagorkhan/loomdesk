@@ -1,0 +1,111 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Activity, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+
+export default function VerifyEmailPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const verificationToken = token ?? '';
+  const hasToken = typeof token === 'string' && token.length > 0;
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Verifying your email address...');
+
+  useEffect(() => {
+    if (!hasToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function verifyEmail() {
+      try {
+        const response = await fetch(
+          `/api/email-verification?token=${encodeURIComponent(verificationToken)}`
+        );
+        const data = await response.json();
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok) {
+          setStatus('error');
+          setMessage(data.error ?? 'Failed to verify your email address.');
+          return;
+        }
+
+        setStatus('success');
+        setMessage(data.message ?? 'Your email address has been verified.');
+      } catch {
+        if (!cancelled) {
+          setStatus('error');
+          setMessage('Failed to verify your email address.');
+        }
+      }
+    }
+
+    void verifyEmail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasToken, verificationToken]);
+
+  const displayStatus = hasToken ? status : 'error';
+  const displayMessage = hasToken ? message : 'Verification token is missing.';
+
+  return (
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+      <div className="flex items-center gap-2 mb-8 justify-center">
+        <Activity className="w-8 h-8 text-primary" />
+        <span className="text-2xl font-semibold text-foreground">LoomDesk</span>
+      </div>
+
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-semibold text-foreground mb-2">Verify your email</h1>
+        <p className="text-muted-foreground">
+          We&apos;re confirming that this inbox belongs to your LoomDesk account.
+        </p>
+      </div>
+
+      <div
+        className={`px-4 py-4 rounded-xl text-sm mb-6 flex items-start gap-3 ${
+          displayStatus === 'success'
+            ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300'
+            : displayStatus === 'error'
+              ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400'
+              : 'bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-200'
+        }`}
+      >
+        {displayStatus === 'loading' ? (
+          <Loader2 size={18} className="animate-spin mt-0.5" />
+        ) : displayStatus === 'success' ? (
+          <CheckCircle2 size={18} className="mt-0.5" />
+        ) : (
+          <AlertCircle size={18} className="mt-0.5" />
+        )}
+        <span>{displayMessage}</span>
+      </div>
+
+      <div className="space-y-3">
+        <Link
+          href="/login?verified=1"
+          className="inline-flex w-full h-12 items-center justify-center rounded-xl bg-slate-800 text-base font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+        >
+          Back to sign in
+        </Link>
+        {displayStatus === 'error' && (
+          <Link
+            href="/resend-verification"
+            className="inline-flex w-full h-12 items-center justify-center rounded-xl border border-input bg-background text-base font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Send a new verification link
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}

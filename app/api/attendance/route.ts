@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { unstable_cache } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'LEAVE' | 'ABSENT' | 'DAY_OFF';
 
@@ -241,7 +242,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(attendance);
   } catch (error) {
-    console.error('Get attendance error:', error);
+    logger.error('Get attendance error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch attendance' }, { status: 500 });
   }
 }

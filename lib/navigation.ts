@@ -29,84 +29,84 @@ export const navItems: NavItem[] = [
     section: 'Overview',
   },
   {
-    href: '/dashboard/reports',
+    href: '/reports',
     label: 'Reports',
     description: 'Daily reporting workspace',
     icon: 'reports',
     section: 'Workflows',
-    matches: ['/reports'],
+    matches: ['/dashboard/reports'],
   },
   {
-    href: '/dashboard/qa',
+    href: '/qa',
     label: 'QA Review',
     description: 'Review reports and score work',
     icon: 'qa',
     section: 'Workflows',
-    matches: ['/qa', '/qa/', '/dashboard/qa/'],
+    matches: ['/qa/', '/dashboard/qa', '/dashboard/qa/'],
   },
   {
-    href: '/dashboard/leave',
+    href: '/leave',
     label: 'Leave',
     description: 'Requests and approvals',
     icon: 'leave',
     section: 'Operations',
-    matches: ['/leave', '/leave/admin', '/dashboard/leave/admin'],
+    matches: ['/leave/admin', '/dashboard/leave', '/dashboard/leave/admin'],
   },
   {
-    href: '/dashboard/shifts',
+    href: '/shifts',
     label: 'Shifts',
     description: 'Templates, assignments, schedules',
     icon: 'shifts',
     section: 'Operations',
-    matches: ['/shifts', '/shifts/my-schedule', '/dashboard/shifts/my-schedule'],
+    matches: ['/shifts/my-schedule', '/dashboard/shifts', '/dashboard/shifts/my-schedule'],
   },
   {
-    href: '/dashboard/calendar',
+    href: '/calendar',
     label: 'Calendar',
     description: 'Unified schedule and leave view',
     icon: 'calendar',
     section: 'Operations',
-    matches: ['/calendar'],
+    matches: ['/dashboard/calendar'],
   },
   {
-    href: '/dashboard/attendance',
+    href: '/attendance',
     label: 'Attendance',
     description: 'Presence and punctuality',
     icon: 'attendance',
     section: 'Operations',
-    matches: ['/attendance'],
+    matches: ['/dashboard/attendance'],
   },
   {
-    href: '/dashboard/analytics',
+    href: '/analytics',
     label: 'Analytics',
     description: 'Performance and trends',
     icon: 'analytics',
     section: 'Admin',
-    matches: ['/analytics'],
+    matches: ['/dashboard/analytics'],
   },
   {
-    href: '/dashboard/messages',
+    href: '/messages',
     label: 'Messages',
     description: 'Team communication',
     icon: 'messages',
     section: 'Operations',
-    matches: ['/messages'],
+    matches: ['/dashboard/messages'],
   },
   {
-    href: '/dashboard/scoring',
+    href: '/scoring',
     label: 'Scoring',
     description: 'Performance metrics',
     icon: 'scoring',
     section: 'Workflows',
-    matches: ['/scoring'],
+    matches: ['/dashboard/scoring'],
   },
   {
-    href: '/dashboard/settings',
+    href: '/settings',
     label: 'Settings',
     description: 'Profile and preferences',
     icon: 'settings',
     section: 'Admin',
-    matches: ['/settings'],
+    matches: ['/dashboard/settings'],
   },
 ];
 
@@ -141,7 +141,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Reports',
       description: 'Create, review, and submit daily work logs without leaving the workflow.',
-      href: '/dashboard/reports',
+      href: '/reports',
     },
   },
   {
@@ -149,7 +149,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'QA Review',
       description: 'Inspect submitted reports, leave feedback, and apply score deductions cleanly.',
-      href: '/dashboard/qa',
+      href: '/qa',
     },
   },
   {
@@ -157,7 +157,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'QA Detail',
       description: 'A focused review surface for one report, its entries, and score history.',
-      href: '/dashboard/qa',
+      href: '/qa',
     },
   },
   {
@@ -165,7 +165,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Leave',
       description: 'Request time off, review status, and keep team coverage visible.',
-      href: '/dashboard/leave',
+      href: '/leave',
     },
   },
   {
@@ -174,7 +174,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Leave Admin',
       description: 'Approve or reject requests from a queue built for quick decisions.',
-      href: '/dashboard/leave/admin',
+      href: '/leave/admin',
     },
   },
   {
@@ -182,7 +182,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Shifts',
       description: 'Manage shift templates and assignments from one operational hub.',
-      href: '/dashboard/shifts',
+      href: '/shifts',
     },
   },
   {
@@ -191,7 +191,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'My Schedule',
       description: 'See your assigned shifts and upcoming coverage windows clearly.',
-      href: '/dashboard/shifts/my-schedule',
+      href: '/shifts/my-schedule',
     },
   },
   {
@@ -199,7 +199,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Attendance',
       description: 'Monitor presence patterns, late submissions, and missed days.',
-      href: '/dashboard/attendance',
+      href: '/attendance',
     },
   },
   {
@@ -207,7 +207,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Analytics',
       description: 'Follow performance trends, quality shifts, and operational pressure points.',
-      href: '/dashboard/analytics',
+      href: '/analytics',
     },
   },
   {
@@ -215,7 +215,23 @@ const routeOverrides: Array<{
     meta: {
       title: 'Calendar',
       description: 'View your schedule, leaves, and team activities in a unified calendar view.',
-      href: '/dashboard/calendar',
+      href: '/calendar',
+    },
+  },
+  {
+    test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
+    meta: {
+      title: 'Messages',
+      description: 'Stay aligned with teammates through direct conversation threads.',
+      href: '/messages',
+    },
+  },
+  {
+    test: (pathname) => pathname === '/scoring' || pathname === '/dashboard/scoring',
+    meta: {
+      title: 'Scoring',
+      description: 'Track your current score, historical trends, and ranking context.',
+      href: '/scoring',
     },
   },
   {
@@ -223,7 +239,7 @@ const routeOverrides: Array<{
     meta: {
       title: 'Settings',
       description: 'Update profile details and tune the workspace to your preferences.',
-      href: '/dashboard/settings',
+      href: '/settings',
     },
   },
 ];

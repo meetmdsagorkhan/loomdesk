@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -10,7 +12,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [reports, activeUsers] = await Promise.all([
+    const [reports, activeUsers]: [
+      Array<{ id: string; date: Date }>,
+      Array<{ id: string }>
+    ] = await Promise.all([
       prisma.report.findMany({
         where: {
           userId: session.user.id,
@@ -30,7 +35,19 @@ export async function GET() {
 
     const reportIds = reports.map((report) => report.id);
 
-    const [reportScoreEvents, allUserScoreEvents] = await Promise.all([
+    const [reportScoreEvents, allUserScoreEvents]: [
+      Prisma.ScoreEventGetPayload<{
+        select: {
+          id: true;
+          reportId: true;
+          severity: true;
+          deduction: true;
+          reason: true;
+          createdAt: true;
+        };
+      }>[], 
+      Array<{ userId: string; deduction: number }>
+    ] = await Promise.all([
       prisma.scoreEvent.findMany({
         where: {
           reportId: {
@@ -127,7 +144,9 @@ export async function GET() {
         })),
     });
   } catch (error) {
-    console.error('Get scoring summary error:', error);
+    logger.error('Get scoring summary error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch scoring data' }, { status: 500 });
   }
 }

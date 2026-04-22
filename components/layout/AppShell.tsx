@@ -25,7 +25,7 @@ export default function AppShell({ children }: AppShellProps) {
   }, [isSidebarCollapsed]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="liquid-shell min-h-screen bg-transparent text-foreground">
       <Sidebar
         isMobileOpen={isMobileMenuOpen}
         onMobileClose={() => setIsMobileMenuOpen(false)}

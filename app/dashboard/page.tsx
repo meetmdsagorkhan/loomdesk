@@ -4,28 +4,19 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   ArrowRight,
-  BarChart2,
-  CalendarDays,
-  CalendarOff,
-  CheckSquare,
-  Clock,
   FileText,
-  LayoutDashboard,
   Loader2,
-  MessageSquare,
-  Settings,
   TrendingUp,
-  UserCheck,
   Users,
   CheckCircle,
 } from 'lucide-react';
 import StatCard from '@/components/shared/StatCard';
 import Card from '@/components/shared/Card';
 import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import DataTable from '@/components/shared/DataTable';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { navItems, type NavIcon } from '@/lib/navigation';
-import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -43,20 +34,6 @@ type DashboardAnalytics = {
     avgScore: number;
     attendanceRate: number;
   }>;
-};
-
-const iconMap: Record<NavIcon, React.ComponentType<{ className?: string }>> = {
-  dashboard: LayoutDashboard,
-  reports: FileText,
-  qa: CheckSquare,
-  leave: CalendarOff,
-  shifts: Clock,
-  calendar: CalendarDays,
-  attendance: UserCheck,
-  analytics: BarChart2,
-  messages: MessageSquare,
-  scoring: TrendingUp,
-  settings: Settings,
 };
 
 export default function DashboardPage() {
@@ -89,34 +66,41 @@ export default function DashboardPage() {
 
   const statCards = analytics?.kpi
     ? [
-        {
-          title: 'Total Reports',
-          value: analytics.kpi.totalReports || 0,
-          change: 12,
-          icon: <FileText size={24} />,
-          color: 'primary',
-        },
-        {
-          title: 'Team Members',
-          value: analytics.kpi.activeMembers || 0,
-          change: 0,
-          icon: <Users size={24} />,
-          color: 'accent',
-        },
-        {
-          title: 'Pending QA',
-          value: analytics.kpi.pendingLeaves || 0,
-          change: -15,
-          icon: <CheckCircle size={24} />,
-          color: 'warning',
-        },
-        {
-          title: 'Avg Score',
-          value: analytics.kpi.avgScore || 0,
-          change: 3,
-          icon: <TrendingUp size={24} />,
-          color: 'success',
-        },
+        <GlassCard variant="default" padding="none" key="stats">
+          <div className="p-6 border-b border-border/60">
+            <h2 className="text-lg font-semibold text-foreground">Performance Overview</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+            <StatCard
+              title="Reports"
+              value={analytics.kpi.totalReports || 0}
+              icon={<FileText size={20} />}
+              color="primary"
+              change={12}
+            />
+            <StatCard
+              title="Attendance"
+              value={`${analytics.kpi.activeMembers || 0}%`}
+              icon={<Users size={20} />}
+              color="success"
+              change={0}
+            />
+            <StatCard
+              title="Avg Score"
+              value={analytics.kpi.avgScore || 0}
+              icon={<TrendingUp size={20} />}
+              color="warning"
+              change={3}
+            />
+            <StatCard
+              title="Deductions"
+              value={analytics.kpi.pendingLeaves || 0}
+              icon={<CheckCircle size={20} />}
+              color="accent"
+              change={0}
+            />
+          </div>
+        </GlassCard>,
       ]
     : [];
 
@@ -144,30 +128,21 @@ export default function DashboardPage() {
     );
   }
 
-  const workspaces = navItems.filter((item) => item.href !== '/dashboard');
   const isAdmin = user?.role === 'ADMIN';
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/95 to-info p-6 text-primary-foreground card-elevation-lg sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-foreground/80">
-          {isAdmin ? 'Admin Dashboard' : 'Member Dashboard'}
-        </p>
-        <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-primary-foreground">
-            {user?.name
-              ? `${user.name}, ${isAdmin ? 'manage your team' : 'track your progress'} efficiently.`
-              : 'Everything important is now one click away.'}
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-primary-foreground/90">
-          {isAdmin
-            ? 'Oversee team performance, manage reports, review QA, and handle administrative tasks from your centralized dashboard.'
-            : 'Track your reports, view your QA scores, manage your schedule, and access all your work tools in one place.'}
-        </p>
+      <PageHeader
+        badge="Dashboard"
+        title={`Welcome back, ${user?.name || 'User'}`}
+        subtitle="Here's what's happening with your team today."
+      />
 
-        <div className="mt-6 flex flex-wrap gap-3">
+      <GlassCard variant="default" padding="md">
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/dashboard/reports"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+            className="btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
           >
             {isAdmin ? 'Manage Reports' : 'My Reports'}
             <ArrowRight className="h-4 w-4" />
@@ -175,25 +150,25 @@ export default function DashboardPage() {
           {isAdmin && (
             <Link
               href="/dashboard/qa"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+              className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-foreground"
             >
               Review QA
             </Link>
           )}
           <Link
             href="/dashboard/analytics"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+            className="glass-pill inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-foreground"
           >
             {isAdmin ? 'Team Analytics' : 'My Analytics'}
           </Link>
         </div>
-      </section>
+      </GlassCard>
 
       <section>
         <BentoGrid>
-          {statCards.map((stat) => (
-            <BentoCard key={stat.title}>
-              <StatCard {...stat} />
+          {statCards.map((stat, index) => (
+            <BentoCard key={index}>
+              {stat}
             </BentoCard>
           ))}
         </BentoGrid>

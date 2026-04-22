@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +38,9 @@ export async function GET(request: NextRequest) {
       role: invitation.role,
     });
   } catch (error) {
-    console.error('Check invite error:', error);
+    logger.error('Check invite error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to check invitation' }, { status: 500 });
   }
 }

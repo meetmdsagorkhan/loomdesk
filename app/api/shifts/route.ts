@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const shiftSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -25,7 +26,9 @@ export async function GET() {
 
     return NextResponse.json({ shifts });
   } catch (error) {
-    console.error('List shifts error:', error);
+    logger.error('List shifts error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch shifts' }, { status: 500 });
   }
 }
@@ -68,7 +71,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error('Create shift error:', error);
+    logger.error('Create shift error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to create shift' }, { status: 500 });
   }
 }

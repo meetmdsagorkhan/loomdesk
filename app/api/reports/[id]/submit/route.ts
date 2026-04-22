@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -49,7 +50,9 @@ export async function POST(
 
     return NextResponse.json(updatedReport);
   } catch (error) {
-    console.error('Submit report error:', error);
+    logger.error('Submit report error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to submit report' }, { status: 500 });
   }
 }

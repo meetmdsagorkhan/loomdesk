@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useEffectEvent } from 'react';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Users, CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
@@ -155,23 +157,32 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-            Attendance Calendar
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            Track team attendance
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            View daily attendance records, monitor patterns, and track team presence over time.
-          </p>
-        </div>
-      </section>
-
+      <PageHeader
+        badge="Attendance Tracking"
+        title="Monthly attendance overview"
+        subtitle="View and track team attendance patterns across the month with detailed statistics."
+        actions={
+          isAdmin && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-foreground">Select User:</label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="px-4 py-2 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              >
+                <option value="">All Users</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        }
+      />
       {/* Date Navigation */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-4 card-elevation-md backdrop-blur-sm">
+      <GlassCard>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={goToPreviousMonth} className="rounded-xl">
@@ -188,29 +199,11 @@ export default function AttendancePage() {
             Today
           </Button>
         </div>
-      </section>
-
-      {/* User Selection for Admin */}
-      {isAdmin({ user }) && (
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-4 card-elevation-md backdrop-blur-sm">
-          <select
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-          >
-            <option value={user?.id}>My attendance</option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-        </section>
-      )}
+      </GlassCard>
 
       {/* Calendar Grid */}
       {attendance ? (
-        <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+        <GlassCard>
           <div className="grid grid-cols-7 gap-1 p-4 bg-muted/50">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
               <div key={day} className="text-center text-sm font-medium text-muted-foreground">
@@ -229,37 +222,39 @@ export default function AttendancePage() {
               </div>
             ))}
           </div>
-        </section>
+        </GlassCard>
       ) : (
-        <section className="rounded-3xl border border-border/60 bg-card/80 p-8 card-elevation-md backdrop-blur-sm text-center">
-          <p className="text-muted-foreground">No attendance data available for this period.</p>
-        </section>
+        <GlassCard variant="default" padding="lg">
+          <p className="text-muted-foreground text-center">No attendance data available for this period.</p>
+        </GlassCard>
       )}
 
       {/* Stats */}
       {attendance && (
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
-            <div className="text-2xl font-bold text-success">{attendance.stats.present}</div>
-            <div className="text-sm text-muted-foreground">Present</div>
+        <GlassCard variant="default" padding="md">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-success">{attendance.stats.present}</div>
+              <div className="text-sm text-muted-foreground">Present</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-warning">{attendance.stats.late}</div>
+              <div className="text-sm text-muted-foreground">Late</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-destructive">{attendance.stats.absent}</div>
+              <div className="text-sm text-muted-foreground">Absent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-info">{attendance.stats.leave}</div>
+              <div className="text-sm text-muted-foreground">Leave</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-foreground">{attendance.stats.attendanceRate}%</div>
+              <div className="text-sm text-muted-foreground">Attendance Rate</div>
+            </div>
           </div>
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
-            <div className="text-2xl font-bold text-warning">{attendance.stats.late}</div>
-            <div className="text-sm text-muted-foreground">Late</div>
-          </div>
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
-            <div className="text-2xl font-bold text-destructive">{attendance.stats.absent}</div>
-            <div className="text-sm text-muted-foreground">Absent</div>
-          </div>
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
-            <div className="text-2xl font-bold text-info">{attendance.stats.leave}</div>
-            <div className="text-sm text-muted-foreground">Leave</div>
-          </div>
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-4 text-center card-elevation-md backdrop-blur-sm">
-            <div className="text-2xl font-bold text-foreground">{attendance.stats.attendanceRate}%</div>
-            <div className="text-sm text-muted-foreground">Attendance Rate</div>
-          </div>
-        </section>
+        </GlassCard>
       )}
     </div>
   );

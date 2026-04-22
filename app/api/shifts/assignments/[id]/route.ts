@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
+import { logger } from '@/lib/logger';
 
 export async function DELETE(
   request: NextRequest,
@@ -36,7 +37,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete assignment error:', error);
+    logger.error('Delete assignment error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to delete assignment' }, { status: 500 });
   }
 }

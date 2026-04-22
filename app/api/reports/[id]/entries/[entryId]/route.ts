@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { logger } from '@/lib/logger';
 
 export async function DELETE(
   request: NextRequest,
@@ -38,7 +39,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete entry error:', error);
+    logger.error('Delete entry error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to delete entry' }, { status: 500 });
   }
 }

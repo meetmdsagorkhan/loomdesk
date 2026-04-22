@@ -5,6 +5,7 @@ import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { createNotification } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 const feedbackSchema = z.object({
   entryId: z.string(),
@@ -63,7 +64,9 @@ export async function POST(request: NextRequest) {
         message: `A reviewer left feedback on your ${reportDate} report.`,
       });
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      logger.error('Failed to send notification for QA feedback', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       // Don't fail the request if notification fails
     }
 
@@ -72,7 +75,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error('Add feedback error:', error);
+    logger.error('Add feedback error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to add feedback' }, { status: 500 });
   }
 }

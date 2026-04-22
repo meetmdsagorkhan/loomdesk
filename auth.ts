@@ -2,59 +2,264 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db"
 import * as bcrypt from "bcryptjs"
-import { z } from "zod"
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-})
+import { env } from "@/lib/env.server"
+import { logger } from "@/lib/logger"
+import { loginSchema } from "@/lib/validations/auth"
+import {
+  consumeRateLimitPersistent,
+  getRateLimitStatusPersistent,
+  getRequestIp,
+} from "@/lib/rate-limit"
+import {
+  clearFailedLoginsPersistent,
+  getAccountLockStatePersistent,
+  recordFailedLoginPersistent,
+} from "@/lib/auth-security"
+import { auditEvent } from "@/lib/audit-log"
+import {
+  createSessionExpiryTimestamp,
+  isSessionExpired,
+  normalizeRememberMe,
+} from "@/lib/session-security"
+import {
+  decryptTwoFactorSecret,
+  parseStoredRecoveryCodes,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from "@/lib/two-factor"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET,
+  secret: env.AUTH_SECRET,
   providers: [
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "Authentication Code", type: "text" },
+        recoveryCode: { label: "Recovery Code", type: "text" },
+        rememberMe: { label: "Remember Me", type: "checkbox" },
       },
-      authorize: async (credentials) => {
-        const parsedCredentials = loginSchema.safeParse(credentials)
+      authorize: async (credentials, request) => {
+        const ipAddress = getRequestIp(request)
+        const ipRateLimitKey = `auth:${ipAddress}`
+        const ipRateLimit = await getRateLimitStatusPersistent(ipRateLimitKey, {
+          limit: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+          windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+        })
 
-        if (!parsedCredentials.success) {
-          console.log('Auth: Invalid credentials format')
+        if (!ipRateLimit.success) {
+          logger.warn("Blocked login attempt due to IP rate limiting", {
+            ipAddress,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            ipAddress,
+            metadata: { reason: "ip-rate-limit" },
+          })
           return null
         }
 
-        const { email, password } = parsedCredentials.data
-        console.log('Auth: Attempting login for', email)
+        const parsedCredentials = loginSchema.safeParse(credentials)
+
+        if (!parsedCredentials.success) {
+          await consumeRateLimitPersistent(ipRateLimitKey, {
+            limit: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            blockDurationMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+          })
+          logger.warn("Rejected login due to invalid credential format", {
+            ipAddress,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            ipAddress,
+            metadata: { reason: "invalid-format" },
+          })
+          return null
+        }
+
+        const email = parsedCredentials.data.email.trim().toLowerCase()
+        const { password, otp, recoveryCode } = parsedCredentials.data
+        const rememberMe = normalizeRememberMe(parsedCredentials.data.rememberMe)
+        const lockoutState = await getAccountLockStatePersistent(email, {
+          threshold: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+          windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+          baseLockMs: env.AUTH_LOCKOUT_BASE_MS,
+        })
+
+        if (lockoutState.locked) {
+          logger.warn("Blocked login attempt for locked account", {
+            email,
+            retryAfterMs: lockoutState.retryAfterMs,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            actorEmail: email,
+            ipAddress,
+            metadata: { reason: "account-locked" },
+          })
+          return null
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
         })
 
         if (!user) {
-          console.log('Auth: User not found')
+          await consumeRateLimitPersistent(ipRateLimitKey, {
+            limit: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            blockDurationMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+          })
+          await recordFailedLoginPersistent(email, {
+            threshold: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            baseLockMs: env.AUTH_LOCKOUT_BASE_MS,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            actorEmail: email,
+            ipAddress,
+            metadata: { reason: "user-not-found" },
+          })
           return null
         }
 
         if (!user.isActive) {
-          console.log('Auth: User is not active')
+          await consumeRateLimitPersistent(ipRateLimitKey, {
+            limit: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            blockDurationMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+          })
+          await recordFailedLoginPersistent(email, {
+            threshold: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            baseLockMs: env.AUTH_LOCKOUT_BASE_MS,
+          })
+          logger.warn("Blocked login for inactive user", {
+            userId: user.id,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            actorId: user.id,
+            actorEmail: user.email,
+            actorRole: user.role,
+            ipAddress,
+            metadata: { reason: "inactive-user" },
+          })
+          return null
+        }
+
+        if (!user.emailVerifiedAt) {
+          logger.warn("Blocked login for unverified email address", {
+            userId: user.id,
+            email: user.email,
+          })
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            actorId: user.id,
+            actorEmail: user.email,
+            actorRole: user.role,
+            ipAddress,
+            metadata: { reason: "email-unverified" },
+          })
           return null
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password)
 
         if (!isPasswordValid) {
-          console.log('Auth: Invalid password')
+          await consumeRateLimitPersistent(ipRateLimitKey, {
+            limit: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            blockDurationMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+          })
+          const failedState = await recordFailedLoginPersistent(email, {
+            threshold: env.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+            windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+            baseLockMs: env.AUTH_LOCKOUT_BASE_MS,
+          })
+
+          if (failedState.locked) {
+            logger.warn("Locked account after repeated failed logins", {
+              userId: user.id,
+              retryAfterMs: failedState.retryAfterMs,
+            })
+          }
+
+          auditEvent({
+            action: "auth.login",
+            status: "failure",
+            actorId: user.id,
+            actorEmail: user.email,
+            actorRole: user.role,
+            ipAddress,
+            metadata: {
+              reason: failedState.locked ? "account-locked" : "invalid-password",
+            },
+          })
+
           return null
         }
 
-        console.log('Auth: Login successful for', email)
+        if (user.twoFactorEnabled) {
+          const hashedRecoveryCodes = parseStoredRecoveryCodes(user.twoFactorRecoveryCodes)
+          const recoveryCodeResult = verifyRecoveryCode(recoveryCode, hashedRecoveryCodes)
+          const secret =
+            typeof user.twoFactorSecret === "string"
+              ? decryptTwoFactorSecret(user.twoFactorSecret)
+              : null
+          const otpValid = secret ? verifyTotpToken(secret, otp ?? "") : false
+
+          if (!otpValid && !recoveryCodeResult.valid) {
+            logger.warn("Blocked login due to missing or invalid two-factor verification", {
+              userId: user.id,
+            })
+            auditEvent({
+              action: "auth.login",
+              status: "failure",
+              actorId: user.id,
+              actorEmail: user.email,
+              actorRole: user.role,
+              ipAddress,
+              metadata: { reason: "two-factor-invalid" },
+            })
+            return null
+          }
+
+          if (recoveryCodeResult.valid) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                twoFactorRecoveryCodes: recoveryCodeResult.remainingCodes,
+              } satisfies import("@prisma/client").Prisma.UserUpdateInput,
+            })
+          }
+        }
+
+        await clearFailedLoginsPersistent(email)
+        auditEvent({
+          action: "auth.login",
+          status: "success",
+          actorId: user.id,
+          actorEmail: user.email,
+          actorRole: user.role,
+          ipAddress,
+        })
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          sessionVersion: user.sessionVersion,
+          twoFactorEnabled: user.twoFactorEnabled,
+          rememberMe,
         }
       },
     }),
@@ -67,13 +272,57 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.sessionVersion = user.sessionVersion ?? 0
+        token.twoFactorEnabled = user.twoFactorEnabled ?? false
+        token.rememberMe = user.rememberMe ?? false
+        token.sessionExpiresAt = createSessionExpiryTimestamp(Boolean(token.rememberMe))
+        return token
       }
+
+      if (!token.id || isSessionExpired(token.sessionExpiresAt)) {
+        return null
+      }
+
+      const tokenUserId = typeof token.id === "string" ? token.id : null
+
+      if (!tokenUserId) {
+        return null
+      }
+
+      const currentUser = await prisma.user.findUnique({
+        where: { id: tokenUserId },
+        select: {
+          id: true,
+          role: true,
+          isActive: true,
+          sessionVersion: true,
+          twoFactorEnabled: true,
+        },
+      })
+
+      if (!currentUser?.isActive) {
+        return null
+      }
+
+      if (currentUser.sessionVersion !== token.sessionVersion) {
+        return null
+      }
+
+      token.role = currentUser.role
+      token.sessionVersion = currentUser.sessionVersion
+      token.twoFactorEnabled = currentUser.twoFactorEnabled
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.rememberMe = Boolean(token.rememberMe)
+        session.user.sessionVersion = Number(token.sessionVersion ?? 0)
+        session.user.twoFactorEnabled = Boolean(token.twoFactorEnabled)
+        if (typeof token.sessionExpiresAt === "number") {
+          session.expires = new Date(token.sessionExpiresAt).toISOString()
+        }
       }
       return session
     },

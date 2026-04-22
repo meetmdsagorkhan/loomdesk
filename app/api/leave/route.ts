@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -53,7 +54,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ leaveRequests });
   } catch (error) {
-    console.error('List leave requests error:', error);
+    logger.error('List leave requests error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch leave requests' }, { status: 500 });
   }
 }
@@ -158,7 +161,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error('Create leave request error:', error);
+    logger.error('Create leave request error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to create leave request' }, { status: 500 });
   }
 }

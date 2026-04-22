@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 type ScoreEventSummary = {
   deduction: number;
@@ -65,7 +66,9 @@ export async function GET(request: NextRequest) {
       currentScore,
     });
   } catch (error) {
-    console.error('Get score events error:', error);
+    logger.error('Get score events error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch score events' }, { status: 500 });
   }
 }
@@ -128,7 +131,9 @@ export async function POST(request: NextRequest) {
         message: `You received a ${severity.toLowerCase()} deduction for: ${reason}`,
       });
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      logger.error('Failed to send notification for score event', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       // Don't fail the request if notification fails
     }
 
@@ -137,7 +142,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error('Create score event error:', error);
+    logger.error('Create score event error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to create score event' }, { status: 500 });
   }
 }

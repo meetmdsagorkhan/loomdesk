@@ -35,6 +35,8 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { handleApiError } from '@/lib/error-handler';
 import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -190,23 +192,14 @@ function AnalyticsContent() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-6 card-elevation-md backdrop-blur-sm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-            Analytics Dashboard
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            Team performance insights
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Monitor key performance indicators, track trends, and analyze team productivity data.
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        badge="Analytics Dashboard"
+        title="Team performance insights"
+        subtitle="Monitor key performance indicators, track trends, and analyze team productivity data."
+      />
 
       {/* Date Range Filter */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 p-4 card-elevation-md backdrop-blur-sm">
+      <GlassCard variant="default" padding="sm">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Calendar size={20} className="text-muted-foreground" />
@@ -264,7 +257,7 @@ function AnalyticsContent() {
             </div>
           )}
         </div>
-      </section>
+      </GlassCard>
 
       {/* KPI Cards - Bento Grid */}
       <section>
@@ -414,7 +407,7 @@ function AnalyticsContent() {
       </section>
 
       {/* Member Leaderboard */}
-      <section className="rounded-3xl border border-border/60 bg-card/80 overflow-hidden card-elevation-md backdrop-blur-sm">
+      <GlassCard variant="default" padding="none">
         <div className="border-b border-border/60 p-6">
           <h2 className="text-lg font-semibold text-foreground">Member Leaderboard</h2>
         </div>
@@ -457,7 +450,7 @@ function AnalyticsContent() {
             </tbody>
           </table>
         </div>
-      </section>
+      </GlassCard>
     </div>
   );
 }

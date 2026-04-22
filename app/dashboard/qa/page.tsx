@@ -12,6 +12,8 @@ import {
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 
@@ -152,22 +154,121 @@ export default function QAPage() {
 
   if (userLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-8">
+        <PageHeader
+          badge="QA Review"
+          title="Review submitted reports"
+          subtitle="Review and score team member reports to ensure quality and provide feedback."
+        />
+        <GlassCard>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Date Picker */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Date</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+            </div>
+
+            {/* Member Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Member</label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              >
+                <option value="">All Members</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              >
+                <option value="SUBMITTED">Submitted</option>
+                <option value="DRAFT">Draft</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+
+            {/* Apply Button */}
+            <div className="flex items-end">
+              <Button onClick={fetchReports} className="w-full">
+                <Filter size={16} className="mr-2" />
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Reports Table */}
+        <GlassCard variant="default" padding="none">
+          <div className="border-b border-border/60 p-6">
+            <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
+          </div>
+          {reports.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-muted-foreground">No reports found matching your filters.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-6 py-3 text-left text-sm font-medium text-muted-foreground"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="border-b border-border last:border-0">
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-6 py-4 text-sm">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </GlassCard>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">QA Review</h1>
-        <p className="text-muted-foreground mt-1">Review and score submitted reports</p>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="bg-card rounded-2xl p-6 shadow-lg">
+    <div className="space-y-8">
+      <PageHeader
+        badge="QA Review"
+        title="Review submitted reports"
+        subtitle="Review and score team member reports to ensure quality and provide feedback."
+      />
+      <GlassCard>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Date Picker */}
           <div>
@@ -219,10 +320,13 @@ export default function QAPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Reports Table */}
-      <div className="bg-card rounded-2xl overflow-hidden shadow-lg">
+      <GlassCard variant="default" padding="none">
+        <div className="border-b border-border/60 p-6">
+          <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
+        </div>
         {reports.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-muted-foreground">No reports found matching your filters.</p>
@@ -260,7 +364,7 @@ export default function QAPage() {
             </table>
           </div>
         )}
-      </div>
+      </GlassCard>
     </div>
   );
 }

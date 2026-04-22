@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
   BarChart2,
@@ -11,7 +12,6 @@ import {
   Clock,
   FileText,
   LayoutDashboard,
-  PanelLeft,
   PanelLeftClose,
   PanelRightClose,
   MessageSquare,
@@ -58,6 +58,8 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
 
 export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = false, onToggleCollapse, user }: SidebarProps) {
   const pathname = usePathname();
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
 
   const getInitials = (name: string) => {
     return name
@@ -72,6 +74,42 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
     await signOut({ redirectTo: '/login' });
   };
 
+  // Swipe-to-close gesture for mobile
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar || !isMobileOpen) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      setTouchStart(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStart === null) return;
+      const currentX = e.touches[0].clientX;
+      const diff = currentX - touchStart;
+
+      // Swipe right to close
+      if (diff > 50) {
+        onMobileClose?.();
+        setTouchStart(null);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setTouchStart(null);
+    };
+
+    sidebar.addEventListener('touchstart', handleTouchStart);
+    sidebar.addEventListener('touchmove', handleTouchMove);
+    sidebar.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      sidebar.removeEventListener('touchstart', handleTouchStart);
+      sidebar.removeEventListener('touchmove', handleTouchMove);
+      sidebar.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobileOpen, touchStart, onMobileClose]);
+
   const groupedItems = navItems.reduce<Record<string, typeof navItems>>((groups, item) => {
     groups[item.section] ??= [];
     groups[item.section].push(item);
@@ -84,22 +122,23 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
         <button
           type="button"
           aria-label="Close navigation"
-          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm lg:hidden fade-in"
           onClick={onMobileClose}
         />
       )}
 
       <aside
+        ref={sidebarRef}
         className={[
-          'fixed inset-y-0 left-0 z-50 border-r border-white/10 glass-card transition-all duration-300',
+          'glass-nav fixed inset-y-0 left-0 z-50 rounded-r-[2rem] transition-all duration-300 ease-out',
           isCollapsed ? 'w-20' : 'w-72',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-4">
-            <Link href="/dashboard" className="flex items-center gap-3" onClick={onMobileClose}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg ring-2 ring-white/20 backdrop-blur-sm">
+            <Link href="/dashboard" className="flex items-center gap-3 min-h-[44px]" onClick={onMobileClose}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary-light to-info text-primary-foreground shadow-[0_20px_45px_rgba(99,102,241,0.32)] ring-1 ring-white/30">
                 <Activity size={20} />
               </div>
               {!isCollapsed && (
@@ -117,14 +156,14 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
             <div className="flex gap-1 shrink-0">
               <button
                 type="button"
-                className="hidden shrink-0 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:flex"
+                className="glass-pill hidden shrink-0 rounded-xl p-3 text-muted-foreground lg:flex min-h-[44px] min-w-[44px]"
                 onClick={onToggleCollapse}
               >
                 {isCollapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
               </button>
               <button
                 type="button"
-                className="shrink-0 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground lg:hidden"
+                className="glass-pill shrink-0 rounded-xl p-3 text-muted-foreground lg:hidden min-h-[44px] min-w-[44px]"
                 onClick={onMobileClose}
               >
                 <X size={18} />
@@ -134,7 +173,6 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
 
           <nav className={["flex-1 px-3 py-4", isCollapsed ? "" : "overflow-y-auto"].join(" ")}>
             {Object.entries(groupedItems).map(([section, items]) => {
-              const hasActiveItem = items.some(item => isNavItemActive(pathname, item.href, item.matches));
               return (
                 <div key={section} className="mb-4">
                   {!isCollapsed && (
@@ -153,21 +191,21 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                           href={item.href}
                           onClick={onMobileClose}
                           className={[
-                            'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all relative',
+                            'group relative flex items-center gap-3 rounded-2xl px-3 py-3 min-h-[44px] transition-all duration-300',
                             isCollapsed ? 'justify-center' : '',
                             isActive
-                              ? 'bg-primary/20 text-slate-800 dark:bg-white/20 dark:text-white'
-                              : 'text-sidebar-foreground/70 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-sidebar-foreground',
+                              ? 'glass-pill border-white/30 bg-white/45 text-slate-900 dark:bg-white/10 dark:text-white'
+                              : 'text-sidebar-foreground/70 hover:bg-white/35 dark:hover:bg-white/10 hover:text-sidebar-foreground',
                           ].join(' ')}
                           title={isCollapsed ? item.label : undefined}
                         >
                           <div
                             className={[
                               'flex shrink-0 items-center justify-center rounded-lg transition-colors',
-                              isCollapsed ? 'h-9 w-9' : 'h-8 w-8',
+                              isCollapsed ? 'h-11 w-11' : 'h-10 w-10',
                               isActive
-                                ? 'bg-primary/20 text-primary dark:bg-primary/20 dark:text-primary backdrop-blur-sm'
-                                : 'bg-white/10 text-sidebar-foreground group-hover:bg-slate-200 dark:group-hover:bg-white/20 backdrop-blur-sm',
+                                ? 'bg-primary/20 text-primary dark:bg-primary/20 dark:text-primary'
+                                : 'bg-white/10 text-sidebar-foreground group-hover:bg-white/50 dark:group-hover:bg-white/15',
                             ].join(' ')}
                           >
                             <Icon size={isCollapsed ? 20 : 16} />
@@ -192,9 +230,9 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
             <div className="p-3 sticky bottom-0">
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full">
-                  <button className="flex items-center gap-3 w-full rounded-xl p-2 hover:bg-white/10 transition-colors">
-                    <div className="flex shrink-0 items-center justify-center rounded-full transition-colors h-8 w-8 bg-white/10 hover:bg-white/20 backdrop-blur-sm">
-                      <Avatar className="h-8 w-8 bg-primary/10 dark:bg-primary/20 shrink-0 rounded-full border-2 border-white/30">
+                  <button className="glass-pill flex w-full items-center gap-3 rounded-2xl p-3 min-h-[44px]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition-colors">
+                      <Avatar className="h-11 w-11 bg-primary/10 dark:bg-primary/20 shrink-0 rounded-full border-2 border-white/30">
                         {user.image ? (
                           <AvatarImage src={user.image} alt={user.name || 'User'} />
                         ) : (
@@ -212,7 +250,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="glass-panel w-48 rounded-2xl p-1.5">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>

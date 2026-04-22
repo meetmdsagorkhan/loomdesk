@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 type ConversationSummary = {
   userId: string;
@@ -19,7 +21,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [messages, teammates] = await Promise.all([
+    const [messages, teammates]: [
+      Prisma.MessageGetPayload<{
+        include: {
+          sender: { select: { id: true; name: true; email: true } };
+          receiver: { select: { id: true; name: true; email: true } };
+        };
+      }>[],
+      Array<{ id: string; name: string; email: string }>
+    ] = await Promise.all([
       prisma.message.findMany({
         where: {
           OR: [{ senderId: session.user.id }, { receiverId: session.user.id }],
@@ -93,13 +103,16 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json(
-      Array.from(conversations.values()).sort(
-        (a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
-      )
+    const orderedConversations = Array.from(conversations.values()).sort(
+      (a: ConversationSummary, b: ConversationSummary) =>
+        b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
     );
+
+    return NextResponse.json(orderedConversations);
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error('Get conversations error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
   }
 }

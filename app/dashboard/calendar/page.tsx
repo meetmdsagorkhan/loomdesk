@@ -12,6 +12,8 @@ import { CalendarDays, Clock3, FileText, Loader2, PlaneTakeoff } from 'lucide-re
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 
@@ -197,20 +199,11 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-border bg-card/80 p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-              Unified Calendar
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-              A single view of shifts, leave, and report activity.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Use this calendar to spot staffing coverage, approved leave, and report cadence without hopping between modules.
-            </p>
-          </div>
-
+      <PageHeader
+        badge="Unified Calendar"
+        title="A single view of shifts, leave, and report activity."
+        subtitle="Use this calendar to spot staffing coverage, approved leave, and report cadence without hopping between modules."
+        actions={
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
               {format(month, 'MMMM yyyy')}
@@ -219,11 +212,11 @@ export default function CalendarPage() {
               This month
             </Button>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <div className="rounded-[2rem] border border-border bg-card/90 p-5 shadow-lg">
+        <GlassCard variant="default" padding="md">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -237,9 +230,9 @@ export default function CalendarPage() {
             }}
             className="w-full rounded-2xl border border-border/70 bg-background/60 p-4"
           />
-        </div>
+        </GlassCard>
 
-        <div className="rounded-[2rem] border border-border bg-card/90 p-5 shadow-lg">
+        <GlassCard variant="default" padding="md">
           <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Selected day</p>
@@ -301,7 +294,7 @@ export default function CalendarPage() {
               })
             )}
           </div>
-        </div>
+        </GlassCard>
       </section>
     </div>
   );

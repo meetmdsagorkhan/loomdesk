@@ -5,6 +5,9 @@ declare module "next-auth" {
     user: {
       id: string
       role: string
+      rememberMe?: boolean
+      sessionVersion?: number
+      twoFactorEnabled?: boolean
     } & DefaultSession["user"]
   }
 
@@ -13,6 +16,9 @@ declare module "next-auth" {
     email: string
     name: string
     role: string
+    rememberMe?: boolean
+    sessionVersion?: number
+    twoFactorEnabled?: boolean
     createdAt?: string
   }
 }
@@ -21,5 +27,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string
     role: string
+    rememberMe?: boolean
+    sessionVersion?: number
+    sessionExpiresAt?: number
+    twoFactorEnabled?: boolean
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { logger } from '@/lib/logger';
 
 type ReportScoreEvent = {
   deduction: number;
@@ -63,7 +64,9 @@ export async function GET(
       totalDeduction,
     });
   } catch (error) {
-    console.error('Get QA report error:', error);
+    logger.error('Get QA report error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch report' }, { status: 500 });
   }
 }

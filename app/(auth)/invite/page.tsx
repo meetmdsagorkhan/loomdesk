@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, Suspense, type FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { Activity, Eye, EyeOff, Loader2, Mail, User, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Activity, Eye, EyeOff, Loader2, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { inviteSignupSchema, type InviteSignupFormData } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 
 function InviteSignupContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -18,6 +17,8 @@ function InviteSignupContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [verificationPreviewUrl, setVerificationPreviewUrl] = useState<string | null>(null);
   const [inviteData, setInviteData] = useState<{ email: string; role: string } | null>(null);
   const [formData, setFormData] = useState<InviteSignupFormData>({
     fullName: '',
@@ -88,6 +89,9 @@ function InviteSignupContent() {
 
     const data = parsed.data;
     setIsLoading(true);
+    setInviteError(null);
+    setSuccessMessage(null);
+    setVerificationPreviewUrl(null);
 
     try {
       const response = await fetch('/api/auth/invite/accept', {
@@ -108,20 +112,11 @@ function InviteSignupContent() {
         return;
       }
 
-      const signInResult = await signIn('credentials', {
-        email: inviteData?.email,
-        password: data.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        setInviteError('Account created but failed to sign in. Please try logging in.');
-        setIsLoading(false);
-        return;
-      }
-
-      router.push('/dashboard');
-      router.refresh();
+      setSuccessMessage(
+        'Account created successfully. Check your inbox for a verification link before signing in.'
+      );
+      setVerificationPreviewUrl(result.previewUrl ?? null);
+      setIsLoading(false);
     } catch {
       setInviteError('Failed to create account');
       setIsLoading(false);
@@ -153,6 +148,23 @@ function InviteSignupContent() {
         </div>
       )}
 
+      {successMessage && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-xl text-sm mb-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={18} />
+            <span>{successMessage}</span>
+          </div>
+          {verificationPreviewUrl && (
+            <p>
+              Development preview:{' '}
+              <a className="underline underline-offset-4" href={verificationPreviewUrl}>
+                Open verification link
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+
       {!isValidating && !inviteError && inviteData && (
         <div className="bg-muted/50 border border-border rounded-xl p-4 mb-6">
           <div className="flex items-center gap-3">
@@ -168,7 +180,7 @@ function InviteSignupContent() {
         </div>
       )}
 
-      {!isValidating && !inviteError && (
+      {!isValidating && !inviteError && !successMessage && (
         <form onSubmit={onSubmit} className="space-y-5">
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-foreground mb-2">
@@ -265,6 +277,23 @@ function InviteSignupContent() {
             )}
           </Button>
         </form>
+      )}
+
+      {successMessage && (
+        <div className="space-y-3">
+          <Link
+            href="/resend-verification"
+            className="inline-flex w-full h-12 items-center justify-center rounded-xl bg-slate-800 text-base font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/90"
+          >
+            Resend verification email
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex w-full h-12 items-center justify-center rounded-xl border border-input bg-background text-base font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Back to sign in
+          </Link>
+        </div>
       )}
     </div>
   );

@@ -13,10 +13,16 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  emailVerifiedAt DateTime?
   name          String
   password      String
   role          Role      @default(MEMBER)
   isActive      Boolean   @default(true)
+  sessionVersion Int      @default(0)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  twoFactorRecoveryCodes Json?
+  twoFactorConfirmedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   reports       Report[]
@@ -28,6 +34,56 @@ model User {
   receivedMessages Message[] @relation("MessageReceiver")
   invitedBy     String?
   invitations   Invitation[] @relation("invitedBy")
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  status      AuditStatus
+  actorId     String?
+  actorEmail  String?
+  actorRole   String?
+  targetType  String?
+  targetId    String?
+  targetEmail String?
+  ipAddress   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetId, createdAt])
+}
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  blockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+model AccountLockoutState {
+  subject     String   @id
+  failureCount Int
+  firstFailedAt DateTime
+  lockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
 }
 
 model Invitation {
@@ -188,4 +244,9 @@ enum LeaveStatus {
 enum ScoreSeverity {
   MINOR
   MAJOR
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
 }

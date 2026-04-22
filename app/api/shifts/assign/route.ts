@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const assignShiftSchema = z.object({
   userId: z.string(),
@@ -104,7 +105,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
-    console.error('Assign shift error:', error);
+    logger.error('Assign shift error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to assign shift' }, { status: 500 });
   }
 }

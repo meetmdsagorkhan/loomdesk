@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma as db } from "@/lib/db";
 import { isAdmin, isTeamLead } from "@/lib/auth-utils";
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -34,7 +35,9 @@ export async function GET() {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error("Failed to fetch users:", error);
+    logger.error('Failed to fetch users', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }

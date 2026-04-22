@@ -1,8 +1,22 @@
 import { z } from 'zod';
 
+export const passwordPolicySchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[a-z]/, 'Password must include at least one lowercase letter')
+  .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
+  .regex(/[0-9]/, 'Password must include at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must include at least one special character');
+
 export const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
+  otp: z.string().trim().optional(),
+  recoveryCode: z.string().trim().optional(),
+  rememberMe: z.preprocess(
+    (value) => value === true || value === 'true' || value === 'on',
+    z.boolean().default(false)
+  ),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
@@ -10,11 +24,7 @@ export type LoginFormData = z.infer<typeof loginSchema>;
 export const inviteSignupSchema = z
   .object({
     fullName: z.string().min(1, 'Full name is required').min(2, 'Name must be at least 2 characters'),
-    password: z
-      .string()
-      .min(1, 'Password is required')
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[0-9]/, 'Password must include at least one number'),
+    password: passwordPolicySchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {

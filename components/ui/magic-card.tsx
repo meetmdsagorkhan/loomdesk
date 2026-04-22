@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Particles } from "./particles";
-import { cn } from "@/lib/utils";
 
 export interface Props extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
@@ -44,4 +43,4 @@ export default function MagicCard({
             </div>
         </div>
     );
-};
+}

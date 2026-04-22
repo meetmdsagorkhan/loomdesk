@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { logger } from '@/lib/logger';
 
 type UserSummary = {
   id: string;
@@ -388,7 +389,9 @@ export async function GET(request: NextRequest) {
       leaderboard,
     });
   } catch (error) {
-    console.error('Analytics summary error:', error);
+    logger.error('Analytics summary error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to fetch analytics summary' }, { status: 500 });
   }
 }

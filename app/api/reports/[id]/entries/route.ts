@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { entrySchema } from '@/lib/validations/report';
+import { logger } from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -71,7 +72,9 @@ export async function POST(
         { status: 400 }
       );
     }
-    console.error('Add entry error:', error);
+    logger.error('Add entry error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json({ error: 'Failed to add entry' }, { status: 500 });
   }
 }

@@ -21,14 +21,14 @@ export default function StatCard({ title, value, change, icon, color = 'primary'
   };
 
   const cardGradientMap: Record<string, string> = {
-    primary: 'from-indigo-500/10 to-purple-500/10 border-indigo-500/30',
-    accent: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30',
-    warning: 'from-orange-500/10 to-amber-500/10 border-orange-500/30',
-    success: 'from-emerald-500/10 to-green-500/10 border-emerald-500/30',
+    primary: 'from-indigo-500/15 via-violet-500/10 to-white/5',
+    accent: 'from-cyan-500/15 via-sky-500/10 to-white/5',
+    warning: 'from-orange-500/15 via-amber-500/10 to-white/5',
+    success: 'from-emerald-500/15 via-green-500/10 to-white/5',
   };
 
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${cardGradientMap[color] ?? cardGradientMap.primary} border p-6 card-elevation-md backdrop-blur-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg`}>
+    <div className={`glass-card rounded-[1.6rem] bg-gradient-to-br ${cardGradientMap[color] ?? cardGradientMap.primary} p-6`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm font-semibold text-muted-foreground">{title}</p>
@@ -41,7 +41,7 @@ export default function StatCard({ title, value, change, icon, color = 'primary'
             </div>
           )}
         </div>
-        <div className={`rounded-xl p-3 shadow-md ${toneMap[color] ?? toneMap.primary}`}>{icon}</div>
+        <div className={`rounded-2xl p-3 shadow-md ring-1 ring-white/20 ${toneMap[color] ?? toneMap.primary}`}>{icon}</div>
       </div>
     </div>
   );
