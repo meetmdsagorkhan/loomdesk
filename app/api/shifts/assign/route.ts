@@ -9,7 +9,7 @@ const assignShiftSchema = z.object({
   userId: z.string(),
   shiftId: z.string(),
   startDate: z.string(),
-  endDate: z.string(),
+  endDate: z.string().optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     const { userId, shiftId, startDate, endDate } = assignShiftSchema.parse(body);
 
     const start = new Date(startDate);
-    const end = new Date(endDate);
+    const end = endDate ? new Date(endDate) : null;
 
-    if (end < start) {
+    if (end && end < start) {
       return NextResponse.json(
         { error: 'End date must be on or after start date' },
         { status: 400 }
@@ -42,8 +42,13 @@ export async function POST(request: NextRequest) {
     const existingAssignments = await prisma.shiftAssignment.findMany({
       where: {
         userId,
-        endDate: { gte: start },
-        startDate: { lte: end },
+        // Start date of existing must be before or equal to new end date (if new has an end date)
+        ...(end ? { startDate: { lte: end } } : {}),
+        // End date of existing must be after or equal to new start date, OR existing has no end date
+        OR: [
+          { endDate: null },
+          { endDate: { gte: start } },
+        ],
       },
     });
 
@@ -59,8 +64,8 @@ export async function POST(request: NextRequest) {
       where: {
         userId,
         status: 'APPROVED',
+        ...(end ? { startDate: { lte: end } } : {}),
         endDate: { gte: start },
-        startDate: { lte: end },
       },
     });
 

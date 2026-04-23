@@ -49,13 +49,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, startTime, endTime, reportDeadline } = shiftSchema.parse(body);
 
-    // Validate time order
-    if (startTime >= endTime) {
-      return NextResponse.json(
-        { error: 'End time must be after start time' },
-        { status: 400 }
-      );
-    }
+
 
     const shift = await prisma.shift.create({
       data: {

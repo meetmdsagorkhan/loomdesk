@@ -23,12 +23,18 @@ model User {
   twoFactorSecret  String?
   twoFactorRecoveryCodes Json?
   twoFactorConfirmedAt DateTime?
+  image         String?
+  position      String?
+  department    String?
+  company       String?
+  joiningDate   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   reports       Report[]
   scoreEvents   ScoreEvent[]
   leaveRequests LeaveRequest[]
   shifts        ShiftAssignment[]
+  shiftExceptions ShiftException[]
   notifications  Notification[]
   sentMessages  Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageReceiver")
@@ -169,6 +175,7 @@ model Shift {
   reportDeadline  String
   createdAt       DateTime          @default(now())
   assignments     ShiftAssignment[]
+  exceptions      ShiftException[]
 }
 
 model ShiftAssignment {
@@ -178,8 +185,21 @@ model ShiftAssignment {
   shiftId   String
   shift     Shift    @relation(fields: [shiftId], references: [id])
   startDate DateTime @db.Date
-  endDate   DateTime @db.Date
+  endDate   DateTime? @db.Date
   createdAt DateTime @default(now())
+}
+
+model ShiftException {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime @db.Date
+  shiftId   String?
+  shift     Shift?   @relation(fields: [shiftId], references: [id])
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
 }
 
 model Notification {
@@ -194,15 +214,17 @@ model Notification {
 }
 
 model Message {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   senderId   String
-  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
-  receiverId String
-  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  sender     User      @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId String?   // Null means it's a channel message
+  receiver   User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  channel    String?   // 'general', 'announcements', etc.
   content    String
-  read       Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  read       Boolean   @default(false)
+  readAt     DateTime? // Tracks exactly when it was read for read receipts
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, read, createdAt])

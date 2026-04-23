@@ -23,7 +23,7 @@ type LeaveSummary = {
 type ShiftAssignmentSummary = {
   userId: string;
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
 };
 
 type ScoreEventSummary = {
@@ -109,7 +109,10 @@ export async function GET(request: NextRequest) {
     const shiftAssignments: ShiftAssignmentSummary[] = await prisma.shiftAssignment.findMany({
       where: {
         startDate: { lte: end },
-        endDate: { gte: start },
+        OR: [
+          { endDate: null },
+          { endDate: { gte: start } },
+        ],
         ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
       },
       select: {
@@ -130,7 +133,7 @@ export async function GET(request: NextRequest) {
 
       userShifts.forEach((shift) => {
         const shiftStart = new Date(shift.startDate);
-        const shiftEnd = new Date(shift.endDate);
+        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
         const rangeStart = shiftStart < start ? start : shiftStart;
         const rangeEnd = shiftEnd > end ? end : shiftEnd;
 
@@ -230,7 +233,7 @@ export async function GET(request: NextRequest) {
 
       userShifts.forEach((shift) => {
         const shiftStart = new Date(shift.startDate);
-        const shiftEnd = new Date(shift.endDate);
+        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
         const rangeStart = shiftStart < start ? start : shiftStart;
         const rangeEnd = shiftEnd > end ? end : shiftEnd;
 
@@ -336,7 +339,7 @@ export async function GET(request: NextRequest) {
 
       userShifts.forEach((shift) => {
         const shiftStart = new Date(shift.startDate);
-        const shiftEnd = new Date(shift.endDate);
+        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
         const rangeStart = shiftStart < start ? start : shiftStart;
         const rangeEnd = shiftEnd > end ? end : shiftEnd;
 

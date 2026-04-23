@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import {
@@ -86,19 +86,7 @@ function AnalyticsContent() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (userLoading) return;
-    if (!mounted) return;
-
-    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchAnalytics();
-  }, [user, userLoading, router, dateRange, customStart, customEnd, mounted]);
-
-  const fetchAnalytics = useEffectEvent(async () => {
+  const fetchAnalytics = useCallback(async () => {
     setIsLoading(true);
     try {
       let startDate: string | undefined;
@@ -144,7 +132,19 @@ function AnalyticsContent() {
     } finally {
       setIsLoading(false);
     }
-  });
+  }, [dateRange, customStart, customEnd]);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!mounted) return;
+
+    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
+      router.push('/dashboard');
+      return;
+    }
+
+    fetchAnalytics();
+  }, [user, userLoading, router, mounted, fetchAnalytics]);
 
   // Prevent SSR rendering
   if (!mounted) {

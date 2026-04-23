@@ -47,6 +47,7 @@ export default function LeavePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [fetchedYears, setFetchedYears] = useState<number[]>([]);
 
   // Custom DayButton to show holiday name on hover
   const HolidayAwareDayButton = ({
@@ -56,19 +57,16 @@ export default function LeavePage() {
     locale,
     ...props
   }: any) => {
-    const holidayName = modifiers.holiday && day?.date
-      ? holidays.find((h: Holiday) => {
-          const dayDate = day.date.toISOString().split('T')[0];
-          const match = h.date === dayDate;
-          return match;
-        })?.name 
-      : undefined;
+    const dayDateStr = day?.date ? format(day.date, 'yyyy-MM-dd') : null;
+    const matchedHoliday = dayDateStr ? holidays.find((h: Holiday) => h.date === dayDateStr) : undefined;
+    const holidayName = matchedHoliday?.name;
+    const isHoliday = modifiers.holiday || !!matchedHoliday;
 
     return (
       <CalendarDayButton
         className={className}
         day={day}
-        modifiers={modifiers}
+        modifiers={{ ...modifiers, holiday: isHoliday }}
         locale={locale}
         title={holidayName}
         {...props}
@@ -78,12 +76,18 @@ export default function LeavePage() {
 
   useEffect(() => {
     setMounted(true);
-    fetchHolidays();
+    const currentYear = new Date().getFullYear();
+    fetchHolidays(currentYear);
   }, []);
 
-  const fetchHolidays = async () => {
+  const fetchHolidays = async (year: number) => {
+    // If we've already fetched holidays for this year, skip it.
+    if (fetchedYears.includes(year)) return;
+    
+    // Add year to state immediately to prevent duplicate concurrent calls
+    setFetchedYears((prev) => [...prev, year]);
+
     try {
-      const currentYear = new Date().getFullYear();
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY;
       
       if (!apiKey) {
@@ -92,7 +96,7 @@ export default function LeavePage() {
       }
 
       const calendarId = 'en.bd#holiday@group.v.calendar.google.com';
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${apiKey}&timeMin=${currentYear}-01-01T00:00:00Z&timeMax=${currentYear}-12-31T23:59:59Z`;
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${apiKey}&timeMin=${year}-01-01T00:00:00Z&timeMax=${year}-12-31T23:59:59Z`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -101,20 +105,39 @@ export default function LeavePage() {
       }
       
       const data = await response.json();
-      const holidaysData = data.items?.map((item: any) => ({
-        date: item.start?.date,
-        name: item.summary,
-        description: item.description,
-      })).filter((h: Holiday) => h.date) || [];
+      const newHolidaysData: Holiday[] = [];
       
-      console.log('Holidays from API:', holidaysData);
-      const parsedDates = holidaysData.map((h: Holiday) => {
-        const [year, month, day] = h.date.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        return { name: h.name, originalDate: h.date, parsedDate: date.toISOString() };
+      data.items?.forEach((item: any) => {
+        const startStrRaw = item.start?.date || item.start?.dateTime;
+        const endStrRaw = item.end?.date || item.end?.dateTime;
+        
+        if (!startStrRaw) return;
+        
+        const startDateStr = startStrRaw.split('T')[0];
+        const endDateStr = endStrRaw ? endStrRaw.split('T')[0] : null;
+        
+        const name = item.summary;
+        const description = item.description;
+
+        newHolidaysData.push({ date: startDateStr, name, description });
+
+        if (endDateStr && endDateStr !== startDateStr) {
+          const [yr, month, day] = startDateStr.split('-').map(Number);
+          const startObj = new Date(yr, month - 1, day);
+          const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+          const endObj = new Date(endYear, endMonth - 1, endDay);
+          
+          startObj.setDate(startObj.getDate() + 1);
+          while (startObj < endObj) {
+            const dateStr = format(startObj, 'yyyy-MM-dd');
+            newHolidaysData.push({ date: dateStr, name, description });
+            startObj.setDate(startObj.getDate() + 1);
+          }
+        }
       });
-      console.log('Parsed dates:', parsedDates);
-      setHolidays(holidaysData);
+      
+      console.log('Holidays parsed for year', year, ':', newHolidaysData);
+      setHolidays((prev) => [...prev, ...newHolidaysData]);
     } catch (error) {
       console.error('Error fetching holidays:', error);
     }
@@ -221,6 +244,11 @@ export default function LeavePage() {
               selected={newLeave.startDate ? new Date(newLeave.startDate) : undefined}
               components={{
                 DayButton: HolidayAwareDayButton,
+              }}
+              onMonthChange={(newMonth) => {
+                if (newMonth) {
+                  fetchHolidays(newMonth.getFullYear());
+                }
               }}
               onSelect={(date) => {
                 if (date) {

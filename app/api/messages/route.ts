@@ -8,12 +8,14 @@ import { consumeRateLimitPersistent } from '@/lib/rate-limit';
 import type { Prisma } from '@prisma/client';
 
 const createMessageSchema = z.object({
-  receiverId: z.string().min(1, 'Receiver is required'),
+  receiverId: z.string().nullable().optional(),
+  channel: z.string().nullable().optional(),
   content: z.string().trim().min(1, 'Message cannot be empty').max(2000, 'Message is too long'),
 });
 
 const getMessagesSchema = z.object({
-  userId: z.string().min(1, 'userId is required'),
+  userId: z.string().nullable().optional(),
+  channel: z.string().nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -43,12 +45,16 @@ export async function GET(request: NextRequest) {
         };
       };
     }>[] = await prisma.message.findMany({
-      where: {
-        OR: [
-          { senderId: session.user.id, receiverId: params.data.userId },
-          { senderId: params.data.userId, receiverId: session.user.id },
-        ],
-      },
+      where: params.data.channel
+        ? { channel: params.data.channel }
+        : params.data.userId
+          ? {
+            OR: [
+              { senderId: session.user.id, receiverId: params.data.userId },
+              { senderId: params.data.userId, receiverId: session.user.id },
+            ],
+          }
+          : { channel: 'general' },
       include: {
         sender: {
           select: {
@@ -68,9 +74,11 @@ export async function GET(request: NextRequest) {
         senderName: message.sender.name,
         senderEmail: message.sender.email,
         receiverId: message.receiverId,
+        channel: message.channel,
         content: message.content,
         createdAt: message.createdAt,
         read: message.read,
+        readAt: message.readAt,
       }))
     );
   } catch (error) {
@@ -103,25 +111,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { receiverId, content } = createMessageSchema.parse(body);
+    const { receiverId, channel, content } = createMessageSchema.parse(body);
 
-    if (receiverId === session.user.id) {
-      return NextResponse.json({ error: 'You cannot message yourself' }, { status: 400 });
-    }
+    if (receiverId) {
+      if (receiverId === session.user.id) {
+        return NextResponse.json({ error: 'You cannot message yourself' }, { status: 400 });
+      }
 
-    const receiver = await prisma.user.findUnique({
-      where: { id: receiverId },
-      select: { id: true, isActive: true, name: true, email: true },
-    });
+      const receiver = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { id: true, isActive: true, name: true, email: true },
+      });
 
-    if (!receiver || !receiver.isActive) {
-      return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
+      if (!receiver || !receiver.isActive) {
+        return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
+      }
     }
 
     const message = await prisma.message.create({
       data: {
         senderId: session.user.id,
-        receiverId,
+        receiverId: receiverId || null,
+        channel: channel || null,
         content,
       },
       include: {
@@ -140,9 +151,11 @@ export async function POST(request: NextRequest) {
       senderName: message.sender.name,
       senderEmail: message.sender.email,
       receiverId: message.receiverId,
+      channel: message.channel,
       content: message.content,
       createdAt: message.createdAt,
       read: message.read,
+      readAt: message.readAt,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

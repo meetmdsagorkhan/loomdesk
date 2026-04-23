@@ -21,6 +21,7 @@ function Calendar({
   locale,
   formatters,
   components,
+  onMonthChange,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -32,7 +33,10 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       month={month}
-      onMonthChange={setMonth}
+      onMonthChange={(newMonth) => {
+        setMonth(newMonth)
+        onMonthChange?.(newMonth)
+      }}
       onDayClick={(day, modifiers, e) => {
         if (modifiers.outside) {
           setMonth(day)

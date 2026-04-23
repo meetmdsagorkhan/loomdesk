@@ -4,9 +4,8 @@ export type NavIcon =
   | 'qa'
   | 'leave'
   | 'shifts'
-  | 'attendance'
-  | 'analytics'
   | 'messages'
+  | 'analytics'
   | 'scoring'
   | 'settings';
 
@@ -60,12 +59,12 @@ export const navItems: NavItem[] = [
     matches: ['/shifts/my-schedule', '/dashboard/shifts', '/dashboard/shifts/my-schedule'],
   },
   {
-    href: '/attendance',
-    label: 'Attendance',
-    description: 'Presence and punctuality',
-    icon: 'attendance',
+    href: '/messages',
+    label: 'Messages',
+    description: 'Team chat and announcements',
+    icon: 'messages',
     section: 'Operations',
-    matches: ['/dashboard/attendance'],
+    matches: ['/dashboard/messages'],
   },
   {
     href: '/analytics',
@@ -75,14 +74,7 @@ export const navItems: NavItem[] = [
     section: 'Admin',
     matches: ['/dashboard/analytics'],
   },
-  {
-    href: '/messages',
-    label: 'Messages',
-    description: 'Team communication',
-    icon: 'messages',
-    section: 'Operations',
-    matches: ['/dashboard/messages'],
-  },
+
   {
     href: '/scoring',
     label: 'Scoring',
@@ -186,11 +178,11 @@ const routeOverrides: Array<{
       },
     },
     {
-      test: (pathname) => pathname === '/attendance' || pathname === '/dashboard/attendance',
+      test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
       meta: {
-        title: 'Attendance',
-        description: 'Monitor presence patterns, late submissions, and missed days.',
-        href: '/attendance',
+        title: 'Messages',
+        description: 'Real-time communication with your team.',
+        href: '/messages',
       },
     },
     {
@@ -201,14 +193,7 @@ const routeOverrides: Array<{
         href: '/analytics',
       },
     },
-    {
-      test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
-      meta: {
-        title: 'Messages',
-        description: 'Stay aligned with teammates through direct conversation threads.',
-        href: '/messages',
-      },
-    },
+
     {
       test: (pathname) => pathname === '/scoring' || pathname === '/dashboard/scoring',
       meta: {

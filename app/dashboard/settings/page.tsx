@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, Users, Bell, Mail, Loader2, Plus, ShieldCheck, KeyRound, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Users, Bell, Mail, Loader2, Plus, ShieldCheck, KeyRound, RefreshCw, ChevronRight, Settings as SettingsIcon, Camera, Briefcase, Building2, Calendar, Lock } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
+import { Switch } from '@/components/ui/switch';
+import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
@@ -16,14 +20,22 @@ import { handleApiError } from '@/lib/error-handler';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-type Tab = 'profile' | 'team' | 'notifications' | 'security';
-
 export default function SettingsPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [mounted, setMounted] = useState(false);
 
-  const [profileData, setProfileData] = useState({ name: '', currentPassword: '', newPassword: '' });
+  const [activeTab, setActiveTab] = useState('profile');
+  const [profileData, setProfileData] = useState({ 
+    name: '', 
+    currentPassword: '', 
+    newPassword: '', 
+    confirmPassword: '',
+    position: '',
+    department: '',
+    company: '',
+    joiningDate: '',
+    image: '' 
+  });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const [inviteData, setInviteData] = useState({ email: '', role: 'MEMBER' });
@@ -57,6 +69,11 @@ export default function SettingsPage() {
       setProfileData((prev) => ({
         ...prev,
         name: data.user?.name || user?.name || '',
+        position: data.user?.position || '',
+        department: data.user?.department || '',
+        company: data.user?.company || '',
+        joiningDate: data.user?.joiningDate ? new Date(data.user.joiningDate).toISOString().split('T')[0] : '',
+        image: data.user?.image || '',
       }));
       setEmailAddress(data.user?.email || user?.email || '');
       setEmailVerified(Boolean(data.user?.emailVerifiedAt));
@@ -85,8 +102,11 @@ export default function SettingsPage() {
   }, []);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUpdatingProfile(true);
+    if (profileData.newPassword && profileData.newPassword !== profileData.confirmPassword) {
+      showToast('New passwords do not match', 'error');
+      setIsUpdatingProfile(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/user/profile', {
@@ -96,6 +116,11 @@ export default function SettingsPage() {
           name: profileData.name,
           currentPassword: profileData.currentPassword || undefined,
           newPassword: profileData.newPassword || undefined,
+          position: profileData.position || null,
+          department: profileData.department || null,
+          company: profileData.company || null,
+          joiningDate: profileData.joiningDate || null,
+          image: profileData.image || null,
         }),
       });
 
@@ -110,6 +135,7 @@ export default function SettingsPage() {
         ...prev,
         currentPassword: '',
         newPassword: '',
+        confirmPassword: '',
       }));
       if (response.ok) {
         const data = await response.json();
@@ -264,6 +290,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Image size must be less than 2MB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileData((prev) => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   useEffect(() => {
     void fetchProfile();
     void fetchTwoFactorStatus();
@@ -287,393 +338,526 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto pb-12">
       <PageHeader
         badge="Settings"
-        title="Manage your account and team settings"
-        subtitle="Update your profile, manage team members, and configure notification preferences."
+        title="Command Center"
+        subtitle="Manage your profile, team members, and security preferences from one place."
       />
 
-          {/* Tabs */}
-          <GlassCard variant="minimal" padding="sm">
-            <div className="flex gap-2 p-2">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'profile'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <User size={16} />
-              Profile
-            </button>
-            {isAdmin({ user }) && (
-              <button
-                onClick={() => setActiveTab('team')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
-                  activeTab === 'team'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Users size={16} />
-                Team
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'notifications'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Bell size={16} />
-              Notifications
-            </button>
-            <button
-              onClick={() => setActiveTab('security')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-colors ${
-                activeTab === 'security'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ShieldCheck size={16} />
-              Security
-            </button>
-          </div>
-        </GlassCard>
-
-          {/* Tab Content */}
-          {activeTab === 'profile' && (
-            <GlassCard variant="default" padding="md">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Profile Settings</h2>
-              <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
-                <div>
-                  <Label className="form-label">Name</Label>
-                  <Input
-                    type="text"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <Label className="form-label">Current Password</Label>
-                  <Input
-                    type="password"
-                    value={profileData.currentPassword}
-                    onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
-                    placeholder="Leave blank to keep current password"
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <Label className="form-label">New Password</Label>
-                  <Input
-                    type="password"
-                    value={profileData.newPassword}
-                    onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
-                    placeholder="Leave blank to keep current password"
-                    className="form-input"
-                  />
-                </div>
-                <Button type="submit" disabled={isUpdatingProfile} className="rounded-xl">
-                  {isUpdatingProfile ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </form>
-            </GlassCard>
-          )}
-
-          {activeTab === 'team' && isAdmin({ user }) && (
-            <GlassCard variant="default" padding="md">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Team Management</h2>
-              <form onSubmit={handleInvite} className="space-y-4 max-w-md">
-                <div>
-                  <Label className="form-label">Email</Label>
-                  <Input
-                    type="email"
-                    value={inviteData.email}
-                    onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                    placeholder="Enter team member email"
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <Label className="form-label">Role</Label>
-                  <Select
-                    value={inviteData.role}
-                    onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                    className="form-input"
-                  >
-                    <option value="MEMBER">Member</option>
-                    <option value="TEAM_LEAD">Team Lead</option>
-                    <option value="ADMIN">Admin</option>
-                  </Select>
-                </div>
-                <Button type="submit" disabled={isInviting} className="rounded-xl">
-                  {isInviting ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} className="mr-2" />
-                      Send Invitation
-                    </>
-                  )}
-                </Button>
-              </form>
-            </GlassCard>
-          )}
-
-
-          {activeTab === 'security' && (
-            <GlassCard variant="default" padding="md">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-2">Security</h2>
-                <p className="text-sm text-muted-foreground">
-                  Manage email verification and two-factor authentication for your account.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border/50 bg-muted/30 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-foreground">Email verification</p>
-                    <p className="text-sm text-muted-foreground">
-                      {emailVerified
-                        ? `Verified for ${emailAddress || user?.email || 'your account'}`
-                        : `Verification pending for ${emailAddress || user?.email || 'your account'}`}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
-                      emailVerified
-                        ? 'bg-emerald-100/80 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
-                        : 'bg-amber-100/80 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300'
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Spatial Navigation Sidebar */}
+        <div className="lg:col-span-3 space-y-4">
+          <GlassCard variant="minimal" padding="sm" className="border-white/10 overflow-hidden sticky top-24">
+            <div className="flex flex-col gap-1">
+              {[
+                { id: 'profile', label: 'Profile', icon: User },
+                ...(isAdmin({ user }) ? [{ id: 'team', label: 'Team', icon: Users }] : []),
+                { id: 'security', label: 'Security', icon: ShieldCheck },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`relative flex items-center justify-between w-full px-4 py-3.5 rounded-xl transition-all duration-300 group ${activeTab === item.id
+                      ? 'text-primary font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                     }`}
-                  >
-                    {emailVerified ? 'Verified' : 'Pending'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border/50 bg-muted/30 p-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-foreground">Two-factor authentication</p>
-                    <p className="text-sm text-muted-foreground">
-                      {twoFactorEnabled
-                        ? `Enabled with ${twoFactorRecoveryCodesRemaining} recovery codes remaining`
-                        : 'Protect your account with an authenticator app and backup recovery codes.'}
-                    </p>
+                >
+                  <div className="flex items-center gap-3 z-10">
+                    <item.icon size={18} className={`${activeTab === item.id ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                    <span className="text-sm tracking-tight">{item.label}</span>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm ${
-                      twoFactorEnabled
-                        ? 'bg-emerald-100/80 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
-                        : 'bg-slate-200/80 text-slate-600 dark:bg-slate-800 dark:text-slate-200'
-                    }`}
-                  >
-                    {twoFactorEnabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
+                  {activeTab === item.id && (
+                    <motion.div
+                      layoutId="activeTabGlow"
+                      className="absolute inset-0 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_20px_rgba(125,92,255,0.15)]"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <ChevronRight
+                    size={14}
+                    className={`transition-transform duration-300 z-10 ${activeTab === item.id ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`}
+                  />
+                </button>
+              ))}
+            </div>
+          </GlassCard>
 
-                {!twoFactorEnabled && !twoFactorSetupSecret && (
-                  <Button
-                    onClick={startTwoFactorSetup}
-                    disabled={isTwoFactorLoading || !emailVerified}
-                    className="rounded-xl"
-                  >
-                    {isTwoFactorLoading ? (
-                      <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
-                        Preparing...
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={16} className="mr-2" />
-                        Set Up Two-Factor Authentication
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {!emailVerified && (
-                  <p className="text-sm text-amber-600 dark:text-amber-300">
-                    Verify your email address before enabling two-factor authentication.
-                  </p>
-                )}
-
-                {twoFactorSetupSecret && !twoFactorEnabled && (
-                  <div className="space-y-4 rounded-2xl border border-border/50 bg-background/80 p-4">
-                    <div>
-                      <p className="font-medium text-foreground">Step 1: Add this secret to your authenticator app</p>
-                      <p className="mt-2 rounded-xl bg-muted/50 px-4 py-3 font-mono text-sm text-foreground break-all">
-                        {twoFactorSetupSecret}
-                      </p>
-                      {twoFactorSetupUrl && (
-                        <p className="mt-2 text-xs text-muted-foreground break-all">
-                          OTPAuth URL: {twoFactorSetupUrl}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label className="form-label">
-                        Step 2: Enter the 6-digit code from your authenticator app
-                      </Label>
-                      <Input
-                        type="text"
-                        value={twoFactorOtp}
-                        onChange={(e) => setTwoFactorOtp(e.target.value)}
-                        placeholder="123456"
-                        className="form-input max-w-xs"
-                      />
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button onClick={enableTwoFactor} disabled={isTwoFactorLoading || twoFactorOtp.trim().length < 6} className="rounded-xl">
-                        {isTwoFactorLoading ? (
-                          <>
-                            <Loader2 size={16} className="mr-2 animate-spin" />
-                            Enabling...
-                          </>
-                        ) : (
-                          'Enable Two-Factor Authentication'
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setTwoFactorSetupSecret(null);
-                          setTwoFactorSetupUrl(null);
-                          setTwoFactorOtp('');
-                        }}
-                        disabled={isTwoFactorLoading}
-                        className="rounded-xl"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {twoFactorEnabled && (
-                  <div className="space-y-4 rounded-2xl border border-border/50 bg-background/80 p-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label className="form-label">
-                          Current Password
-                        </Label>
-                        <Input
-                          type="password"
-                          value={twoFactorPassword}
-                          onChange={(e) => setTwoFactorPassword(e.target.value)}
-                          placeholder="Required for security changes"
-                          className="form-input"
-                        />
-                      </div>
-                      <div>
-                        <Label className="form-label">
-                          Authenticator Code
-                        </Label>
-                        <Input
-                          type="text"
-                          value={twoFactorOtp}
-                          onChange={(e) => setTwoFactorOtp(e.target.value)}
-                          placeholder="123456"
-                          className="form-input"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="form-label">
-                        Or Use a Recovery Code
-                      </Label>
-                      <Input
-                        type="text"
-                        value={twoFactorRecoveryCode}
-                        onChange={(e) => setTwoFactorRecoveryCode(e.target.value)}
-                        placeholder="ABCD-1234"
-                        className="form-input max-w-xs"
-                      />
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        onClick={regenerateRecoveryCodes}
-                        disabled={
-                          isTwoFactorLoading ||
-                          twoFactorPassword.trim().length === 0 ||
-                          (twoFactorOtp.trim().length === 0 &&
-                            twoFactorRecoveryCode.trim().length === 0)
-                        }
-                        className="rounded-xl"
-                      >
-                        {isTwoFactorLoading ? (
-                          <>
-                            <Loader2 size={16} className="mr-2 animate-spin" />
-                            Updating...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw size={16} className="mr-2" />
-                            Regenerate Recovery Codes
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={disableTwoFactor}
-                        disabled={
-                          isTwoFactorLoading ||
-                          twoFactorPassword.trim().length === 0 ||
-                          (twoFactorOtp.trim().length === 0 &&
-                            twoFactorRecoveryCode.trim().length === 0)
-                        }
-                        className="rounded-xl"
-                      >
-                        <KeyRound size={16} className="mr-2" />
-                        Disable Two-Factor Authentication
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {generatedRecoveryCodes.length > 0 && (
-                  <div className="rounded-2xl border border-amber-300/40 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 backdrop-blur-sm">
-                    <p className="font-medium text-foreground">Save these recovery codes now</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Each code can be used once if you lose access to your authenticator app.
-                    </p>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {generatedRecoveryCodes.map((code) => (
-                        <div
-                          key={code}
-                          className="rounded-xl bg-background px-4 py-3 font-mono text-sm text-foreground"
-                        >
-                          {code}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </GlassCard>
-          )}
         </div>
+
+        {/* Dynamic Content Area */}
+        <div className="lg:col-span-9 min-h-[600px]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {activeTab === 'profile' && (
+                <BentoGrid>
+                  <BentoCard colSpan={3}>
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Profile Settings</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Manage your personal information and credentials</p>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                        <User className="text-primary" size={24} />
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleProfileUpdate} className="space-y-8">
+                      {/* Profile Image Upload */}
+                      <div className="flex flex-col items-center gap-4 mb-8">
+                        <div className="relative group">
+                          <Avatar className="w-24 h-24 border-2 border-primary/30 ring-4 ring-primary/5">
+                            {profileData.image ? (
+                              <AvatarImage src={profileData.image} alt={profileData.name} className="object-cover" />
+                            ) : (
+                              <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
+                                {getInitials(profileData.name || 'User')}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <label 
+                            htmlFor="avatar-upload" 
+                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
+                          >
+                            <Camera size={24} className="text-white" />
+                            <input 
+                              id="avatar-upload" 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={handleImageUpload}
+                            />
+                          </label>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-foreground">Profile Picture</p>
+                          <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF up to 2MB</p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <User size={14} className="text-primary" /> Full Name
+                          </Label>
+                          <Input
+                            type="text"
+                            value={profileData.name}
+                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                            className="form-input"
+                            placeholder="Your Name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Mail size={14} className="text-primary" /> Email Address
+                          </Label>
+                          <Input
+                            type="email"
+                            value={emailAddress}
+                            disabled
+                            className="form-input opacity-70 bg-white/5 cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="relative py-4">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-white/10"></span>
+                        </div>
+                        <div className="relative flex justify-start">
+                          <span className="bg-transparent pr-4 text-xs font-bold uppercase tracking-widest text-primary/60">Professional Details</span>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Briefcase size={14} className="text-primary" /> Position
+                          </Label>
+                          <Input
+                            type="text"
+                            value={profileData.position}
+                            onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
+                            placeholder="e.g. Senior Developer"
+                            className="form-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Building2 size={14} className="text-primary" /> Department
+                          </Label>
+                          <Input
+                            type="text"
+                            value={profileData.department}
+                            onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                            placeholder="e.g. Engineering"
+                            className="form-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <SettingsIcon size={14} className="text-primary" /> Company Name
+                          </Label>
+                          <Input
+                            type="text"
+                            value={profileData.company}
+                            onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
+                            placeholder="LoomDesk"
+                            className="form-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Calendar size={14} className="text-primary" /> Joining Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={profileData.joiningDate}
+                            onChange={(e) => setProfileData({ ...profileData, joiningDate: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex justify-end">
+                        <Button type="submit" disabled={isUpdatingProfile} className="btn-primary min-w-[140px] h-11 px-8 rounded-xl font-semibold">
+                          {isUpdatingProfile ? (
+                            <>
+                              <Loader2 size={18} className="mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            'Update Profile'
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </BentoCard>
+                </BentoGrid>
+              )}
+
+              {activeTab === 'team' && isAdmin({ user }) && (
+                <BentoGrid>
+                  <BentoCard colSpan={3}>
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Team Management</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Add new members and define their workspace permissions</p>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                        <Users className="text-primary" size={24} />
+                      </div>
+                    </div>
+
+                    <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 mb-8">
+                      <p className="text-sm text-foreground/90 leading-relaxed">
+                        Invitations are sent via email. New members will have 72 hours to accept the invite before it expires.
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleInvite} className="space-y-6">
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1">Email Address</Label>
+                          <Input
+                            type="email"
+                            value={inviteData.email}
+                            onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                            placeholder="colleague@company.com"
+                            className="form-input"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold ml-1">Workspace Role</Label>
+                          <Select
+                            value={inviteData.role}
+                            onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
+                            className="form-input bg-transparent"
+                          >
+                            <option value="MEMBER">Member (Standard Access)</option>
+                            <option value="TEAM_LEAD">Team Lead (Management Access)</option>
+                            <option value="ADMIN">Admin (Full Control)</option>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex justify-end">
+                        <Button type="submit" disabled={isInviting} className="btn-primary min-w-[160px] h-11 px-8 rounded-xl font-semibold">
+                          {isInviting ? (
+                            <>
+                              <Loader2 size={18} className="mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={18} className="mr-2" />
+                              Send Invitation
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </BentoCard>
+                </BentoGrid>
+              )}
+
+
+              {activeTab === 'security' && (
+                <BentoGrid>
+                  <BentoCard colSpan={3}>
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Security Protocol</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Multi-factor authentication and identity verification</p>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                        <ShieldCheck className="text-primary" size={24} />
+                      </div>
+                    </div>
+
+                    {/* Password Change Section */}
+                    <div className="mb-10">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                          <Lock size={18} className="text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-foreground">Update Password</h3>
+                          <p className="text-xs text-muted-foreground">Ensure your account uses a long, random password to stay secure.</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleProfileUpdate} className="space-y-6">
+                        <div className="grid gap-6 md:grid-cols-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold ml-1">Current Password</Label>
+                            <Input
+                              type="password"
+                              value={profileData.currentPassword}
+                              onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
+                              placeholder="••••••••"
+                              className="form-input"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold ml-1">New Password</Label>
+                            <Input
+                              type="password"
+                              value={profileData.newPassword}
+                              onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
+                              placeholder="Minimum 8 characters"
+                              className="form-input"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold ml-1">Confirm Password</Label>
+                            <Input
+                              type="password"
+                              value={profileData.confirmPassword}
+                              onChange={(e) => setProfileData({ ...profileData, confirmPassword: e.target.value })}
+                              placeholder="Match new password"
+                              className="form-input"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button 
+                            type="submit" 
+                            disabled={isUpdatingProfile || !profileData.currentPassword || !profileData.newPassword} 
+                            className="btn-primary min-w-[140px] h-10 px-6 rounded-xl font-semibold"
+                          >
+                            {isUpdatingProfile ? (
+                              <>
+                                <Loader2 size={16} className="mr-2 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Change Password'
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+
+                    <div className="relative py-4 mb-8">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-white/10"></span>
+                      </div>
+                      <div className="relative flex justify-start">
+                        <span className="bg-transparent pr-4 text-xs font-bold uppercase tracking-widest text-primary/60">Advanced Protection</span>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 mb-8">
+                      {/* Email Verification Status */}
+                      <div className="p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent flex items-center justify-between group hover:border-primary/30 transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-xl ${emailVerified ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
+                            <Mail size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">Email Integrity</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {emailVerified ? `Verified: ${emailAddress}` : 'Verification Pending'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${emailVerified ? 'bg-success/10 text-success border border-success/20' : 'bg-warning/10 text-warning border border-warning/20'}`}>
+                          {emailVerified ? 'Authentic' : 'Pending'}
+                        </div>
+                      </div>
+
+                      {/* 2FA Main Panel */}
+                      <div className="p-6 rounded-2xl border border-white/10 bg-white/5">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-xl ${twoFactorEnabled ? 'bg-success/20 text-success' : 'bg-muted/20 text-muted-foreground'}`}>
+                              <KeyRound size={20} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground">Two-Factor Authentication</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Add an extra layer of security to your account
+                              </p>
+                            </div>
+                          </div>
+                          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${twoFactorEnabled ? 'bg-success/10 text-success border border-success/20' : 'bg-muted/10 text-muted-foreground border border-white/10'}`}>
+                            {twoFactorEnabled ? 'Active' : 'Inactive'}
+                          </div>
+                        </div>
+
+                        {!twoFactorEnabled && !twoFactorSetupSecret && (
+                          <Button
+                            onClick={startTwoFactorSetup}
+                            disabled={isTwoFactorLoading || !emailVerified}
+                            className="btn-primary w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20"
+                          >
+                            {isTwoFactorLoading ? <Loader2 size={18} className="animate-spin" /> : 'Activate Security Layer'}
+                          </Button>
+                        )}
+
+                        {twoFactorSetupSecret && !twoFactorEnabled && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="mt-4 space-y-6 p-6 rounded-2xl border border-primary/30 bg-primary/5"
+                          >
+                            <div className="space-y-4">
+                              <p className="text-xs font-bold uppercase tracking-widest text-primary">Protocol Setup: Step 1</p>
+                              <div className="p-4 rounded-xl bg-black/20 border border-white/10 font-mono text-sm break-all text-center tracking-widest font-bold">
+                                {twoFactorSetupSecret}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground text-center">Add this secret to your authenticator application</p>
+                            </div>
+
+                            <div className="space-y-4">
+                              <p className="text-xs font-bold uppercase tracking-widest text-primary">Protocol Setup: Step 2</p>
+                              <Input
+                                type="text"
+                                value={twoFactorOtp}
+                                onChange={(e) => setTwoFactorOtp(e.target.value)}
+                                placeholder="000 000"
+                                className="form-input text-center text-2xl tracking-[0.5em] font-bold h-14"
+                                maxLength={6}
+                              />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                              <Button onClick={enableTwoFactor} disabled={isTwoFactorLoading || twoFactorOtp.length < 6} className="btn-primary flex-1 h-12 rounded-xl font-bold">
+                                Finalize Activation
+                              </Button>
+                              <Button variant="outline" onClick={() => { setTwoFactorSetupSecret(null); setTwoFactorOtp(''); }} className="btn-secondary px-6 rounded-xl border-white/10">
+                                Abort
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {twoFactorEnabled && (
+                          <div className="mt-4 space-y-6">
+                            <div className="grid gap-6 md:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-widest text-primary/70 ml-1">Confirmation</Label>
+                                <Input
+                                  type="password"
+                                  value={twoFactorPassword}
+                                  onChange={(e) => setTwoFactorPassword(e.target.value)}
+                                  placeholder="Password required"
+                                  className="form-input"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-widest text-primary/70 ml-1">Current Code</Label>
+                                <Input
+                                  type="text"
+                                  value={twoFactorOtp}
+                                  onChange={(e) => setTwoFactorOtp(e.target.value)}
+                                  placeholder="000 000"
+                                  className="form-input font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-4 pt-2">
+                              <Button
+                                onClick={regenerateRecoveryCodes}
+                                disabled={isTwoFactorLoading || !twoFactorPassword || (!twoFactorOtp && !twoFactorRecoveryCode)}
+                                className="btn-secondary flex-1 h-11 rounded-xl font-bold border-white/10"
+                                variant="outline"
+                              >
+                                {isTwoFactorLoading ? <Loader2 size={18} className="animate-spin" /> : 'Refresh Recovery Keys'}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={disableTwoFactor}
+                                disabled={isTwoFactorLoading || !twoFactorPassword || (!twoFactorOtp && !twoFactorRecoveryCode)}
+                                className="flex-1 h-11 rounded-xl font-bold bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-white transition-all"
+                              >
+                                Deactivate 2FA
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {generatedRecoveryCodes.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-6 rounded-2xl border border-warning/30 bg-warning/5"
+                      >
+                        <div className="flex items-center gap-2 text-warning mb-4">
+                          <ShieldCheck size={18} />
+                          <span className="font-bold uppercase tracking-widest text-xs">Emergency Recovery Protocol</span>
+                        </div>
+                        <p className="text-[11px] text-foreground/70 mb-6 leading-relaxed">
+                          Save these cryptographic keys in a secure offline location. They provide emergency access if your primary authentication device is compromised.
+                        </p>
+                        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+                          {generatedRecoveryCodes.map((code) => (
+                            <div key={code} className="p-3 rounded-xl bg-black/20 border border-white/10 font-mono text-[10px] font-bold text-foreground text-center tracking-widest">
+                              {code}
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </BentoCard>
+                </BentoGrid>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
   );
 }

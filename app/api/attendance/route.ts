@@ -44,7 +44,7 @@ type AttendanceLeave = {
 
 type AttendanceShiftAssignment = {
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
   shift: {
     reportDeadline: string;
   };
@@ -107,7 +107,10 @@ async function calculateAttendance(
     where: {
       userId,
       startDate: { lte: endDate },
-      endDate: { gte: startDate },
+      OR: [
+        { endDate: null },
+        { endDate: { gte: startDate } },
+      ],
     },
     include: {
       shift: true,
@@ -127,9 +130,11 @@ async function calculateAttendance(
 
     // Check if there's a shift assignment for this day
     const shiftAssignment = shiftAssignments.find(
-      (assignment) =>
-        currentDate >= new Date(assignment.startDate) &&
-        currentDate <= new Date(assignment.endDate)
+      (assignment) => {
+        const assignmentEnd = assignment.endDate ? new Date(assignment.endDate) : endDate;
+        return currentDate >= new Date(assignment.startDate) &&
+        currentDate <= assignmentEnd;
+      }
     );
 
     // If no shift assignment, it's a day off
@@ -165,7 +170,7 @@ async function calculateAttendance(
       const reportDeadline = shiftAssignment.shift.reportDeadline;
       const reportTime = report.updatedAt || report.createdAt;
       const reportDate = new Date(reportTime);
-      
+
       // Parse the deadline time (HH:MM format)
       const [deadlineHours, deadlineMinutes] = reportDeadline.split(':').map(Number);
       const deadlineTime = new Date(reportDate);

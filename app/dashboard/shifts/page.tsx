@@ -2,11 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Clock, Loader2, Plus, Trash2, Pencil, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
@@ -29,7 +38,7 @@ type Shift = {
 type ShiftAssignment = {
   id: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   user: {
     id: string;
     name: string;
@@ -38,11 +47,25 @@ type ShiftAssignment = {
   shift: Shift;
 };
 
+type ShiftException = {
+  id: string;
+  date: string;
+  shiftId: string | null;
+  shift: Shift | null;
+  note: string | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+};
+
 export default function ShiftsPage() {
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
+  const [exceptions, setExceptions] = useState<ShiftException[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateShift, setShowCreateShift] = useState(false);
@@ -58,9 +81,33 @@ export default function ShiftsPage() {
     shiftId: '',
     startDate: '',
     endDate: '',
+    untilFurtherNotice: false,
   });
   const [isAssigning, setIsAssigning] = useState(false);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
+  
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [editingShiftForm, setEditingShiftForm] = useState({
+    name: '',
+    startTime: '',
+    endTime: '',
+    reportDeadline: '',
+  });
+  const [isUpdatingShift, setIsUpdatingShift] = useState(false);
+  const [deleteShiftId, setDeleteShiftId] = useState<string | null>(null);
+
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
+
+  const [exceptionForm, setExceptionForm] = useState({
+    userId: '',
+    date: '',
+    shiftId: '',
+    note: '',
+  });
+  const [isCreatingException, setIsCreatingException] = useState(false);
+  const [deleteExceptionId, setDeleteExceptionId] = useState<string | null>(null);
+
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -79,8 +126,21 @@ export default function ShiftsPage() {
 
     fetchShifts();
     fetchAssignments();
+    fetchExceptions();
     fetchMembers();
   }, [user, userLoading, router, mounted]);
+
+  const fetchExceptions = async () => {
+    try {
+      const response = await fetch('/api/shifts/exceptions');
+      if (response.ok) {
+        const data = await response.json();
+        setExceptions(data.exceptions || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch exceptions', error);
+    }
+  };
 
   const fetchShifts = async () => {
     try {
@@ -160,37 +220,135 @@ export default function ShiftsPage() {
     }
   };
 
-  const handleAssignShift = async (e: React.FormEvent) => {
+  const handleEditShiftClick = (shift: Shift) => {
+    setEditingShiftId(shift.id);
+    setEditingShiftForm({
+      name: shift.name,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      reportDeadline: shift.reportDeadline,
+    });
+    setError('');
+  };
+
+  const handleUpdateShift = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!assignForm.userId || !assignForm.shiftId || !assignForm.startDate || !assignForm.endDate) {
+    if (!editingShiftForm.name || !editingShiftForm.startTime || !editingShiftForm.endTime || !editingShiftForm.reportDeadline) {
       setError('All fields are required');
       return;
     }
 
-    setIsAssigning(true);
+    setIsUpdatingShift(true);
     try {
-      const response = await fetch('/api/shifts/assign', {
-        method: 'POST',
+      const response = await fetch(`/api/shifts/${editingShiftId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assignForm),
+        body: JSON.stringify(editingShiftForm),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        setError(data.error || 'Failed to assign shift');
+        setError(data.error || 'Failed to update shift');
+        return;
+      }
+
+      await fetchShifts();
+      setEditingShiftId(null);
+      showToast('Shift updated successfully', 'success');
+    } catch (error) {
+      handleApiError(error, 'Shift Management');
+    } finally {
+      setIsUpdatingShift(false);
+    }
+  };
+
+  const handleDeleteShift = async () => {
+    if (!deleteShiftId) return;
+
+    try {
+      const response = await fetch(`/api/shifts/${deleteShiftId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        handleApiError(data.error || 'Failed to delete shift', 'Shift Management');
+        return;
+      }
+
+      await fetchShifts();
+      setDeleteShiftId(null);
+      showToast('Shift deleted', 'success');
+    } catch (error) {
+      handleApiError(error, 'Shift Management');
+    }
+  };
+
+  const handleAssignShift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!assignForm.userId || !assignForm.shiftId || !assignForm.startDate) {
+      setError('Required fields are missing');
+      return;
+    }
+
+    if (!assignForm.untilFurtherNotice && !assignForm.endDate) {
+      setError('End date is required unless "Until further notice" is checked');
+      return;
+    }
+
+    const isEditing = !!editingAssignmentId;
+    const actionStateSetter = isEditing ? setIsUpdatingAssignment : setIsAssigning;
+    actionStateSetter(true);
+    
+    try {
+      const payload = {
+        userId: assignForm.userId,
+        shiftId: assignForm.shiftId,
+        startDate: assignForm.startDate,
+        endDate: assignForm.untilFurtherNotice ? null : assignForm.endDate,
+      };
+
+      const url = isEditing ? `/api/shifts/assignments/${editingAssignmentId}` : '/api/shifts/assign';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || `Failed to ${isEditing ? 'update' : 'assign'} shift`);
         return;
       }
 
       await fetchAssignments();
-      setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '' });
-      showToast('Shift assigned successfully', 'success');
+      setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '', untilFurtherNotice: false });
+      setEditingAssignmentId(null);
+      showToast(`Shift ${isEditing ? 'updated' : 'assigned'} successfully`, 'success');
     } catch (error) {
       handleApiError(error, 'Shift Management');
     } finally {
-      setIsAssigning(false);
+      actionStateSetter(false);
     }
+  };
+
+  const handleEditAssignmentClick = (assignment: ShiftAssignment) => {
+    setEditingAssignmentId(assignment.id);
+    setAssignForm({
+      userId: assignment.user.id,
+      shiftId: assignment.shift.id,
+      startDate: new Date(assignment.startDate).toISOString().split('T')[0],
+      endDate: assignment.endDate ? new Date(assignment.endDate).toISOString().split('T')[0] : '',
+      untilFurtherNotice: !assignment.endDate,
+    });
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteAssignment = async () => {
@@ -209,6 +367,68 @@ export default function ShiftsPage() {
       await fetchAssignments();
       setDeleteAssignmentId(null);
       showToast('Assignment removed', 'success');
+    } catch (error) {
+      handleApiError(error, 'Shift Management');
+    }
+  };
+
+  const handleCreateException = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!exceptionForm.userId || !exceptionForm.date || !exceptionForm.shiftId) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    setIsCreatingException(true);
+    try {
+      const payload = {
+        userId: exceptionForm.userId,
+        date: exceptionForm.date,
+        shiftId: exceptionForm.shiftId === 'off' ? null : exceptionForm.shiftId,
+        note: exceptionForm.note,
+      };
+
+      const response = await fetch('/api/shifts/exceptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Failed to create override');
+        return;
+      }
+
+      await fetchExceptions();
+      setExceptionForm({ userId: '', date: '', shiftId: '', note: '' });
+      showToast('Override created successfully', 'success');
+    } catch (error) {
+      handleApiError(error, 'Shift Management');
+    } finally {
+      setIsCreatingException(false);
+    }
+  };
+
+  const handleDeleteException = async () => {
+    if (!deleteExceptionId) return;
+
+    try {
+      const response = await fetch(`/api/shifts/exceptions/${deleteExceptionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        handleApiError(data.error || 'Failed to remove override', 'Shift Management');
+        return;
+      }
+
+      await fetchExceptions();
+      setDeleteExceptionId(null);
+      showToast('Override removed', 'success');
     } catch (error) {
       handleApiError(error, 'Shift Management');
     }
@@ -262,8 +482,9 @@ export default function ShiftsPage() {
 
           {/* Create Shift Form */}
           {showCreateShift && (
-            <form onSubmit={handleCreateShift} className="space-y-4 mb-6 p-4 bg-muted/50 rounded-2xl card-elevation-sm">
-              <div>
+            <GlassCard variant="panel" padding="sm" className="mb-6">
+              <form onSubmit={handleCreateShift} className="space-y-4">
+                <div>
                 <Label className="form-label">Name</Label>
                 <Input
                   type="text"
@@ -303,7 +524,8 @@ export default function ShiftsPage() {
                 </div>
               </div>
               {error && (
-                <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm">
+                <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                  <AlertCircle size={16} />
                   {error}
                 </div>
               )}
@@ -332,6 +554,7 @@ export default function ShiftsPage() {
                 </Button>
               </div>
             </form>
+            </GlassCard>
           )}
 
           {/* Shifts List */}
@@ -345,27 +568,105 @@ export default function ShiftsPage() {
           ) : (
             <div className="space-y-2">
               {shifts.map((shift) => (
-                <div key={shift.id} className="p-4 bg-muted/50 rounded-2xl border border-border/40">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">{shift.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {shift.startTime} - {shift.endTime} ({getShiftHours(shift.startTime, shift.endTime)}h)
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Report deadline: {shift.reportDeadline}
-                      </p>
+                <GlassCard key={shift.id} variant="panel" padding="sm" hover>
+                  {editingShiftId === shift.id ? (
+                    <form onSubmit={handleUpdateShift} className="space-y-4">
+                      <div>
+                        <Label className="form-label">Name</Label>
+                        <Input
+                          type="text"
+                          value={editingShiftForm.name}
+                          onChange={(e) => setEditingShiftForm({ ...editingShiftForm, name: e.target.value })}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="form-label">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={editingShiftForm.startTime}
+                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, startTime: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
+                        <div>
+                          <Label className="form-label">End Time</Label>
+                          <Input
+                            type="time"
+                            value={editingShiftForm.endTime}
+                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, endTime: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
+                        <div>
+                          <Label className="form-label">Report Deadline</Label>
+                          <Input
+                            type="time"
+                            value={editingShiftForm.reportDeadline}
+                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, reportDeadline: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
+                      </div>
+                      {error && (
+                        <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                          <AlertCircle size={16} />
+                          {error}
+                        </div>
+                      )}
+                      <div className="flex gap-2 justify-end">
+                        <Button type="submit" size="sm" disabled={isUpdatingShift} className="rounded-xl">
+                          {isUpdatingShift ? <Loader2 size={14} className="mr-2 animate-spin" /> : 'Save'}
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingShiftId(null)} className="rounded-xl">
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-foreground">{shift.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {shift.startTime} - {shift.endTime} ({getShiftHours(shift.startTime, shift.endTime)}h)
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Report deadline: {shift.reportDeadline}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => handleEditShiftClick(shift)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                          <Pencil size={14} />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setDeleteShiftId(shift.id)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </GlassCard>
               ))}
             </div>
           )}
         </GlassCard>
 
-        {/* Assign Shift Panel */}
+        {/* Assign/Edit Shift Panel */}
         <GlassCard variant="default" padding="md">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Assign Shift</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              {editingAssignmentId ? 'Edit Assignment' : 'Assign Shift'}
+            </h2>
+            {editingAssignmentId && (
+              <Button size="icon" variant="ghost" onClick={() => {
+                setEditingAssignmentId(null);
+                setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '', untilFurtherNotice: false });
+                setError('');
+              }}>
+                <X size={16} />
+              </Button>
+            )}
+          </div>
           <form onSubmit={handleAssignShift} className="space-y-4">
             <div>
               <Label className="form-label">Member</Label>
@@ -409,32 +710,51 @@ export default function ShiftsPage() {
                   className="form-input"
                 />
               </div>
-              <div>
+              <div className={assignForm.untilFurtherNotice ? 'opacity-50' : ''}>
                 <Label className="form-label">End Date</Label>
                 <Input
                   type="date"
                   value={assignForm.endDate}
                   onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
                   min={assignForm.startDate}
+                  disabled={assignForm.untilFurtherNotice}
                   className="form-input"
                 />
               </div>
             </div>
 
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="untilFurtherNotice"
+                checked={assignForm.untilFurtherNotice}
+                onChange={(e) => {
+                  setAssignForm({
+                    ...assignForm,
+                    untilFurtherNotice: e.target.checked,
+                    ...(e.target.checked ? { endDate: '' } : {})
+                  });
+                }}
+              />
+              <Label htmlFor="untilFurtherNotice" className="text-sm font-medium text-foreground cursor-pointer">
+                Until further notice (No end date)
+              </Label>
+            </div>
+
             {error && (
-              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl text-sm">
+              <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                <AlertCircle size={16} />
                 {error}
               </div>
             )}
 
-            <Button type="submit" disabled={isAssigning} className="w-full rounded-xl">
-              {isAssigning ? (
+            <Button type="submit" disabled={isAssigning || isUpdatingAssignment} className="w-full rounded-xl">
+              {isAssigning || isUpdatingAssignment ? (
                 <>
                   <Loader2 size={16} className="mr-2 animate-spin" />
-                  Assigning...
+                  {editingAssignmentId ? 'Updating...' : 'Assigning...'}
                 </>
               ) : (
-                'Assign Shift'
+                editingAssignmentId ? 'Update Assignment' : 'Assign Shift'
               )}
             </Button>
           </form>
@@ -443,7 +763,7 @@ export default function ShiftsPage() {
 
       {/* Current Assignments Table */}
       <GlassCard variant="default" padding="none">
-        <div className="border-b border-border/60 p-6">
+        <div className="p-6 pb-2">
           <h2 className="text-lg font-semibold text-foreground">Current Assignments</h2>
         </div>
         {assignments.length === 0 ? (
@@ -454,54 +774,221 @@ export default function ShiftsPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto p-6">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border/60">
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Shift</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Hours</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Period</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Shift</TableHead>
+                  <TableHead>Hours</TableHead>
+                  <TableHead>Dates</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {assignments.map((assignment) => (
-                  <tr key={assignment.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
-                    <td className="px-6 py-4 text-sm text-foreground">{assignment.user.name}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">{assignment.shift.name}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">
+                  <TableRow key={assignment.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs border border-primary/20">
+                          {assignment.user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{assignment.user.name}</p>
+                          <p className="text-xs text-muted-foreground">{assignment.user.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
+                        {assignment.shift.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {getShiftHours(assignment.shift.startTime, assignment.shift.endTime)}h
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {new Date(assignment.startDate).toLocaleDateString()} - {new Date(assignment.endDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteAssignmentId(assignment.id)}
-                        className="rounded-xl"
-                      >
-                        <Trash2 size={14} className="mr-2" />
-                        Remove
-                      </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(assignment.startDate).toLocaleDateString()} - {assignment.endDate ? new Date(assignment.endDate).toLocaleDateString() : 'Until further notice'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleEditAssignmentClick(assignment)}
+                          className="rounded-xl"
+                        >
+                          <Pencil size={14} className="mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteAssignmentId(assignment.id)}
+                          className="rounded-xl"
+                        >
+                          <Trash2 size={14} className="mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </GlassCard>
 
-      {/* Delete Confirm Modal */}
+      {/* Exceptions & Overrides Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <GlassCard variant="panel" padding="md" className="lg:col-span-1 h-fit">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Add Holiday / Override</h2>
+          <form onSubmit={handleCreateException} className="space-y-4">
+            <div>
+              <Label className="form-label">Member</Label>
+              <Select
+                value={exceptionForm.userId}
+                onChange={(e) => setExceptionForm({ ...exceptionForm, userId: e.target.value })}
+                className="form-input"
+              >
+                <option value="">Select member</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label className="form-label">Date</Label>
+              <Input
+                type="date"
+                value={exceptionForm.date}
+                onChange={(e) => setExceptionForm({ ...exceptionForm, date: e.target.value })}
+                className="form-input"
+              />
+            </div>
+            <div>
+              <Label className="form-label">Action</Label>
+              <Select
+                value={exceptionForm.shiftId}
+                onChange={(e) => setExceptionForm({ ...exceptionForm, shiftId: e.target.value })}
+                className="form-input"
+              >
+                <option value="">Select action</option>
+                <option value="off">🏖️ Day Off (Holiday)</option>
+                {shifts.map((shift) => (
+                  <option key={shift.id} value={shift.id}>🏢 Work: {shift.name}</option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label className="form-label">Note (Optional)</Label>
+              <Input
+                type="text"
+                placeholder="e.g., Covering for John"
+                value={exceptionForm.note}
+                onChange={(e) => setExceptionForm({ ...exceptionForm, note: e.target.value })}
+                className="form-input"
+              />
+            </div>
+            <Button type="submit" disabled={isCreatingException} className="w-full rounded-xl">
+              {isCreatingException ? <Loader2 size={16} className="mr-2 animate-spin" /> : 'Add Override'}
+            </Button>
+          </form>
+        </GlassCard>
+
+        <GlassCard variant="default" padding="none" className="lg:col-span-2">
+          <div className="p-6 pb-2">
+            <h2 className="text-lg font-semibold text-foreground">Holiday Overrides & Exceptions</h2>
+          </div>
+          {exceptions.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
+                <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No overrides set yet</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead>Remove</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {exceptions.map((exc) => (
+                    <TableRow key={exc.id}>
+                      <TableCell>
+                        <p className="font-medium text-sm text-foreground">{exc.user.name}</p>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(exc.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {exc.shift ? (
+                          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
+                            Work: {exc.shift.name}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500 border border-green-500/20">
+                            Day Off
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {exc.note || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setDeleteExceptionId(exc.id)}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </GlassCard>
+      </div>
+
+      {/* Delete Confirm Modals */}
       <ConfirmModal
         isOpen={!!deleteAssignmentId}
         onCancel={() => setDeleteAssignmentId(null)}
         onConfirm={handleDeleteAssignment}
         title="Remove Assignment"
         description="Are you sure you want to remove this shift assignment? This action cannot be undone."
+        confirmLabel="Remove"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteShiftId}
+        onCancel={() => setDeleteShiftId(null)}
+        onConfirm={handleDeleteShift}
+        title="Delete Shift Template"
+        description="Are you sure you want to delete this shift template? You can only delete templates that have not been assigned yet."
+        confirmLabel="Delete"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteExceptionId}
+        onCancel={() => setDeleteExceptionId(null)}
+        onConfirm={handleDeleteException}
+        title="Remove Override"
+        description="Are you sure you want to remove this shift override? The member will return to their standard shift assignment for this date."
         confirmLabel="Remove"
         variant="danger"
       />

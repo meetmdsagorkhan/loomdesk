@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,18 +32,7 @@ export default function MySchedulePage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (userLoading) return;
-    if (!mounted) return;
-
-    if (!user) {
-      return;
-    }
-
-    fetchSchedule();
-  }, [user, userLoading, currentWeek, mounted]);
-
-  const fetchSchedule = useEffectEvent(async () => {
+  const fetchSchedule = useCallback(async () => {
     setIsLoading(true);
     try {
       const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -59,7 +48,18 @@ export default function MySchedulePage() {
     } finally {
       setIsLoading(false);
     }
-  });
+  }, [currentWeek]);
+
+  useEffect(() => {
+    if (userLoading) return;
+    if (!mounted) return;
+
+    if (!user) {
+      return;
+    }
+
+    fetchSchedule();
+  }, [user, userLoading, mounted, fetchSchedule]);
 
   const getShiftForDay = (date: Date) => {
     return assignments.find((assignment) => {
