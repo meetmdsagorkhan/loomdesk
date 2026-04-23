@@ -4,7 +4,6 @@ export type NavIcon =
   | 'qa'
   | 'leave'
   | 'shifts'
-  | 'calendar'
   | 'attendance'
   | 'analytics'
   | 'messages'
@@ -59,14 +58,6 @@ export const navItems: NavItem[] = [
     icon: 'shifts',
     section: 'Operations',
     matches: ['/shifts/my-schedule', '/dashboard/shifts', '/dashboard/shifts/my-schedule'],
-  },
-  {
-    href: '/calendar',
-    label: 'Calendar',
-    description: 'Unified schedule and leave view',
-    icon: 'calendar',
-    section: 'Operations',
-    matches: ['/dashboard/calendar'],
   },
   {
     href: '/attendance',
@@ -208,14 +199,6 @@ const routeOverrides: Array<{
         title: 'Analytics',
         description: 'Follow performance trends, quality shifts, and operational pressure points.',
         href: '/analytics',
-      },
-    },
-    {
-      test: (pathname) => pathname === '/calendar' || pathname === '/dashboard/calendar',
-      meta: {
-        title: 'Calendar',
-        description: 'View your schedule, leaves, and team activities in a unified calendar view.',
-        href: '/calendar',
       },
     },
     {

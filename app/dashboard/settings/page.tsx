@@ -29,8 +29,6 @@ export default function SettingsPage() {
   const [inviteData, setInviteData] = useState({ email: '', role: 'MEMBER' });
   const [isInviting, setIsInviting] = useState(false);
 
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
   const [emailAddress, setEmailAddress] = useState('');
   const [emailVerified, setEmailVerified] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -62,7 +60,6 @@ export default function SettingsPage() {
       }));
       setEmailAddress(data.user?.email || user?.email || '');
       setEmailVerified(Boolean(data.user?.emailVerifiedAt));
-      setEmailNotifications(Boolean(data.user?.emailNotifications ?? true));
       setTwoFactorEnabled(Boolean(data.user?.twoFactorEnabled));
     } catch (error) {
       handleApiError(error, 'Settings');
@@ -159,35 +156,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleNotificationToggle = async () => {
-    setIsUpdatingNotifications(true);
-    try {
-      const newValue = !emailNotifications;
-      const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emailNotifications: newValue,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        handleApiError(error.error || 'Failed to update notifications', 'Settings');
-        return;
-      }
-
-      setEmailNotifications(newValue);
-      showToast(
-        newValue ? 'Email notifications enabled' : 'Email notifications disabled',
-        'success'
-      );
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsUpdatingNotifications(false);
-    }
-  };
 
   const handleTwoFactorAction = async (body: Record<string, unknown>) => {
     const response = await fetch('/api/user/two-factor', {
@@ -469,36 +437,6 @@ export default function SettingsPage() {
             </GlassCard>
           )}
 
-          {activeTab === 'notifications' && (
-            <GlassCard variant="default" padding="md">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Notification Preferences</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-2xl border border-border/40">
-                  <div className="flex items-center gap-3">
-                    <Mail size={20} className="text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Email Notifications</p>
-                      <p className="text-sm text-muted-foreground">Receive email updates for important events</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant={emailNotifications ? 'default' : 'outline'}
-                    onClick={handleNotificationToggle}
-                    disabled={isUpdatingNotifications}
-                    className="rounded-xl"
-                  >
-                    {isUpdatingNotifications ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : emailNotifications ? (
-                      'Enabled'
-                    ) : (
-                      'Disabled'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </GlassCard>
-          )}
 
           {activeTab === 'security' && (
             <GlassCard variant="default" padding="md">

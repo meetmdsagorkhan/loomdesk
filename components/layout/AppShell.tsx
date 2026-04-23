@@ -12,13 +12,13 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sidebarCollapsed') === 'true';
-    }
-    return false;
-  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { user } = useCurrentUser();
+
+  useEffect(() => {
+    const collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    setIsSidebarCollapsed(collapsed);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', isSidebarCollapsed.toString());

@@ -47,7 +47,6 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   qa: CheckSquare,
   leave: CalendarOff,
   shifts: Clock,
-  calendar: CalendarDays,
   attendance: UserCheck,
   analytics: BarChart2,
   messages: MessageSquare,
@@ -150,23 +149,37 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
               )}
             </Link>
 
-            <div className="flex gap-1 shrink-0">
+            {!isCollapsed && (
+              <div className="flex gap-1 shrink-0">
+                <button
+                  type="button"
+                  className="glass-pill hidden shrink-0 rounded-xl p-3 text-muted-foreground lg:flex min-h-[44px] min-w-[44px]"
+                  onClick={onToggleCollapse}
+                >
+                  <PanelLeftClose size={18} />
+                </button>
+                <button
+                  type="button"
+                  className="glass-pill shrink-0 rounded-xl p-3 text-muted-foreground lg:hidden min-h-[44px] min-w-[44px]"
+                  onClick={onMobileClose}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isCollapsed && (
+            <div className="px-3 py-2">
               <button
                 type="button"
-                className="glass-pill hidden shrink-0 rounded-xl p-3 text-muted-foreground lg:flex min-h-[44px] min-w-[44px]"
+                className="glass-pill flex shrink-0 rounded-full text-muted-foreground mx-auto h-11 w-11 items-center justify-center"
                 onClick={onToggleCollapse}
               >
-                {isCollapsed ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
-              </button>
-              <button
-                type="button"
-                className="glass-pill shrink-0 rounded-xl p-3 text-muted-foreground lg:hidden min-h-[44px] min-w-[44px]"
-                onClick={onMobileClose}
-              >
-                <X size={18} />
+                <PanelRightClose size={18} />
               </button>
             </div>
-          </div>
+          )}
 
           <nav className={["flex-1 px-3 py-4", isCollapsed ? "" : "overflow-y-auto"].join(" ")}>
             {Object.entries(groupedItems).map(([section, items]) => {
@@ -188,8 +201,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                           href={item.href}
                           onClick={onMobileClose}
                           className={[
-                            'group relative flex items-center gap-3 rounded-2xl px-3 py-3 min-h-[44px] transition-all duration-300',
-                            isCollapsed ? 'justify-center' : '',
+                            'group relative flex items-center gap-3 transition-all duration-300',
+                            isCollapsed ? 'justify-center rounded-full h-11 w-11 mx-auto' : 'rounded-2xl px-3 py-3 min-h-[44px]',
                             isActive
                               ? 'glass-pill border-white/30 bg-white/45 text-slate-900 dark:bg-white/10 dark:text-white'
                               : 'text-sidebar-foreground/70 hover:bg-white/35 dark:hover:bg-white/10 hover:text-sidebar-foreground',
@@ -198,14 +211,14 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                         >
                           <div
                             className={[
-                              'flex shrink-0 items-center justify-center rounded-lg transition-colors',
-                              isCollapsed ? 'h-11 w-11' : 'h-10 w-10',
+                              'flex shrink-0 items-center justify-center transition-colors',
+                              isCollapsed ? 'h-8 w-8 rounded-full' : 'h-10 w-10 rounded-lg',
                               isActive
                                 ? 'bg-primary/20 text-primary dark:bg-primary/20 dark:text-primary'
                                 : 'bg-white/10 text-sidebar-foreground group-hover:bg-white/50 dark:group-hover:bg-white/15',
                             ].join(' ')}
                           >
-                            <Icon size={isCollapsed ? 20 : 16} />
+                            <Icon size={isCollapsed ? 18 : 16} />
                           </div>
                           {!isCollapsed && (
                             <div className="min-w-0">
@@ -224,12 +237,12 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
 
           {/* Profile Button at Bottom - Floated inside sidebar */}
           {user && (
-            <div className="p-3 sticky bottom-0">
+            <div className={`p-3 sticky bottom-0 ${isCollapsed ? '' : ''}`}>
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full">
-                  <button className="glass-pill flex w-full items-center gap-3 rounded-2xl p-3 min-h-[44px]">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition-colors">
-                      <Avatar className="h-11 w-11 bg-primary/10 dark:bg-primary/20 shrink-0 rounded-full border-2 border-white/30">
+                  <div className={`glass-pill flex items-center gap-3 cursor-pointer ${isCollapsed ? 'mx-auto rounded-full h-11 w-11 p-0' : 'w-full rounded-2xl p-3'}`}>
+                    <div className={`flex shrink-0 items-center justify-center bg-white/10 transition-colors ${isCollapsed ? 'h-11 w-11 rounded-full' : 'h-11 w-11 rounded-full'}`}>
+                      <Avatar className={`bg-primary/10 dark:bg-primary/20 shrink-0 rounded-full border-2 border-white/30 ${isCollapsed ? 'h-11 w-11' : 'h-11 w-11'}`}>
                         {user.image ? (
                           <AvatarImage src={user.image} alt={user.name || 'User'} />
                         ) : (
@@ -245,7 +258,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                         <p className="text-xs text-muted-foreground capitalize truncate">{user.role?.toLowerCase().replace('_', ' ')}</p>
                       </div>
                     )}
-                  </button>
+                  </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="glass-panel w-48 rounded-2xl p-1.5">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>

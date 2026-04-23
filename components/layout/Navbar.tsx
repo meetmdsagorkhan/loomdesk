@@ -186,14 +186,14 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         {/* Notifications */}
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger>
-            <button className="glass-pill relative flex h-12 w-12 items-center justify-center rounded-full">
+            <div className="glass-pill relative flex h-12 w-12 items-center justify-center rounded-full cursor-pointer">
               <Bell size={20} className="text-foreground" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg backdrop-blur-sm">
                   {unreadCount}
                 </span>
               )}
-            </button>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"

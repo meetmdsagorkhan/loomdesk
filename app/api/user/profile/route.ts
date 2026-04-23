@@ -14,7 +14,6 @@ const updateProfileSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   currentPassword: z.string().min(1, "Current password is required").optional(),
   newPassword: passwordPolicySchema.optional(),
-  emailNotifications: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -33,7 +32,6 @@ export async function GET() {
         emailVerifiedAt: true,
         name: true,
         role: true,
-        emailNotifications: true,
         twoFactorEnabled: true,
         twoFactorConfirmedAt: true,
         createdAt: true,
@@ -131,7 +129,6 @@ export async function PATCH(request: NextRequest) {
         emailVerifiedAt: true,
         name: true,
         role: true,
-        emailNotifications: true,
         twoFactorEnabled: true,
         twoFactorConfirmedAt: true,
         createdAt: true,

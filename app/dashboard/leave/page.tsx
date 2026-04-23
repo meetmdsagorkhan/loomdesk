@@ -11,6 +11,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Calendar } from '@/components/ui/calendar';
+import { CalendarDayButton } from '@/components/ui/calendar';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
 import { cn } from '@/lib/utils';
@@ -30,19 +31,8 @@ type LeaveRequest = {
 type Holiday = {
   date: string;
   name: string;
-  description: string;
+  description?: string;
 };
-
-const bangladeshHolidays: Holiday[] = [
-  { date: '2026-02-21', name: 'International Mother Language Day', description: 'Commemorates language martyrs of 1952' },
-  { date: '2026-03-17', name: 'Birthday of Bangabandhu', description: 'Father of the Nation\'s birthday' },
-  { date: '2026-03-26', name: 'Independence Day', description: 'Bangladesh declared independence in 1971' },
-  { date: '2026-04-14', name: 'Bengali New Year', description: 'Traditional Bengali New Year celebration' },
-  { date: '2026-05-01', name: 'Labor Day', description: 'International Workers\' Day' },
-  { date: '2026-08-15', name: 'National Mourning Day', description: 'Martyrdom of Bangabandhu' },
-  { date: '2026-12-16', name: 'Victory Day', description: 'Victory in the Liberation War' },
-  { date: '2026-12-25', name: 'Christmas Day', description: 'Birth of Jesus Christ' },
-];
 
 export default function LeavePage() {
   const { user, isLoading: userLoading } = useCurrentUser();
@@ -56,10 +46,79 @@ export default function LeavePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Custom DayButton to show holiday name on hover
+  const HolidayAwareDayButton = ({
+    className,
+    day,
+    modifiers,
+    locale,
+    ...props
+  }: any) => {
+    const holidayName = modifiers.holiday && day?.date
+      ? holidays.find((h: Holiday) => {
+          const dayDate = day.date.toISOString().split('T')[0];
+          const match = h.date === dayDate;
+          return match;
+        })?.name 
+      : undefined;
+
+    return (
+      <CalendarDayButton
+        className={className}
+        day={day}
+        modifiers={modifiers}
+        locale={locale}
+        title={holidayName}
+        {...props}
+      />
+    );
+  };
 
   useEffect(() => {
     setMounted(true);
+    fetchHolidays();
   }, []);
+
+  const fetchHolidays = async () => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY;
+      
+      if (!apiKey) {
+        console.warn('Google Calendar API key not found');
+        return;
+      }
+
+      const calendarId = 'en.bd#holiday@group.v.calendar.google.com';
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${apiKey}&timeMin=${currentYear}-01-01T00:00:00Z&timeMax=${currentYear}-12-31T23:59:59Z`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error('Failed to fetch holidays from Google Calendar API');
+        return;
+      }
+      
+      const data = await response.json();
+      const holidaysData = data.items?.map((item: any) => ({
+        date: item.start?.date,
+        name: item.summary,
+        description: item.description,
+      })).filter((h: Holiday) => h.date) || [];
+      
+      console.log('Holidays from API:', holidaysData);
+      const parsedDates = holidaysData.map((h: Holiday) => {
+        const [year, month, day] = h.date.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return { name: h.name, originalDate: h.date, parsedDate: date.toISOString() };
+      });
+      console.log('Parsed dates:', parsedDates);
+      setHolidays(holidaysData);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+    }
+  };
 
   useEffect(() => {
     if (userLoading) return;
@@ -160,6 +219,9 @@ export default function LeavePage() {
             <Calendar
               mode="single"
               selected={newLeave.startDate ? new Date(newLeave.startDate) : undefined}
+              components={{
+                DayButton: HolidayAwareDayButton,
+              }}
               onSelect={(date) => {
                 if (date) {
                   const formatDate = (d: Date) => {
@@ -201,7 +263,10 @@ export default function LeavePage() {
                     }
                     return dates;
                   }),
-                  holiday: bangladeshHolidays.map((holiday) => new Date(holiday.date)),
+                  holiday: holidays.map((holiday) => {
+                    const [year, month, day] = holiday.date.split('-').map(Number);
+                    return new Date(year, month - 1, day);
+                  }),
               }}
               modifiersStyles={{
                 selected: {
