@@ -1,1 +1,1 @@
-export { default, dynamic, fetchCache } from '@/app/dashboard/messages/page';
+export { default } from '@/app/dashboard/messages/page';

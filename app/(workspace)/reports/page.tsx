@@ -1,1 +1,1 @@
-export { default, dynamic, fetchCache } from '@/app/dashboard/reports/page';
+export { default } from '@/app/dashboard/reports/page';
