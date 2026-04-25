@@ -9,6 +9,8 @@ import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { createNotification } from '@/lib/notifications';
 
+export const dynamic = 'force-dynamic';
+
 const feedbackSchema = z.object({
   entryId: z.string(),
   comment: z.string().min(1, 'Comment is required'),

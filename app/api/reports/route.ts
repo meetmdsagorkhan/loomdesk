@@ -5,6 +5,8 @@ import { logger } from '@/lib/logger';
 import { consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { getRequestIp } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();

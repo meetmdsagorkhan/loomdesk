@@ -6,6 +6,8 @@ import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp } from '@/lib/rate-limit';
 import { issueEmailVerification } from '@/lib/email-verification';
 
+export const dynamic = 'force-dynamic';
+
 const verificationRequestSchema = z.object({
   email: z.string().trim().toLowerCase().email('A valid email address is required'),
 });

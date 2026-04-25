@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 const assignShiftSchema = z.object({
   userId: z.string(),
   shiftId: z.string(),

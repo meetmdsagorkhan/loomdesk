@@ -9,6 +9,8 @@ import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 const leaveRequestSchema = z.object({

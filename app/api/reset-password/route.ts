@@ -16,6 +16,8 @@ import { getRequestIp } from '@/lib/rate-limit';
 import { sendTransactionalEmail } from '@/lib/email';
 import { buildPasswordResetEmail } from '@/lib/email-templates';
 
+export const dynamic = 'force-dynamic';
+
 const resetPasswordRequestSchema = z.object({
   email: z.string().trim().toLowerCase().email('A valid email address is required'),
 });

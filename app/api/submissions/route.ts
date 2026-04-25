@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 const submissionSchema = z.object({
   type: z.enum(['FEEDBACK', 'BUG_REPORT', 'FEATURE_REQUEST']),
   title: z.string().min(1, 'Title is required'),

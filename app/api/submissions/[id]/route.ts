@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 const updateSubmissionSchema = z.object({
   status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),

@@ -9,6 +9,8 @@ import { env } from '@/lib/env.server';
 import { buildInviteEmail } from '@/lib/email-templates';
 import { sendTransactionalEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
+
 const createInviteSchema = z.object({
   email: z.string().email(),
   role: z.enum(['ADMIN', 'TEAM_LEAD', 'MEMBER']),

@@ -5,6 +5,8 @@ import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 const updateAssignShiftSchema = z.object({
   userId: z.string(),
   shiftId: z.string(),

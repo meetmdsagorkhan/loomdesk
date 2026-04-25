@@ -8,6 +8,8 @@ import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp } from '@/lib/rate-limit';
 import { issueEmailVerification } from '@/lib/email-verification';
 
+export const dynamic = 'force-dynamic';
+
 const acceptInviteSchema = z.object({
   token: z.string().min(1, 'Invitation token is required'),
   name: z.string().min(2),

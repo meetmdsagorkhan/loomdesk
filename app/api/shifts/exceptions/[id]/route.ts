@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

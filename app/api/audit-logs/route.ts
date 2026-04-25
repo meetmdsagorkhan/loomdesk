@@ -6,6 +6,8 @@ import { isAdmin } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
 import { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   action: z.string().min(1).optional(),

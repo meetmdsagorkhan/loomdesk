@@ -4,6 +4,8 @@ import { prisma as db } from "@/lib/db";
 import { isAdmin, isTeamLead } from "@/lib/auth-utils";
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await auth();

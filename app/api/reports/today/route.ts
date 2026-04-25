@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await auth();

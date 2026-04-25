@@ -6,6 +6,8 @@ import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const session = await auth();
 

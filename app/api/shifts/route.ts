@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 
+export const dynamic = 'force-dynamic';
+
 const shiftSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),

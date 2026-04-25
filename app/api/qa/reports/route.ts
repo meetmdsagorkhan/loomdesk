@@ -5,6 +5,8 @@ import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { buildReportScoreMap, getReportScore } from '@/lib/performance-metrics';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();

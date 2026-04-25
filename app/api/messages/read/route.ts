@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 const markReadSchema = z.object({
   senderId: z.string().min(1, 'Sender ID is required'),
 });

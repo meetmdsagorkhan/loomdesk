@@ -5,6 +5,8 @@ import { isAdmin } from '@/lib/auth-utils';
 import { unstable_cache } from 'next/cache';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'LEAVE' | 'ABSENT' | 'DAY_OFF';
 
 interface AttendanceDay {

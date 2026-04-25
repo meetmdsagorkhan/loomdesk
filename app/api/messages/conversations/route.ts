@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 type ConversationSummary = {
   userId: string;
   userName: string;

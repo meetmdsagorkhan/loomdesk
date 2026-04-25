@@ -7,6 +7,8 @@ import { logger } from '@/lib/logger';
 import { consumeRateLimitPersistent } from '@/lib/rate-limit';
 import type { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 const createMessageSchema = z.object({
   receiverId: z.string().nullable().optional(),
   channel: z.string().nullable().optional(),
