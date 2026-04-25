@@ -55,6 +55,7 @@ export async function GET() {
           name: true,
           email: true,
         },
+        take: 200,
       }),
     ]);
 

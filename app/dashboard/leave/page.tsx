@@ -91,63 +91,20 @@ export default function LeavePage() {
   const fetchHolidays = useCallback(async (year: number) => {
     // If we've already fetched holidays for this year, skip it.
     if (fetchedYears.includes(year)) return;
-    
+
     // Add year to state immediately to prevent duplicate concurrent calls
     setFetchedYears((prev) => [...prev, year]);
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY;
-      
-      if (!apiKey) {
-        console.warn('Google Calendar API key not found');
-        return;
-      }
-
-      const calendarId = 'en.bd#holiday@group.v.calendar.google.com';
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${apiKey}&timeMin=${year}-01-01T00:00:00Z&timeMax=${year}-12-31T23:59:59Z`;
-      
-      const response = await fetch(url);
+      const response = await fetch(`/api/holidays?year=${year}`);
       if (!response.ok) {
-        console.error('Failed to fetch holidays from Google Calendar API');
         return;
       }
-      
-      const data: { items?: GoogleCalendarEvent[] } = await response.json();
-      const newHolidaysData: Holiday[] = [];
-      
-      data.items?.forEach((item) => {
-        const startStrRaw = item.start?.date || item.start?.dateTime;
-        const endStrRaw = item.end?.date || item.end?.dateTime;
-        
-        if (!startStrRaw) return;
-        
-        const startDateStr = startStrRaw.split('T')[0];
-        const endDateStr = endStrRaw ? endStrRaw.split('T')[0] : null;
-        
-        const name = item.summary || 'Holiday';
-        const description = item.description;
 
-        newHolidaysData.push({ date: startDateStr, name, description });
-
-        if (endDateStr && endDateStr !== startDateStr) {
-          const [yr, month, day] = startDateStr.split('-').map(Number);
-          const startObj = new Date(yr, month - 1, day);
-          const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
-          const endObj = new Date(endYear, endMonth - 1, endDay);
-          
-          startObj.setDate(startObj.getDate() + 1);
-          while (startObj < endObj) {
-            const dateStr = format(startObj, 'yyyy-MM-dd');
-            newHolidaysData.push({ date: dateStr, name, description });
-            startObj.setDate(startObj.getDate() + 1);
-          }
-        }
-      });
-      
-      console.log('Holidays parsed for year', year, ':', newHolidaysData);
-      setHolidays((prev) => [...prev, ...newHolidaysData]);
+      const data = await response.json();
+      setHolidays((prev) => [...prev, ...(data.holidays || [])]);
     } catch (error) {
-      console.error('Error fetching holidays:', error);
+      // Silently fail - holidays are optional
     }
   }, [fetchedYears]);
 

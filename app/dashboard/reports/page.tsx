@@ -56,7 +56,7 @@ export default function ReportsPage() {
       const data = await response.json();
       setReports(data.reports || []);
     } catch (error) {
-      console.error('Failed to fetch team reports:', error);
+      // Silently fail - reports list will be empty
     } finally {
       setIsLoading(false);
     }

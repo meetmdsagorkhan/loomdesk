@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     const reportIds = reports.map((report) => report.id);
     const scoreEvents = await prisma.scoreEvent.findMany({
       where: {
-        reportId: { in: reportIds.length > 0 ? reportIds : ['__none__'] },
+        reportId: { in: reportIds },
       },
       select: {
         reportId: true,

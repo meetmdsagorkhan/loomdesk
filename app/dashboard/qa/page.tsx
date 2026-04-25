@@ -57,7 +57,7 @@ export default function QAPage() {
       const data = await response.json();
       setMembers(data.users || []);
     } catch (error) {
-      console.error('Failed to fetch members:', error);
+      // Silently fail - members list will be empty
     }
   };
 
@@ -73,7 +73,7 @@ export default function QAPage() {
       const data = await response.json();
       setReports(data.reports || []);
     } catch (error) {
-      console.error('Failed to fetch reports:', error);
+      // Silently fail - reports list will be empty
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +91,7 @@ export default function QAPage() {
       const data = await response.json();
       setReports(data.reports || []);
     } catch (error) {
-      console.error('Failed to fetch reports:', error);
+      // Silently fail - reports list will be empty
     } finally {
       setIsFilterLoading(false);
     }

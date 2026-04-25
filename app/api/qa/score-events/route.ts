@@ -3,8 +3,10 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
-import { createNotification } from '@/lib/notifications';
 import { logger } from '@/lib/logger';
+import { auditEvent } from '@/lib/audit-log';
+import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/notifications';
 
 type ScoreEventSummary = {
   deduction: number;
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
     // Calculate current score
@@ -74,6 +77,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ipAddress = getRequestIp(request);
+
   try {
     const session = await auth();
 
@@ -86,6 +91,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Apply rate limiting
+    const rateLimit = await consumeRateLimitPersistent(`qa:score:${session.user.id}`, {
+      limit: 15,
+      windowMs: 60000, // 1 minute
+      blockDurationMs: 60000,
+    });
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { userId, reportId, entryId, severity, reason, adminNote } = scoreEventSchema.parse(body);
 
@@ -95,6 +114,7 @@ export async function POST(request: NextRequest) {
     // Calculate current score for user
     const existingScoreEvents = await prisma.scoreEvent.findMany({
       where: { userId },
+      take: 100,
     });
 
     const totalDeduction = (existingScoreEvents as ScoreEventSummary[]).reduce(

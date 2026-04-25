@@ -46,7 +46,9 @@ export function useChat(
             try {
               const audio = new Audio('/sounds/notification.mp3');
               audio.volume = 0.5;
-              audio.play().catch((error) => console.log('Audio auto-play blocked', error));
+              audio.play().catch(() => {
+                // Ignore audio auto-play blocked errors
+              });
             } catch {
               // Ignore audio errors
             }

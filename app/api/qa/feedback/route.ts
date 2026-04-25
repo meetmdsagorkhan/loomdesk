@@ -4,8 +4,10 @@ import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { createNotification } from '@/lib/notifications';
 import { logger } from '@/lib/logger';
+import { auditEvent } from '@/lib/audit-log';
+import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/notifications';
 
 const feedbackSchema = z.object({
   entryId: z.string(),
@@ -13,6 +15,8 @@ const feedbackSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const ipAddress = getRequestIp(request);
+
   try {
     const session = await auth();
 
@@ -23,6 +27,20 @@ export async function POST(request: NextRequest) {
     // Only ADMIN and TEAM_LEAD can add feedback
     if (!isAdmin(session) && !isTeamLead(session)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Apply rate limiting
+    const rateLimit = await consumeRateLimitPersistent(`qa:feedback:${session.user.id}`, {
+      limit: 20,
+      windowMs: 60000, // 1 minute
+      blockDurationMs: 60000,
+    });
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();

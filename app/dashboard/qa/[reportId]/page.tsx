@@ -90,7 +90,7 @@ export default function QADetailPage() {
       const data = await response.json();
       setReport(data);
     } catch (error) {
-      console.error('Failed to fetch report:', error);
+      // Silently fail - report data will be empty
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +102,7 @@ export default function QADetailPage() {
       const data = await response.json();
       setScoreEvents(data.scoreEvents || []);
     } catch (error) {
-      console.error('Failed to fetch score events:', error);
+      // Silently fail - score events will be empty
     }
   }, []);
 
@@ -161,7 +161,6 @@ export default function QADetailPage() {
       setDeductEntryId(null);
       showToast('Score deduction recorded', 'success');
     } catch (error) {
-      console.error('Failed to deduct score:', error);
       showToast('Failed to deduct score', 'error');
     } finally {
       setIsDeducting(false);
@@ -192,7 +191,6 @@ export default function QADetailPage() {
       setFeedbackEntryId(null);
       showToast('Feedback added', 'success');
     } catch (error) {
-      console.error('Failed to add feedback:', error);
       showToast('Failed to add feedback', 'error');
     } finally {
       setIsAddingFeedback(false);

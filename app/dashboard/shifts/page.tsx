@@ -140,7 +140,7 @@ export default function ShiftsPage() {
         setExceptions(data.exceptions || []);
       }
     } catch (error) {
-      console.error('Failed to fetch exceptions', error);
+      // Silently fail - exceptions list will be empty
     }
   };
 

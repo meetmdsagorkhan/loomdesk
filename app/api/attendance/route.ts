@@ -80,6 +80,7 @@ async function calculateAttendance(
     include: {
       entries: true,
     },
+    take: 100,
   });
 
   // Fetch approved leaves for the month
@@ -100,6 +101,7 @@ async function calculateAttendance(
         },
       ],
     },
+    take: 50,
   });
 
   // Fetch shift assignments for the month
@@ -115,6 +117,7 @@ async function calculateAttendance(
     include: {
       shift: true,
     },
+    take: 50,
   });
 
   // Build attendance days

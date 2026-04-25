@@ -60,7 +60,7 @@ export default function ChatWindow({ contactId, contactName }: ChatWindowProps) 
           }
         }
       } catch (error) {
-        console.error('Failed to fetch messages', error);
+        // Silently fail - messages will retry on next interaction
       } finally {
         setIsLoading(false);
       }

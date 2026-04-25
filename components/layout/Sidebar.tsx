@@ -24,6 +24,7 @@ import {
   Crown,
   ChevronRight,
   ExternalLink,
+  Send,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -55,6 +56,7 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   analytics: BarChart2,
   messages: MessageSquare,
   scoring: TrendingUp,
+  submissions: Send,
   settings: Settings,
   profile: User,
 };

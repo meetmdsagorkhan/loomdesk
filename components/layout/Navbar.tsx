@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { Bell, Check, Loader2, Sun, Moon, Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/lib/supabase';
-import { formatDistanceToNow } from 'date-fns';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Menu, Bell, Sun, Moon, Loader2, X, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { formatDistanceToNow } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { SubmissionModal } from '@/components/feedback/SubmissionModal';
 
 interface NavbarProps {
   onMobileMenuToggle?: () => void;
@@ -38,100 +31,52 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = useEffectEvent(async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
-      if (!supabase || !user) return;
+      if (!user) return;
 
-      const result = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const response = await fetch('/api/notifications');
+      if (!response.ok) return;
 
-      if (!result) {
-        console.error('Supabase query returned undefined');
-        return;
-      }
-
-      const { data, error } = result;
-
-      if (error) {
-        console.error('Failed to fetch notifications:', error);
-        return;
-      }
-
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter((n: Notification) => !n.is_read).length);
+      const data = await response.json();
+      setNotifications(data.notifications || []);
+      setUnreadCount((data.notifications || []).filter((n: Notification) => !n.is_read).length);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      // Silently fail - notifications are optional
     }
-  });
-
-  useEffect(() => {
-    if (!supabase || !user) return;
-
-    fetchNotifications();
-
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotification = payload.new as Notification;
-          setNotifications((prev) => [newNotification, ...prev]);
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
   }, [user]);
 
-  const markAsRead = async (notificationId: string) => {
-    try {
-      if (supabase && user) {
-        await supabase
-          .from('notifications')
-          .update({ is_read: true })
-          .eq('id', notificationId)
-          .eq('user_id', user.id);
-      }
+  useEffect(() => {
+    if (!user) return;
 
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+    fetchNotifications();
+  }, [user, fetchNotifications]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: 'POST',
+      });
+      if (!response.ok) return;
+      fetchNotifications();
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      // Silently fail
     }
   };
 
   const markAllAsRead = async () => {
     setIsMarkingAllRead(true);
     try {
-      if (supabase) {
-        await supabase
-          .from('notifications')
-          .update({ is_read: true })
-          .eq('user_id', user?.id)
-          .eq('is_read', false);
-      }
+      const response = await fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+      });
+      if (!response.ok) return;
+      fetchNotifications();
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      // Silently fail - notification read status is optional
     } finally {
       setIsMarkingAllRead(false);
     }
@@ -174,6 +119,9 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
 
       {/* Floating Buttons at Bottom Right - Vertical */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        {/* Submission Modal */}
+        <SubmissionModal />
+
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

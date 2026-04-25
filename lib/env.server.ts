@@ -31,6 +31,7 @@ const envSchema = z.object({
     z.string().email('EMAIL_REPLY_TO must be a valid email address')
   ),
   RESEND_API_KEY: optionalString(z.string().min(1, 'RESEND_API_KEY cannot be empty')),
+  GOOGLE_CALENDAR_API_KEY: optionalString(z.string().min(1, 'GOOGLE_CALENDAR_API_KEY cannot be empty')),
   AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
   AUTH_LOCKOUT_BASE_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),

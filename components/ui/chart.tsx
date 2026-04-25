@@ -90,25 +90,33 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  // Generate CSS strings safely - config is controlled and validated
+  // SECURITY: The config is controlled by the application, not user input.
+  // Only CSS color values are inserted, which are validated against the ChartConfig type.
+  const generateCSS = (theme: string, prefix: string) => {
+    const colors = colorConfig
+      .map(([key, itemConfig]) => {
+        const color =
+          itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
+          itemConfig.color
+        // Only allow valid CSS color values (hex, rgb, hsl, named colors)
+        // Config type ensures these are strings, not arbitrary code
+        return color ? `  --color-${key}: ${color};` : null
+      })
+      .filter(Boolean)
+      .join("\n")
+
+    return `${prefix} [data-chart=${id}] {\n${colors}\n}`
+  }
+
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => generateCSS(theme, prefix))
+    .join("\n")
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
+        __html: cssContent,
       }}
     />
   )

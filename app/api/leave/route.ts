@@ -3,6 +3,10 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
+import { format } from 'date-fns';
+import { createNotification } from '@/lib/notifications';
+import { auditEvent } from '@/lib/audit-log';
+import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -62,11 +66,27 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ipAddress = getRequestIp(request);
+
   try {
     const session = await auth();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Apply rate limiting
+    const rateLimit = await consumeRateLimitPersistent(`leave:create:${session.user.id}`, {
+      limit: 5,
+      windowMs: 60000, // 1 minute
+      blockDurationMs: 60000,
+    });
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();

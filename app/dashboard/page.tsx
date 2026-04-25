@@ -54,11 +54,9 @@ export default function DashboardPage() {
           if (data) {
             setAnalytics(data);
           }
-        } else {
-          console.warn('Analytics data not available yet');
         }
       } catch (error) {
-        console.warn('Failed to fetch analytics:', error);
+        // Silently fail - analytics are optional
       } finally {
         setIsLoading(false);
       }

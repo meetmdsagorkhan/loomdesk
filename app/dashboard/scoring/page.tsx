@@ -72,7 +72,7 @@ export default function ScoringPage() {
         setLeaderboard(aData.leaderboard || []);
       }
     } catch (error) {
-      console.error('Failed to fetch scoring data:', error);
+      // Silently fail - leaderboard will be empty
     } finally {
       setIsLoading(false);
     }

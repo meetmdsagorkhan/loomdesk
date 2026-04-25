@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 
 const shiftSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -34,6 +35,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const ipAddress = getRequestIp(request);
+
   try {
     const session = await auth();
 
@@ -44,6 +47,20 @@ export async function POST(request: NextRequest) {
     // Only admin can create shifts
     if (!isAdmin({ user: session.user })) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Apply rate limiting
+    const rateLimit = await consumeRateLimitPersistent(`shifts:create:${session.user.id}`, {
+      limit: 10,
+      windowMs: 60000, // 1 minute
+      blockDurationMs: 60000,
+    });
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();

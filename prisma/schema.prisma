@@ -41,6 +41,7 @@ model User {
   invitedBy     String?
   invitations   Invitation[] @relation("invitedBy")
   emailVerificationTokens EmailVerificationToken[]
+  submissions  UserSubmission[]
 }
 
 model EmailVerificationToken {
@@ -152,6 +153,23 @@ model Feedback {
   comment   String
   authorId  String
   createdAt DateTime    @default(now())
+}
+
+model UserSubmission {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  type        SubmissionType
+  title       String
+  description String
+  status      SubmissionStatus @default(OPEN)
+  priority    SubmissionPriority @default(MEDIUM)
+  adminNote   String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([type, status])
+  @@index([userId, createdAt])
 }
 
 model LeaveRequest {
@@ -271,4 +289,23 @@ enum ScoreSeverity {
 enum AuditStatus {
   SUCCESS
   FAILURE
+}
+
+enum SubmissionType {
+  FEEDBACK
+  BUG_REPORT
+  FEATURE_REQUEST
+}
+
+enum SubmissionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SubmissionPriority {
+  LOW
+  MEDIUM
+  HIGH
 }

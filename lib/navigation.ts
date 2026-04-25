@@ -8,6 +8,7 @@ export type NavIcon =
   | 'analytics'
   | 'scoring'
   | 'attendance'
+  | 'submissions'
   | 'settings'
   | 'profile';
 
@@ -87,6 +88,15 @@ export const navItems: NavItem[] = [
     section: 'Admin',
     matches: ['/dashboard/analytics'],
     roles: ['ADMIN', 'TEAM_LEAD'],
+  },
+  {
+    href: '/dashboard/submissions',
+    label: 'Submissions',
+    description: 'User feedback, bugs, and requests',
+    icon: 'submissions',
+    section: 'Admin',
+    matches: ['/dashboard/submissions'],
+    roles: ['ADMIN'],
   },
   {
     href: '/settings',
@@ -199,6 +209,14 @@ const routeOverrides: Array<{
         title: 'Team Analytics',
         description: 'In-depth performance trends and operational metrics.',
         href: '/analytics',
+      }),
+    },
+    {
+      test: (pathname) => pathname === '/dashboard/submissions',
+      meta: () => ({
+        title: 'User Submissions',
+        description: 'View and manage user feedback, bug reports, and feature requests.',
+        href: '/dashboard/submissions',
       }),
     },
     {

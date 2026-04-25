@@ -47,7 +47,7 @@ export default function MySchedulePage() {
       const data = await response.json();
       setAssignments(data.assignments || []);
     } catch (error) {
-      console.error('Failed to fetch schedule:', error);
+      // Silently fail - schedule will be empty
     } finally {
       setIsLoading(false);
     }

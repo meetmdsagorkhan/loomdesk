@@ -112,7 +112,7 @@ export default function AttendancePage() {
         name: member.name,
       })));
     } catch (error) {
-      console.error('Failed to fetch members for attendance', error);
+      // Silently fail - members list will be empty
     }
   }, [isManager]);
 

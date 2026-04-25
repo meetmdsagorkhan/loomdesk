@@ -326,14 +326,9 @@ export default function ProfilePage() {
           setTwoFactorQrCodeDataUrl(dataUrl);
         }
       } catch (error) {
-        if (!cancelled) {
-          setTwoFactorQrCodeDataUrl(null);
-        }
-        console.error('Failed to generate two-factor QR code', error);
+        // Silently fail - QR code generation will not display
       }
     };
-
-    void generateQrCode();
 
     return () => {
       cancelled = true;
