@@ -2,12 +2,6 @@ import type { NextConfig } from "next";
 
 const nextAuthUrl = process.env.NEXTAUTH_URL;
 
-if (!nextAuthUrl) {
-  throw new Error("NEXTAUTH_URL is required");
-}
-
-new URL(nextAuthUrl);
-
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -17,7 +11,7 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  ...(nextAuthUrl.startsWith("https://")
+  ...(nextAuthUrl?.startsWith("https://")
     ? [
       {
         key: "Strict-Transport-Security",
