@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from "@/auth";
 import { canAccessRoute } from "@/lib/permissions";
-import { allowedCorsOrigins } from '@/lib/env.server';
+import { getAllowedCorsOrigins } from '@/lib/env.server';
 import { attachRequestId, getRequestId } from '@/lib/request-id';
 
 const PUBLIC_ROUTES = [
@@ -36,6 +36,7 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
 
 function applyCorsHeaders(request: NextRequest, response: NextResponse) {
   const origin = request.headers.get('origin');
+  const allowedCorsOrigins = getAllowedCorsOrigins();
 
   response.headers.set(
     'Access-Control-Allow-Methods',
@@ -69,6 +70,7 @@ export default async function proxy(req: NextRequest) {
   // 1. API Route Logic
   if (isApiRoute) {
     const origin = req.headers.get('origin');
+    const allowedCorsOrigins = getAllowedCorsOrigins();
     const isAllowedOrigin = !origin || allowedCorsOrigins.includes(origin);
     const isPublicApiRoute = matchesPrefix(pathname, PUBLIC_API_ROUTES);
 

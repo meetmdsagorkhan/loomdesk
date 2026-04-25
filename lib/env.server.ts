@@ -51,23 +51,40 @@ const envSchema = z.object({
   PASSWORD_RESET_TOKEN_TTL_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
 });
 
-const parsedEnv = envSchema.safeParse(process.env);
+let cachedEnv: z.infer<typeof envSchema> | null = null;
 
-if (!parsedEnv.success) {
-  const issues = parsedEnv.error.issues
-    .map((issue) => `- ${issue.path.join('.')}: ${issue.message}`)
-    .join('\n');
+function getEnv() {
+  if (cachedEnv) {
+    return cachedEnv;
+  }
 
-  throw new Error(`Invalid environment variables:\n${issues}`);
+  const parsedEnv = envSchema.safeParse(process.env);
+
+  if (!parsedEnv.success) {
+    const issues = parsedEnv.error.issues
+      .map((issue) => `- ${issue.path.join('.')}: ${issue.message}`)
+      .join('\n');
+
+    throw new Error(`Invalid environment variables:\n${issues}`);
+  }
+
+  cachedEnv = parsedEnv.data;
+  return cachedEnv;
 }
 
-export const env = parsedEnv.data;
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_target, prop) {
+    return getEnv()[prop as keyof z.infer<typeof envSchema>];
+  },
+});
 
-export const allowedCorsOrigins = Array.from(
-  new Set(
-    [
-      env.NEXTAUTH_URL,
-      ...(env.CORS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()) ?? []),
-    ].filter(Boolean)
-  )
-);
+export function getAllowedCorsOrigins() {
+  return Array.from(
+    new Set(
+      [
+        env.NEXTAUTH_URL,
+        ...(env.CORS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()) ?? []),
+      ].filter(Boolean)
+    )
+  );
+}
