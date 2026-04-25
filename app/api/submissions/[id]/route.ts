@@ -14,7 +14,7 @@ const updateSubmissionSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const ipAddress = getRequestIp(request);
 
@@ -33,8 +33,10 @@ export async function PATCH(
     const body = await request.json();
     const { status, priority, adminNote } = updateSubmissionSchema.parse(body);
 
+    const { id } = await params;
+
     const submission = await prisma.userSubmission.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(status && { status }),
         ...(priority && { priority }),
