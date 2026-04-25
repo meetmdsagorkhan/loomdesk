@@ -32,7 +32,7 @@ export function usePresence(currentUser: { id: string; name: string; email: stri
         
         // Flatten the presence state into a simple array
         Object.keys(state).forEach((key) => {
-          const presences = state[key] as OnlineUser[];
+          const presences = state[key] as unknown as OnlineUser[];
           if (presences.length > 0) {
             users.push(presences[0]);
           }
