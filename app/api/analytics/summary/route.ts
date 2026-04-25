@@ -2,38 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import {
+  buildReportScoreMap,
+  buildWeeklyScoreTrend,
+  calculateAttendanceSummaries,
+  calculateAverageScore,
+  getDateRangeBounds,
+  getReportScore,
+} from '@/lib/performance-metrics';
 import { logger } from '@/lib/logger';
-
-type UserSummary = {
-  id: string;
-  name: string;
-};
-
-type ReportSummary = {
-  userId: string;
-  date: Date;
-};
-
-type LeaveSummary = {
-  userId: string;
-  startDate: Date;
-  endDate: Date;
-};
-
-type ShiftAssignmentSummary = {
-  userId: string;
-  startDate: Date;
-  endDate: Date | null;
-};
-
-type ScoreEventSummary = {
-  userId: string;
-  deduction: number;
-};
-
-type EntrySummary = {
-  type: 'TICKET' | 'CHAT';
-};
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,347 +21,214 @@ export async function GET(request: NextRequest) {
     }
 
     const canViewTeamAnalytics = isAdmin(session) || isTeamLead(session);
-
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const { start, end } = getDateRangeBounds(
+      startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      endDate ? new Date(endDate) : new Date()
+    );
 
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const end = endDate ? new Date(endDate) : new Date();
+    const userWhere = canViewTeamAnalytics
+      ? { isActive: true }
+      : { id: session.user.id, isActive: true };
 
-    // Get all users
-    const users: UserSummary[] = await prisma.user.findMany({
-      where: canViewTeamAnalytics ? { isActive: true } : { id: session.user.id, isActive: true },
+    const users = await prisma.user.findMany({
+      where: userWhere,
       select: {
         id: true,
         name: true,
       },
-    });
-
-    // KPI 1: Total Reports Submitted
-    const totalReports = await prisma.report.count({
-      where: {
-        status: 'SUBMITTED',
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-        date: {
-          gte: start,
-          lte: end,
-        },
+      orderBy: {
+        name: 'asc',
       },
     });
 
-    // KPI 2: Team Attendance Rate
-    const reports: ReportSummary[] = await prisma.report.findMany({
-      where: {
-        status: 'SUBMITTED',
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-        date: {
-          gte: start,
-          lte: end,
-        },
-      },
-      select: {
-        userId: true,
-        date: true,
-      },
-    });
+    const userIds = users.map((user) => user.id);
 
-    const approvedLeaves: LeaveSummary[] = await prisma.leaveRequest.findMany({
-      where: {
-        status: 'APPROVED',
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-        OR: [
-          { startDate: { gte: start, lte: end } },
-          { endDate: { gte: start, lte: end } },
-          { startDate: { lte: start }, endDate: { gte: end } },
-        ],
-      },
-      select: {
-        userId: true,
-        startDate: true,
-        endDate: true,
-      },
-    });
-
-    const shiftAssignments: ShiftAssignmentSummary[] = await prisma.shiftAssignment.findMany({
-      where: {
-        startDate: { lte: end },
-        OR: [
-          { endDate: null },
-          { endDate: { gte: start } },
-        ],
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-      },
-      select: {
-        userId: true,
-        startDate: true,
-        endDate: true,
-      },
-    });
-
-    // Calculate attendance
-    let totalWorkingDays = 0;
-    let presentDays = 0;
-
-    users.forEach((user) => {
-      const userShifts = shiftAssignments.filter((sa) => sa.userId === user.id);
-      const userReports = reports.filter((r) => r.userId === user.id);
-      const userLeaves = approvedLeaves.filter((l) => l.userId === user.id);
-
-      userShifts.forEach((shift) => {
-        const shiftStart = new Date(shift.startDate);
-        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
-        const rangeStart = shiftStart < start ? start : shiftStart;
-        const rangeEnd = shiftEnd > end ? end : shiftEnd;
-
-        const daysInRange = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        totalWorkingDays += daysInRange;
-
-        for (let d = 0; d < daysInRange; d++) {
-          const currentDate = new Date(rangeStart);
-          currentDate.setDate(currentDate.getDate() + d);
-          const dateStr = currentDate.toISOString().split('T')[0];
-
-          const hasReport = userReports.some((r) => r.date.toISOString().split('T')[0] === dateStr);
-          const onLeave = userLeaves.some(
-            (l) => currentDate >= new Date(l.startDate) && currentDate <= new Date(l.endDate)
-          );
-
-          if (hasReport || onLeave) {
-            presentDays++;
-          }
-        }
-      });
-    });
-
-    const attendanceRate = totalWorkingDays > 0 ? Math.round((presentDays / totalWorkingDays) * 100) : 0;
-
-    // KPI 3: Average QA Score
-    const scoreEvents: ScoreEventSummary[] = await prisma.scoreEvent.findMany({
-      where: {
-        createdAt: {
-          gte: start,
-          lte: end,
-        },
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-      },
-      select: {
-        userId: true,
-        deduction: true,
-      },
-    });
-
-    const userScores = new Map<string, number>();
-    scoreEvents.forEach((event) => {
-      const current = userScores.get(event.userId) || 0;
-      userScores.set(event.userId, current + event.deduction);
-    });
-
-    const totalScore = Array.from(userScores.values()).reduce(
-      (sum, deduction) => sum + Math.max(0, 100 - deduction),
-      0
-    );
-    const avgScore = userScores.size > 0 ? Math.round(totalScore / userScores.size) : 100;
-
-    // KPI 4: Total Score Deductions
-    const totalDeductions = scoreEvents.reduce((sum, event) => sum + event.deduction, 0);
-
-    // KPI 5: Pending Leave Requests
-    const pendingLeaves = await prisma.leaveRequest.count({
-      where: {
-        status: 'PENDING',
-        ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
-      },
-    });
-
-    // KPI 6: Active Team Members
-    const activeMembers = users.length;
-
-    // Daily Reports Chart Data
-    const dailyReports: { date: string; count: number }[] = [];
-    const dateMap = new Map<string, number>();
-
-    reports.forEach((report) => {
-      const dateStr = report.date.toISOString().split('T')[0];
-      dateMap.set(dateStr, (dateMap.get(dateStr) || 0) + 1);
-    });
-
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    for (let i = 0; i <= daysDiff; i++) {
-      const date = new Date(start);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      dailyReports.push({
-        date: dateStr,
-        count: dateMap.get(dateStr) || 0,
-      });
-    }
-
-    // Attendance Breakdown Chart Data
-    const attendanceBreakdown = users.map((user) => {
-      const userShifts = shiftAssignments.filter((sa) => sa.userId === user.id);
-      const userReports = reports.filter((r) => r.userId === user.id);
-      const userLeaves = approvedLeaves.filter((l) => l.userId === user.id);
-
-      let present = 0;
-      const late = 0;
-      let absent = 0;
-      let leave = 0;
-
-      userShifts.forEach((shift) => {
-        const shiftStart = new Date(shift.startDate);
-        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
-        const rangeStart = shiftStart < start ? start : shiftStart;
-        const rangeEnd = shiftEnd > end ? end : shiftEnd;
-
-        const daysInRange = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-        for (let d = 0; d < daysInRange; d++) {
-          const currentDate = new Date(rangeStart);
-          currentDate.setDate(currentDate.getDate() + d);
-          const dateStr = currentDate.toISOString().split('T')[0];
-
-          const report = userReports.find((r) => r.date.toISOString().split('T')[0] === dateStr);
-          const onLeave = userLeaves.some(
-            (l) => currentDate >= new Date(l.startDate) && currentDate <= new Date(l.endDate)
-          );
-
-          if (onLeave) {
-            leave++;
-          } else if (report) {
-            present++;
-          } else {
-            absent++;
-          }
-        }
-      });
-
-      return {
-        name: user.name,
-        present,
-        late,
-        absent,
-        leave,
-      };
-    });
-
-    // QA Score Trend (weekly averages)
-    const weeklyScoreTrend: { week: string; avgScore: number }[] = [];
-    const weeksMap = new Map<string, { totalScore: number; count: number }>();
-
-    const weeksInRange = Math.ceil(daysDiff / 7);
-    for (let w = 0; w <= weeksInRange; w++) {
-      const weekStart = new Date(start);
-      weekStart.setDate(weekStart.getDate() + w * 7);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-
-      const weekKey = `${weekStart.toISOString().split('T')[0]}`;
-      weeksMap.set(weekKey, { totalScore: 0, count: 0 });
-    }
-
-    users.forEach((user) => {
-      const userDeductions = scoreEvents
-        .filter((event) => event.userId === user.id)
-        .reduce((sum, event) => sum + event.deduction, 0);
-      const userScore = Math.max(0, 100 - userDeductions);
-
-      weeksMap.forEach((value) => {
-        value.totalScore += userScore;
-        value.count++;
-      });
-    });
-
-    weeksMap.forEach((value, weekKey) => {
-      weeklyScoreTrend.push({
-        week: weekKey,
-        avgScore: value.count > 0 ? Math.round(value.totalScore / value.count) : 100,
-      });
-    });
-
-    // Entry Type Distribution
-    const entries: EntrySummary[] = await prisma.reportEntry.findMany({
-      where: {
-        report: {
-          ...(canViewTeamAnalytics ? {} : { userId: session.user.id }),
+    const [reports, approvedLeaves, shiftAssignments, pendingLeaves, entries] = await Promise.all([
+      prisma.report.findMany({
+        where: {
+          userId: { in: userIds },
+          status: 'SUBMITTED',
           date: {
             gte: start,
             lte: end,
           },
         },
+        select: {
+          id: true,
+          userId: true,
+          date: true,
+          status: true,
+          submittedAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      }),
+      prisma.leaveRequest.findMany({
+        where: {
+          userId: { in: userIds },
+          status: 'APPROVED',
+          OR: [
+            { startDate: { gte: start, lte: end } },
+            { endDate: { gte: start, lte: end } },
+            { startDate: { lte: start }, endDate: { gte: end } },
+          ],
+        },
+        select: {
+          userId: true,
+          startDate: true,
+          endDate: true,
+        },
+      }),
+      prisma.shiftAssignment.findMany({
+        where: {
+          userId: { in: userIds },
+          startDate: { lte: end },
+          OR: [{ endDate: null }, { endDate: { gte: start } }],
+        },
+        select: {
+          userId: true,
+          startDate: true,
+          endDate: true,
+          shift: {
+            select: {
+              reportDeadline: true,
+            },
+          },
+        },
+      }),
+      prisma.leaveRequest.count({
+        where: {
+          userId: { in: userIds },
+          status: 'PENDING',
+        },
+      }),
+      prisma.reportEntry.findMany({
+        where: {
+          report: {
+            userId: { in: userIds },
+            status: 'SUBMITTED',
+            date: {
+              gte: start,
+              lte: end,
+            },
+          },
+        },
+        select: {
+          type: true,
+        },
+      }),
+    ]);
+
+    const reportIds = reports.map((report) => report.id);
+    const scoreEvents = await prisma.scoreEvent.findMany({
+      where: {
+        userId: { in: userIds },
+        reportId: {
+          in: reportIds.length > 0 ? reportIds : ['__none__'],
+        },
       },
       select: {
-        type: true,
+        userId: true,
+        reportId: true,
+        deduction: true,
+        createdAt: true,
       },
     });
 
-    const tickets = entries.filter((e) => e.type === 'TICKET').length;
-    const chats = entries.filter((e) => e.type === 'CHAT').length;
+    const reportScoreMap = buildReportScoreMap(scoreEvents);
+    const attendance = calculateAttendanceSummaries({
+      users,
+      reports,
+      approvedLeaves,
+      shiftAssignments,
+      start,
+      end,
+    });
 
-    // Member Leaderboard
-    const leaderboard = users.map((user) => {
-      const userReportsCount = reports.filter((r) => r.userId === user.id).length;
-      const userDeductions = scoreEvents
-        .filter((event) => event.userId === user.id)
-        .reduce((sum, event) => sum + event.deduction, 0);
-      const userScore = Math.max(0, 100 - userDeductions);
+    const scoresByUser = new Map<string, number[]>();
 
-      // Calculate user attendance rate
-      const userShifts = shiftAssignments.filter((sa) => sa.userId === user.id);
-      const userReports = reports.filter((r) => r.userId === user.id);
-      const userLeaves = approvedLeaves.filter((l) => l.userId === user.id);
+    for (const report of reports) {
+      const values = scoresByUser.get(report.userId) ?? [];
+      values.push(getReportScore(report.id, reportScoreMap));
+      scoresByUser.set(report.userId, values);
+    }
 
-      let userWorkingDays = 0;
-      let userPresentDays = 0;
+    const leaderboard = users
+      .map((user) => {
+        const userReports = reports.filter((report) => report.userId === user.id);
+        const userScoreEvents = scoreEvents.filter((event) => event.userId === user.id);
+        const userAttendance = attendance.summaries.find((summary) => summary.userId === user.id);
 
-      userShifts.forEach((shift) => {
-        const shiftStart = new Date(shift.startDate);
-        const shiftEnd = shift.endDate ? new Date(shift.endDate) : end;
-        const rangeStart = shiftStart < start ? start : shiftStart;
-        const rangeEnd = shiftEnd > end ? end : shiftEnd;
-
-        const daysInRange = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        userWorkingDays += daysInRange;
-
-        for (let d = 0; d < daysInRange; d++) {
-          const currentDate = new Date(rangeStart);
-          currentDate.setDate(currentDate.getDate() + d);
-          const dateStr = currentDate.toISOString().split('T')[0];
-
-          const hasReport = userReports.some((r) => r.date.toISOString().split('T')[0] === dateStr);
-          const onLeave = userLeaves.some(
-            (l) => currentDate >= new Date(l.startDate) && currentDate <= new Date(l.endDate)
-          );
-
-          if (hasReport || onLeave) {
-            userPresentDays++;
-          }
-        }
+        return {
+          name: user.name,
+          reports: userReports.length,
+          avgScore: calculateAverageScore(scoresByUser.get(user.id) ?? []),
+          deductions: Number(
+            userScoreEvents.reduce((sum, event) => sum + event.deduction, 0).toFixed(1)
+          ),
+          attendanceRate: userAttendance?.attendanceRate ?? 0,
+        };
+      })
+      .sort((a, b) => {
+        if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
+        if (b.reports !== a.reports) return b.reports - a.reports;
+        return a.name.localeCompare(b.name);
       });
 
-      const userAttendanceRate = userWorkingDays > 0 ? Math.round((userPresentDays / userWorkingDays) * 100) : 0;
+    const dailyReportsMap = new Map<string, number>();
 
-      return {
-        name: user.name,
-        reports: userReportsCount,
-        avgScore: userScore,
-        deductions: userDeductions,
-        attendanceRate: userAttendanceRate,
-      };
-    }).sort((a, b) => b.avgScore - a.avgScore);
+    for (const report of reports) {
+      const dateKey = report.date.toISOString().split('T')[0];
+      dailyReportsMap.set(dateKey, (dailyReportsMap.get(dateKey) ?? 0) + 1);
+    }
+
+    const dailyReports: Array<{ date: string; count: number }> = [];
+    const currentDate = new Date(start);
+
+    while (currentDate <= end) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      dailyReports.push({
+        date: dateKey,
+        count: dailyReportsMap.get(dateKey) ?? 0,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const tickets = entries.filter((entry) => entry.type === 'TICKET').length;
+    const chats = entries.filter((entry) => entry.type === 'CHAT').length;
+    const allScores = reports.map((report) => getReportScore(report.id, reportScoreMap));
 
     return NextResponse.json({
       kpi: {
-        totalReports,
-        attendanceRate,
-        avgScore,
-        totalDeductions,
+        totalReports: reports.length,
+        attendanceRate: attendance.overallAttendanceRate,
+        avgScore: calculateAverageScore(allScores),
+        totalDeductions: Number(
+          scoreEvents.reduce((sum, event) => sum + event.deduction, 0).toFixed(1)
+        ),
         pendingLeaves,
-        activeMembers,
+        activeMembers: users.length,
       },
       dailyReports,
-      attendanceBreakdown,
-      weeklyScoreTrend,
+      attendanceBreakdown: attendance.summaries.map((summary) => ({
+        name: summary.name,
+        present: summary.present,
+        late: summary.late,
+        absent: summary.absent,
+        leave: summary.leave,
+      })),
+      weeklyScoreTrend: buildWeeklyScoreTrend({
+        reports,
+        scoreMap: reportScoreMap,
+        start,
+        end,
+      }),
       entryDistribution: {
         tickets,
         chats,

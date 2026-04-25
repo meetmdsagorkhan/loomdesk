@@ -12,14 +12,46 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date');
+    const userId = searchParams.get('userId');
+    const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Admin can see all reports, members can only see their own
-    const whereClause =
-      session.user.role === 'ADMIN'
-        ? {}
-        : { userId: session.user.id };
+    // Admin and Team Lead can see all reports, members can only see their own
+    const isManager = session.user.role === 'ADMIN' || session.user.role === 'TEAM_LEAD';
+    const whereClause: {
+      userId?: string;
+      status?: 'SUBMITTED' | 'DRAFT';
+      date?: {
+        gte: Date;
+        lt: Date;
+      };
+    } = {};
+
+    if (isManager) {
+      if (userId) {
+        whereClause.userId = userId;
+      }
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
+    if (status === 'SUBMITTED' || status === 'DRAFT') {
+      whereClause.status = status;
+    }
+
+    if (date) {
+      const targetDate = new Date(date);
+      targetDate.setHours(0, 0, 0, 0);
+      const nextDay = new Date(targetDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      whereClause.date = {
+        gte: targetDate,
+        lt: nextDay,
+      };
+    }
 
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
@@ -32,7 +64,6 @@ export async function GET(request: NextRequest) {
               email: true,
             },
           },
-          entries: true,
           _count: {
             select: { entries: true },
           },

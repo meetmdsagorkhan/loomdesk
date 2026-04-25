@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Users,
   CheckCircle,
+  CalendarDays,
 } from 'lucide-react';
 import StatCard from '@/components/shared/StatCard';
 import PageHeader from '@/components/shared/PageHeader';
@@ -25,6 +26,8 @@ type DashboardAnalytics = {
     activeMembers: number;
     pendingLeaves: number;
     avgScore: number;
+    totalDeductions: number;
+    attendanceRate: number;
   };
   leaderboard: Array<{
     name: string;
@@ -38,6 +41,8 @@ export default function DashboardPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const role = user?.role || 'MEMBER';
+  const isAdminView = role === 'ADMIN' || role === 'TEAM_LEAD';
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -65,7 +70,7 @@ export default function DashboardPage() {
   const metricCards = analytics?.kpi
     ? [
         {
-          title: 'Reports',
+          title: isAdminView ? 'Reports' : 'My Reports',
           value: analytics.kpi.totalReports || 0,
           icon: <FileText size={18} />,
           color: 'primary',
@@ -73,22 +78,22 @@ export default function DashboardPage() {
         },
         {
           title: 'Attendance',
-          value: `${analytics.kpi.activeMembers || 0}%`,
+          value: `${analytics.kpi.activeMembers > 1 ? (analytics.kpi.attendanceRate || 0) : (analytics.kpi.attendanceRate || 0)}%`,
           icon: <Users size={18} />,
           color: 'success',
           change: 0,
         },
         {
-          title: 'Avg Score',
+          title: isAdminView ? 'Avg Score' : 'My Score',
           value: analytics.kpi.avgScore || 0,
           icon: <TrendingUp size={18} />,
           color: 'warning',
           change: 3,
         },
         {
-          title: 'Deductions',
-          value: analytics.kpi.pendingLeaves || 0,
-          icon: <CheckCircle size={18} />,
+          title: isAdminView ? 'Deductions' : 'Pending Leaves',
+          value: isAdminView ? (analytics.kpi.totalDeductions || 0) : (analytics.kpi.pendingLeaves || 0),
+          icon: isAdminView ? <CheckCircle size={18} /> : <CalendarDays size={18} />,
           color: 'accent',
           change: 0,
         },
@@ -115,15 +120,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        badge="Dashboard"
+        badge={isAdminView ? 'Admin Dashboard' : 'Member Dashboard'}
         title={`Welcome back, ${user?.name || 'User'}`}
-        subtitle="Here's what's happening with your team today."
+        subtitle={isAdminView 
+          ? "Here's what's happening with your team today." 
+          : "Here's your personal performance snapshot for today."}
       />
 
       <section>
         <GlassCard variant="panel" padding="none">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 px-5 py-4 md:px-6">
-            <h2 className="text-lg font-semibold text-foreground">Performance Overview</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {isAdminView ? 'Performance Overview' : 'My Performance'}
+            </h2>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Monthly Snapshot
             </p>
@@ -147,12 +156,16 @@ export default function DashboardPage() {
         <GlassCard variant="panel" padding="none" className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 px-5 py-4 md:px-6">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Team Leaderboard</h2>
-              <p className="text-sm text-muted-foreground">Recent activity and score trends</p>
+              <h2 className="text-lg font-semibold text-foreground">
+                {isAdminView ? 'Team Leaderboard' : 'Top Performers'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {isAdminView ? 'Recent activity and score trends' : 'How you compare with the team average'}
+              </p>
             </div>
             <div className="glass-pill inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground/90">
               <Medal className="h-3.5 w-3.5 text-amber-500" />
-              Top 5 Members
+              {isAdminView ? 'Top 5 Members' : 'Market Benchmark'}
             </div>
           </div>
 

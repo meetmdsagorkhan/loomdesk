@@ -2,861 +2,638 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Users, Bell, Mail, Loader2, Plus, ShieldCheck, KeyRound, RefreshCw, ChevronRight, Settings as SettingsIcon, Camera, Briefcase, Building2, Calendar, Lock } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Users, Loader2, Plus, Shield, UserCheck, Crown,
+  Mail, Search, Sparkles, Send, PauseCircle, Trash2,
+  RefreshCw, ChevronRight, AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import PageHeader from '@/components/shared/PageHeader';
-import GlassCard from '@/components/shared/GlassCard';
-import { Switch } from '@/components/ui/switch';
-import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+/* ─────────────────────────────────────────── types ──── */
+interface TeamMember {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  isActive?: boolean;
+  image?: string | null;
+  createdAt: string;
+}
+
+/* ─────────────────────────────────────────── helpers ── */
+const ROLE_META: Record<string, { label: string; color: string; icon: React.ElementType; glow: string }> = {
+  ADMIN: {
+    label: 'Admin',
+    color: 'text-violet-400 bg-violet-500/15 border-violet-500/30',
+    icon: Crown,
+    glow: 'shadow-[0_0_12px_rgba(139,92,246,0.35)]',
+  },
+  TEAM_LEAD: {
+    label: 'Team Lead',
+    color: 'text-sky-400 bg-sky-500/15 border-sky-500/30',
+    icon: Shield,
+    glow: 'shadow-[0_0_12px_rgba(56,189,248,0.3)]',
+  },
+  MEMBER: {
+    label: 'Member',
+    color: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30',
+    icon: UserCheck,
+    glow: '',
+  },
+};
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function getAvatarGradient(name: string) {
+  const gradients = [
+    'from-violet-500 to-indigo-500',
+    'from-sky-500 to-cyan-400',
+    'from-emerald-500 to-teal-400',
+    'from-rose-500 to-pink-400',
+    'from-amber-500 to-orange-400',
+    'from-fuchsia-500 to-purple-500',
+  ];
+  const idx = name.charCodeAt(0) % gradients.length;
+  return gradients[idx];
+}
+
+/* ─────────────────────────────────────────── components ─ */
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+  delay,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  color: string;
+  delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+      className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:-translate-y-0.5 transition-transform duration-300"
+    >
+      <div className={cn('p-3 rounded-xl border', color)}>
+        <Icon size={18} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground font-medium mt-0.5">{label}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+function RolePill({ role }: { role: string }) {
+  const meta = ROLE_META[role] ?? ROLE_META.MEMBER;
+  const Icon = meta.icon;
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', meta.color)}>
+      <Icon size={11} />
+      {meta.label}
+    </span>
+  );
+}
+
+function MemberRow({
+  member,
+  index,
+  canManageMembers,
+  isCurrentUser,
+  actionState,
+  onTogglePause,
+  onDelete,
+}: {
+  member: TeamMember;
+  index: number;
+  canManageMembers: boolean;
+  isCurrentUser: boolean;
+  actionState: { id: string; action: 'pause' | 'resume' | 'delete' } | null;
+  onTogglePause: (member: TeamMember) => void;
+  onDelete: (member: TeamMember) => void;
+}) {
+  const gradient = getAvatarGradient(member.name);
+  const joined = new Date(member.createdAt).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
+  const isPaused = member.isActive === false;
+  const isPausing =
+    actionState?.id === member.id &&
+    (actionState.action === 'pause' || actionState.action === 'resume');
+  const isDeleting = actionState?.id === member.id && actionState.action === 'delete';
+  const actionsDisabled = isCurrentUser || member.role === 'ADMIN' || isPausing || isDeleting;
+
+  return (
+    <motion.tr
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.05 * index, duration: 0.35, ease: 'easeOut' }}
+      className="group border-b border-border/40 last:border-0 hover:bg-primary/[0.04] transition-colors duration-200"
+    >
+      {/* Avatar + Name */}
+      <td className="py-3.5 pl-5 pr-3">
+        <div className="flex items-center gap-3">
+          <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shrink-0', gradient)}>
+            {getInitials(member.name)}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground leading-tight">{member.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <Mail size={10} />
+              {member.email}
+            </p>
+            {isPaused && (
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-amber-500">
+                Paused
+              </p>
+            )}
+          </div>
+        </div>
+      </td>
+
+      {/* Role */}
+      <td className="py-3.5 px-3">
+        <RolePill role={member.role} />
+      </td>
+
+      {/* Joined */}
+      <td className="py-3.5 px-3 hidden md:table-cell">
+        <p className="text-xs text-muted-foreground">{joined}</p>
+      </td>
+
+      {/* Actions placeholder */}
+      <td className="py-3.5 pl-3 pr-5">
+        {canManageMembers ? (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onTogglePause(member)}
+              disabled={actionsDisabled}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+                isPaused
+                  ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15'
+                  : 'border border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
+              )}
+            >
+              {isPausing ? <Loader2 size={12} className="animate-spin" /> : <PauseCircle size={12} />}
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(member)}
+              disabled={actionsDisabled}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/10 px-2.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              Delete
+            </button>
+          </div>
+        ) : null}
+      </td>
+    </motion.tr>
+  );
+}
+
+/* ─────────────────────────────────────────── page ──── */
 export default function SettingsPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
   const [mounted, setMounted] = useState(false);
+  const isManager = isAdmin({ user }) || user?.role === 'TEAM_LEAD';
 
-  const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({ 
-    name: '', 
-    currentPassword: '', 
-    newPassword: '', 
-    confirmPassword: '',
-    position: '',
-    department: '',
-    company: '',
-    joiningDate: '',
-    image: '' 
-  });
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-
+  /* invite state */
   const [inviteData, setInviteData] = useState({ email: '', role: 'MEMBER' });
   const [isInviting, setIsInviting] = useState(false);
 
-  const [emailAddress, setEmailAddress] = useState('');
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [twoFactorRecoveryCodesRemaining, setTwoFactorRecoveryCodesRemaining] = useState(0);
-  const [twoFactorSetupSecret, setTwoFactorSetupSecret] = useState<string | null>(null);
-  const [twoFactorSetupUrl, setTwoFactorSetupUrl] = useState<string | null>(null);
-  const [twoFactorOtp, setTwoFactorOtp] = useState('');
-  const [twoFactorRecoveryCode, setTwoFactorRecoveryCode] = useState('');
-  const [twoFactorPassword, setTwoFactorPassword] = useState('');
-  const [generatedRecoveryCodes, setGeneratedRecoveryCodes] = useState<string[]>([]);
-  const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
+  /* team state */
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [memberActionState, setMemberActionState] = useState<{ id: string; action: 'pause' | 'resume' | 'delete' } | null>(null);
+  const canManageMembers = user?.role === 'ADMIN';
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const fetchMembers = useCallback(async () => {
+    setMembersLoading(true);
+    try {
+      const res = await fetch('/api/users');
+      if (!res.ok) throw new Error('Failed to fetch members');
+      const data = await res.json();
+      setMembers(data.users ?? []);
+    } catch (e) {
+      handleApiError(e, 'Admin Settings');
+    } finally {
+      setMembersLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const fetchProfile = useCallback(async () => {
-    try {
-      const response = await fetch('/api/user/profile');
-      if (!response.ok) {
-        handleApiError('Failed to fetch profile', 'Settings');
-        return;
-      }
-
-      const data = await response.json();
-      setProfileData((prev) => ({
-        ...prev,
-        name: data.user?.name || user?.name || '',
-        position: data.user?.position || '',
-        department: data.user?.department || '',
-        company: data.user?.company || '',
-        joiningDate: data.user?.joiningDate ? new Date(data.user.joiningDate).toISOString().split('T')[0] : '',
-        image: data.user?.image || '',
-      }));
-      setEmailAddress(data.user?.email || user?.email || '');
-      setEmailVerified(Boolean(data.user?.emailVerifiedAt));
-      setTwoFactorEnabled(Boolean(data.user?.twoFactorEnabled));
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    }
-  }, [user?.email, user?.name]);
-
-  const fetchTwoFactorStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/api/user/two-factor');
-
-      if (!response.ok) {
-        handleApiError('Failed to fetch two-factor status', 'Settings');
-        return;
-      }
-
-      const data = await response.json();
-      setTwoFactorEnabled(Boolean(data.enabled));
-      setTwoFactorRecoveryCodesRemaining(Number(data.recoveryCodesRemaining ?? 0));
-      setEmailVerified(Boolean(data.emailVerified));
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    }
-  }, []);
-
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    if (profileData.newPassword && profileData.newPassword !== profileData.confirmPassword) {
-      showToast('New passwords do not match', 'error');
-      setIsUpdatingProfile(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: profileData.name,
-          currentPassword: profileData.currentPassword || undefined,
-          newPassword: profileData.newPassword || undefined,
-          position: profileData.position || null,
-          department: profileData.department || null,
-          company: profileData.company || null,
-          joiningDate: profileData.joiningDate || null,
-          image: profileData.image || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        handleApiError(error.error || 'Failed to update profile', 'Settings');
-        return;
-      }
-
-      showToast('Profile updated successfully', 'success');
-      setProfileData((prev) => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      }));
-      if (response.ok) {
-        const data = await response.json();
-        setEmailVerified(Boolean(data.user?.emailVerifiedAt));
-        setEmailAddress(data.user?.email || emailAddress);
-        if (data.emailVerificationRequired) {
-          showToast('Email changed. Check your inbox to verify the new address.', 'info');
-        }
-      }
-      await fetchProfile();
-      await fetchTwoFactorStatus();
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsUpdatingProfile(false);
-    }
-  };
+    if (isManager) fetchMembers();
+  }, [isManager, fetchMembers]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsInviting(true);
     try {
-      const response = await fetch('/api/auth/invite/create', {
+      const res = await fetch('/api/auth/invite/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: inviteData.email,
-          role: inviteData.role,
-        }),
+        body: JSON.stringify({ email: inviteData.email, role: inviteData.role }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        handleApiError(error.error || 'Failed to send invitation', 'Settings');
+      if (!res.ok) {
+        const err = await res.json();
+        handleApiError(err.error || 'Failed to send invitation', 'Settings');
         return;
       }
-
       showToast('Invitation sent successfully', 'success');
       setInviteData({ email: '', role: 'MEMBER' });
-    } catch (error) {
-      handleApiError(error, 'Settings');
+    } catch (err) {
+      handleApiError(err, 'Settings');
     } finally {
       setIsInviting(false);
     }
   };
 
+  const handleTogglePauseMember = async (member: TeamMember) => {
+    if (!canManageMembers) return;
+    const nextAction = member.isActive === false ? 'resume' : 'pause';
+    const confirmationMessage =
+      nextAction === 'pause'
+        ? `Pause ${member.name}'s account? They will lose access until reactivated.`
+        : `Resume ${member.name}'s account and restore access?`;
 
-  const handleTwoFactorAction = async (body: Record<string, unknown>) => {
-    const response = await fetch('/api/user/two-factor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Two-factor action failed');
+    if (!window.confirm(confirmationMessage)) {
+      return;
     }
 
-    return data;
-  };
-
-  const startTwoFactorSetup = async () => {
-    setIsTwoFactorLoading(true);
-    setGeneratedRecoveryCodes([]);
+    setMemberActionState({ id: member.id, action: nextAction });
 
     try {
-      const data = await handleTwoFactorAction({ action: 'setup' });
-      setTwoFactorSetupSecret(data.secret ?? null);
-      setTwoFactorSetupUrl(data.otpauthUrl ?? null);
-      setTwoFactorOtp('');
-      showToast('Two-factor setup started. Enter a code from your authenticator app to finish.', 'success');
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsTwoFactorLoading(false);
-    }
-  };
-
-  const enableTwoFactor = async () => {
-    setIsTwoFactorLoading(true);
-
-    try {
-      const data = await handleTwoFactorAction({
-        action: 'enable',
-        otp: twoFactorOtp,
+      const res = await fetch(`/api/users/${member.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: nextAction }),
       });
+      const data = await res.json();
 
-      setGeneratedRecoveryCodes(Array.isArray(data.recoveryCodes) ? data.recoveryCodes : []);
-      setTwoFactorEnabled(true);
-      setTwoFactorSetupSecret(null);
-      setTwoFactorSetupUrl(null);
-      setTwoFactorOtp('');
-      setTwoFactorRecoveryCode('');
-      showToast('Two-factor authentication enabled', 'success');
-      await fetchTwoFactorStatus();
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsTwoFactorLoading(false);
-    }
-  };
-
-  const disableTwoFactor = async () => {
-    setIsTwoFactorLoading(true);
-
-    try {
-      const data = await handleTwoFactorAction({
-        action: 'disable',
-        currentPassword: twoFactorPassword,
-        otp: twoFactorOtp || undefined,
-        recoveryCode: twoFactorRecoveryCode || undefined,
-      });
-
-      showToast(data.message || 'Two-factor authentication disabled', 'success');
-      setTwoFactorEnabled(false);
-      setTwoFactorSetupSecret(null);
-      setTwoFactorSetupUrl(null);
-      setTwoFactorOtp('');
-      setTwoFactorRecoveryCode('');
-      setTwoFactorPassword('');
-      setGeneratedRecoveryCodes([]);
-      await fetchTwoFactorStatus();
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsTwoFactorLoading(false);
-    }
-  };
-
-  const regenerateRecoveryCodes = async () => {
-    setIsTwoFactorLoading(true);
-
-    try {
-      const data = await handleTwoFactorAction({
-        action: 'regenerate-recovery-codes',
-        currentPassword: twoFactorPassword,
-        otp: twoFactorOtp || undefined,
-        recoveryCode: twoFactorRecoveryCode || undefined,
-      });
-
-      setGeneratedRecoveryCodes(Array.isArray(data.recoveryCodes) ? data.recoveryCodes : []);
-      setTwoFactorOtp('');
-      setTwoFactorRecoveryCode('');
-      showToast('Recovery codes regenerated', 'success');
-      await fetchTwoFactorStatus();
-    } catch (error) {
-      handleApiError(error, 'Settings');
-    } finally {
-      setIsTwoFactorLoading(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('Image size must be less than 2MB', 'error');
+      if (!res.ok) {
+        handleApiError(data.error || `Failed to ${nextAction} member`, 'Admin Settings');
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData((prev) => ({ ...prev, image: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      showToast(data.message || `Member ${nextAction}d successfully`, 'success');
+      await fetchMembers();
+    } catch (error) {
+      handleApiError(error, 'Admin Settings');
+    } finally {
+      setMemberActionState(null);
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const handleDeleteMember = async (member: TeamMember) => {
+    if (!canManageMembers) return;
+    if (!window.confirm(`Delete ${member.name} permanently? This cannot be undone.`)) {
+      return;
+    }
+
+    setMemberActionState({ id: member.id, action: 'delete' });
+
+    try {
+      const res = await fetch(`/api/users/${member.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        handleApiError(data.error || 'Failed to delete member', 'Admin Settings');
+        return;
+      }
+
+      showToast(data.message || 'Member deleted successfully', 'success');
+      await fetchMembers();
+    } catch (error) {
+      handleApiError(error, 'Admin Settings');
+    } finally {
+      setMemberActionState(null);
+    }
   };
 
-  useEffect(() => {
-    void fetchProfile();
-    void fetchTwoFactorStatus();
-  }, [fetchProfile, fetchTwoFactorStatus]);
-
-  // Prevent SSR rendering
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   if (userLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  if (!isManager) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center min-h-[400px] text-center p-8"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-4">
+          <AlertCircle className="text-destructive" size={28} />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Access Restricted</h2>
+        <p className="text-muted-foreground max-w-sm">Only administrators and team leads can access admin settings.</p>
+      </motion.div>
+    );
+  }
+
+  /* derived stats */
+  const stats = {
+    total: members.length,
+    admins: members.filter((m) => m.role === 'ADMIN' && m.isActive !== false).length,
+    leads: members.filter((m) => m.role === 'TEAM_LEAD' && m.isActive !== false).length,
+    members: members.filter((m) => m.role === 'MEMBER' && m.isActive !== false).length,
+  };
+
+  const filtered = members.filter((m) => {
+    const matchSearch =
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.email.toLowerCase().includes(search.toLowerCase());
+    const matchRole = roleFilter === 'ALL' || m.role === roleFilter;
+    return matchSearch && matchRole;
+  });
+
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-12">
-      <PageHeader
-        badge="Settings"
-        title="Command Center"
-        subtitle="Manage your profile, team members, and security preferences from one place."
-      />
+    <div className="space-y-6 max-w-7xl mx-auto pb-14">
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Spatial Navigation Sidebar */}
-        <div className="lg:col-span-3 space-y-4">
-          <GlassCard variant="minimal" padding="sm" className="border-white/10 overflow-hidden sticky top-24">
-            <div className="flex flex-col gap-1">
-              {[
-                { id: 'profile', label: 'Profile', icon: User },
-                ...(isAdmin({ user }) ? [{ id: 'team', label: 'Team', icon: Users }] : []),
-                { id: 'security', label: 'Security', icon: ShieldCheck },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`relative flex items-center justify-between w-full px-4 py-3.5 rounded-xl transition-all duration-300 group ${activeTab === item.id
-                      ? 'text-primary font-semibold'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                    }`}
-                >
-                  <div className="flex items-center gap-3 z-10">
-                    <item.icon size={18} className={`${activeTab === item.id ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
-                    <span className="text-sm tracking-tight">{item.label}</span>
-                  </div>
-                  {activeTab === item.id && (
-                    <motion.div
-                      layoutId="activeTabGlow"
-                      className="absolute inset-0 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_20px_rgba(125,92,255,0.15)]"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <ChevronRight
-                    size={14}
-                    className={`transition-transform duration-300 z-10 ${activeTab === item.id ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`}
-                  />
-                </button>
-              ))}
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        className="glass-card rounded-2xl p-6 md:p-8 relative overflow-hidden"
+      >
+        {/* ambient orbs */}
+        <div className="pointer-events-none absolute -top-10 -right-10 w-64 h-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 left-10 w-48 h-48 rounded-full bg-sky-500/8 blur-3xl" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/80 mb-2">Admin</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
+              Admin Settings
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+                <Sparkles size={11} />
+                Live
+              </span>
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Manage your workspace members, permissions, and team access.
+            </p>
+          </div>
+
+          <button
+            onClick={fetchMembers}
+            className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl glass-card text-sm font-medium text-muted-foreground hover:text-foreground border border-border/60 hover:border-primary/30 transition-all duration-200"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        </div>
+      </motion.div>
+
+      {/* ── Stats Row ──────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <StatCard icon={Users} label="Total Members" value={stats.total} color="text-primary bg-primary/15 border-primary/25" delay={0.05} />
+        <StatCard icon={Crown} label="Admins" value={stats.admins} color="text-violet-400 bg-violet-500/15 border-violet-500/30" delay={0.1} />
+        <StatCard icon={Shield} label="Team Leads" value={stats.leads} color="text-sky-400 bg-sky-500/15 border-sky-500/30" delay={0.15} />
+        <StatCard icon={UserCheck} label="Members" value={stats.members} color="text-emerald-400 bg-emerald-500/15 border-emerald-500/30" delay={0.2} />
+      </div>
+
+      {/* ── Main Layout ────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5">
+
+        {/* Team Roster ─────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          className="glass-card rounded-2xl overflow-hidden"
+        >
+          {/* roster header */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-5 border-b border-border/50">
+            <div className="flex items-center gap-2.5 flex-1">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <Users size={15} className="text-primary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Team Roster</h2>
+                <p className="text-xs text-muted-foreground">{filtered.length} of {members.length} members</p>
+              </div>
             </div>
-          </GlassCard>
 
-        </div>
+            <div className="flex items-center gap-2">
+              {/* search */}
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 pr-3 h-8 text-xs rounded-lg bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 w-36 transition-all"
+                />
+              </div>
 
-        {/* Dynamic Content Area */}
-        <div className="lg:col-span-9 min-h-[600px]">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {activeTab === 'profile' && (
-                <BentoGrid>
-                  <BentoCard colSpan={3}>
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Profile Settings</h2>
-                        <p className="text-sm text-muted-foreground mt-1">Manage your personal information and credentials</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-                        <User className="text-primary" size={24} />
-                      </div>
-                    </div>
+              {/* role filter */}
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="h-8 px-2.5 text-xs rounded-lg bg-muted/60 border border-border/60 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+              >
+                <option value="ALL">All Roles</option>
+                <option value="ADMIN">Admin</option>
+                <option value="TEAM_LEAD">Team Lead</option>
+                <option value="MEMBER">Member</option>
+              </select>
+            </div>
+          </div>
 
-                    <form onSubmit={handleProfileUpdate} className="space-y-8">
-                      {/* Profile Image Upload */}
-                      <div className="flex flex-col items-center gap-4 mb-8">
-                        <div className="relative group">
-                          <Avatar className="w-24 h-24 border-2 border-primary/30 ring-4 ring-primary/5">
-                            {profileData.image ? (
-                              <AvatarImage src={profileData.image} alt={profileData.name} className="object-cover" />
-                            ) : (
-                              <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
-                                {getInitials(profileData.name || 'User')}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <label 
-                            htmlFor="avatar-upload" 
-                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
-                          >
-                            <Camera size={24} className="text-white" />
-                            <input 
-                              id="avatar-upload" 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={handleImageUpload}
-                            />
-                          </label>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-semibold text-foreground">Profile Picture</p>
-                          <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF up to 2MB</p>
-                        </div>
-                      </div>
+          {/* table */}
+          {membersLoading ? (
+            <div className="flex items-center justify-center py-16 gap-3 text-muted-foreground">
+              <Loader2 size={20} className="animate-spin" />
+              <span className="text-sm">Loading team…</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-8">
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-3">
+                <Users size={20} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">No members found</p>
+              <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filter</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/40">
+                    <th className="py-2.5 pl-5 pr-3 text-left text-xs font-semibold text-muted-foreground">Member</th>
+                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-muted-foreground">Role</th>
+                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-muted-foreground hidden md:table-cell">Joined</th>
+                    <th className="py-2.5 pl-3 pr-5 text-right text-xs font-semibold text-muted-foreground">
+                      {canManageMembers ? 'Actions' : ''}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {filtered.map((member, i) => (
+                      <MemberRow
+                        key={member.id}
+                        member={member}
+                        index={i}
+                        canManageMembers={canManageMembers}
+                        isCurrentUser={user?.id === member.id}
+                        actionState={memberActionState}
+                        onTogglePause={handleTogglePauseMember}
+                        onDelete={handleDeleteMember}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
 
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <User size={14} className="text-primary" /> Full Name
-                          </Label>
-                          <Input
-                            type="text"
-                            value={profileData.name}
-                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                            className="form-input"
-                            placeholder="Your Name"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <Mail size={14} className="text-primary" /> Email Address
-                          </Label>
-                          <Input
-                            type="email"
-                            value={emailAddress}
-                            disabled
-                            className="form-input opacity-70 bg-white/5 cursor-not-allowed"
-                          />
-                        </div>
-                      </div>
+        {/* Invite Panel ────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          className="glass-card rounded-2xl overflow-hidden flex flex-col"
+        >
+          {/* panel header */}
+          <div className="p-5 border-b border-border/50 relative overflow-hidden">
+            <div className="pointer-events-none absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary/10 blur-2xl" />
+            <div className="relative flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/15 border border-primary/25">
+                <Send size={15} className="text-primary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Invite Member</h2>
+                <p className="text-xs text-muted-foreground">Send a workspace invitation</p>
+              </div>
+            </div>
+          </div>
 
-                      <div className="relative py-4">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t border-white/10"></span>
-                        </div>
-                        <div className="relative flex justify-start">
-                          <span className="bg-transparent pr-4 text-xs font-bold uppercase tracking-widest text-primary/60">Professional Details</span>
-                        </div>
-                      </div>
+          {/* notice */}
+          <div className="mx-5 mt-5 p-3.5 rounded-xl bg-primary/8 border border-primary/15">
+            <p className="text-xs text-foreground/80 leading-relaxed">
+              Invitations expire after <span className="font-semibold text-primary">72 hours</span>. Members can join only via the emailed link.
+            </p>
+          </div>
 
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <Briefcase size={14} className="text-primary" /> Position
-                          </Label>
-                          <Input
-                            type="text"
-                            value={profileData.position}
-                            onChange={(e) => setProfileData({ ...profileData, position: e.target.value })}
-                            placeholder="e.g. Senior Developer"
-                            className="form-input"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <Building2 size={14} className="text-primary" /> Department
-                          </Label>
-                          <Input
-                            type="text"
-                            value={profileData.department}
-                            onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
-                            placeholder="e.g. Engineering"
-                            className="form-input"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <SettingsIcon size={14} className="text-primary" /> Company Name
-                          </Label>
-                          <Input
-                            type="text"
-                            value={profileData.company}
-                            onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
-                            placeholder="LoomDesk"
-                            className="form-input"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
-                            <Calendar size={14} className="text-primary" /> Joining Date
-                          </Label>
-                          <Input
-                            type="date"
-                            value={profileData.joiningDate}
-                            onChange={(e) => setProfileData({ ...profileData, joiningDate: e.target.value })}
-                            className="form-input"
-                          />
-                        </div>
-                      </div>
+          {/* form */}
+          <form onSubmit={handleInvite} className="flex flex-col gap-5 p-5 flex-1">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wide ml-0.5">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={inviteData.email}
+                  onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+                  placeholder="colleague@company.com"
+                  className="pl-9 form-input"
+                  required
+                />
+              </div>
+            </div>
 
-                      <div className="pt-4 flex justify-end">
-                        <Button type="submit" disabled={isUpdatingProfile} className="btn-primary min-w-[140px] h-11 px-8 rounded-xl font-semibold">
-                          {isUpdatingProfile ? (
-                            <>
-                              <Loader2 size={18} className="mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            'Update Profile'
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </BentoCard>
-                </BentoGrid>
-              )}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wide ml-0.5">
+                Workspace Role
+              </Label>
+              <Select
+                value={inviteData.role}
+                onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
+                className="form-input bg-transparent"
+              >
+                <option value="MEMBER">Member — Standard access</option>
+                <option value="TEAM_LEAD">Team Lead — Management access</option>
+                <option value="ADMIN">Admin — Full control</option>
+              </Select>
 
-              {activeTab === 'team' && isAdmin({ user }) && (
-                <BentoGrid>
-                  <BentoCard colSpan={3}>
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Team Management</h2>
-                        <p className="text-sm text-muted-foreground mt-1">Add new members and define their workspace permissions</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-                        <Users className="text-primary" size={24} />
-                      </div>
-                    </div>
+              {/* Role description */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={inviteData.role}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={cn(
+                    'overflow-hidden mt-2 p-3 rounded-xl text-xs border',
+                    ROLE_META[inviteData.role]?.color ?? ROLE_META.MEMBER.color
+                  )}
+                >
+                  {inviteData.role === 'ADMIN' && 'Full access to all settings, reports, and team management features.'}
+                  {inviteData.role === 'TEAM_LEAD' && 'Can manage their team\'s reports, attendance, and QA reviews.'}
+                  {inviteData.role === 'MEMBER' && 'Standard workspace access — submit reports, view personal stats, and more.'}
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-                    <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 mb-8">
-                      <p className="text-sm text-foreground/90 leading-relaxed">
-                        Invitations are sent via email. New members will have 72 hours to accept the invite before it expires.
-                      </p>
-                    </div>
+            <div className="mt-auto pt-2">
+              <Button
+                type="submit"
+                disabled={isInviting}
+                className="w-full h-11 rounded-xl font-semibold btn-primary flex items-center justify-center gap-2"
+              >
+                {isInviting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Sending invite…
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Send Invitation
+                    <ChevronRight size={14} className="ml-auto opacity-60" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </motion.div>
 
-                    <form onSubmit={handleInvite} className="space-y-6">
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1">Email Address</Label>
-                          <Input
-                            type="email"
-                            value={inviteData.email}
-                            onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
-                            placeholder="colleague@company.com"
-                            className="form-input"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1">Workspace Role</Label>
-                          <Select
-                            value={inviteData.role}
-                            onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                            className="form-input bg-transparent"
-                          >
-                            <option value="MEMBER">Member (Standard Access)</option>
-                            <option value="TEAM_LEAD">Team Lead (Management Access)</option>
-                            <option value="ADMIN">Admin (Full Control)</option>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 flex justify-end">
-                        <Button type="submit" disabled={isInviting} className="btn-primary min-w-[160px] h-11 px-8 rounded-xl font-semibold">
-                          {isInviting ? (
-                            <>
-                              <Loader2 size={18} className="mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Plus size={18} className="mr-2" />
-                              Send Invitation
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </BentoCard>
-                </BentoGrid>
-              )}
-
-
-              {activeTab === 'security' && (
-                <BentoGrid>
-                  <BentoCard colSpan={3}>
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h2 className="text-xl font-bold tracking-tight text-foreground font-heading">Security Protocol</h2>
-                        <p className="text-sm text-muted-foreground mt-1">Multi-factor authentication and identity verification</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-                        <ShieldCheck className="text-primary" size={24} />
-                      </div>
-                    </div>
-
-                    {/* Password Change Section */}
-                    <div className="mb-10">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
-                          <Lock size={18} className="text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-foreground">Update Password</h3>
-                          <p className="text-xs text-muted-foreground">Ensure your account uses a long, random password to stay secure.</p>
-                        </div>
-                      </div>
-
-                      <form onSubmit={handleProfileUpdate} className="space-y-6">
-                        <div className="grid gap-6 md:grid-cols-3">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold ml-1">Current Password</Label>
-                            <Input
-                              type="password"
-                              value={profileData.currentPassword}
-                              onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
-                              placeholder="••••••••"
-                              className="form-input"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold ml-1">New Password</Label>
-                            <Input
-                              type="password"
-                              value={profileData.newPassword}
-                              onChange={(e) => setProfileData({ ...profileData, newPassword: e.target.value })}
-                              placeholder="Minimum 8 characters"
-                              className="form-input"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold ml-1">Confirm Password</Label>
-                            <Input
-                              type="password"
-                              value={profileData.confirmPassword}
-                              onChange={(e) => setProfileData({ ...profileData, confirmPassword: e.target.value })}
-                              placeholder="Match new password"
-                              className="form-input"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button 
-                            type="submit" 
-                            disabled={isUpdatingProfile || !profileData.currentPassword || !profileData.newPassword} 
-                            className="btn-primary min-w-[140px] h-10 px-6 rounded-xl font-semibold"
-                          >
-                            {isUpdatingProfile ? (
-                              <>
-                                <Loader2 size={16} className="mr-2 animate-spin" />
-                                Updating...
-                              </>
-                            ) : (
-                              'Change Password'
-                            )}
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-
-                    <div className="relative py-4 mb-8">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-white/10"></span>
-                      </div>
-                      <div className="relative flex justify-start">
-                        <span className="bg-transparent pr-4 text-xs font-bold uppercase tracking-widest text-primary/60">Advanced Protection</span>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-6 mb-8">
-                      {/* Email Verification Status */}
-                      <div className="p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent flex items-center justify-between group hover:border-primary/30 transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-xl ${emailVerified ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
-                            <Mail size={20} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-foreground">Email Integrity</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {emailVerified ? `Verified: ${emailAddress}` : 'Verification Pending'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${emailVerified ? 'bg-success/10 text-success border border-success/20' : 'bg-warning/10 text-warning border border-warning/20'}`}>
-                          {emailVerified ? 'Authentic' : 'Pending'}
-                        </div>
-                      </div>
-
-                      {/* 2FA Main Panel */}
-                      <div className="p-6 rounded-2xl border border-white/10 bg-white/5">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-3 rounded-xl ${twoFactorEnabled ? 'bg-success/20 text-success' : 'bg-muted/20 text-muted-foreground'}`}>
-                              <KeyRound size={20} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-foreground">Two-Factor Authentication</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Add an extra layer of security to your account
-                              </p>
-                            </div>
-                          </div>
-                          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${twoFactorEnabled ? 'bg-success/10 text-success border border-success/20' : 'bg-muted/10 text-muted-foreground border border-white/10'}`}>
-                            {twoFactorEnabled ? 'Active' : 'Inactive'}
-                          </div>
-                        </div>
-
-                        {!twoFactorEnabled && !twoFactorSetupSecret && (
-                          <Button
-                            onClick={startTwoFactorSetup}
-                            disabled={isTwoFactorLoading || !emailVerified}
-                            className="btn-primary w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20"
-                          >
-                            {isTwoFactorLoading ? <Loader2 size={18} className="animate-spin" /> : 'Activate Security Layer'}
-                          </Button>
-                        )}
-
-                        {twoFactorSetupSecret && !twoFactorEnabled && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="mt-4 space-y-6 p-6 rounded-2xl border border-primary/30 bg-primary/5"
-                          >
-                            <div className="space-y-4">
-                              <p className="text-xs font-bold uppercase tracking-widest text-primary">Protocol Setup: Step 1</p>
-                              <div className="p-4 rounded-xl bg-black/20 border border-white/10 font-mono text-sm break-all text-center tracking-widest font-bold">
-                                {twoFactorSetupSecret}
-                              </div>
-                              <p className="text-[10px] text-muted-foreground text-center">Add this secret to your authenticator application</p>
-                            </div>
-
-                            <div className="space-y-4">
-                              <p className="text-xs font-bold uppercase tracking-widest text-primary">Protocol Setup: Step 2</p>
-                              <Input
-                                type="text"
-                                value={twoFactorOtp}
-                                onChange={(e) => setTwoFactorOtp(e.target.value)}
-                                placeholder="000 000"
-                                className="form-input text-center text-2xl tracking-[0.5em] font-bold h-14"
-                                maxLength={6}
-                              />
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                              <Button onClick={enableTwoFactor} disabled={isTwoFactorLoading || twoFactorOtp.length < 6} className="btn-primary flex-1 h-12 rounded-xl font-bold">
-                                Finalize Activation
-                              </Button>
-                              <Button variant="outline" onClick={() => { setTwoFactorSetupSecret(null); setTwoFactorOtp(''); }} className="btn-secondary px-6 rounded-xl border-white/10">
-                                Abort
-                              </Button>
-                            </div>
-                          </motion.div>
-                        )}
-
-                        {twoFactorEnabled && (
-                          <div className="mt-4 space-y-6">
-                            <div className="grid gap-6 md:grid-cols-2">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-primary/70 ml-1">Confirmation</Label>
-                                <Input
-                                  type="password"
-                                  value={twoFactorPassword}
-                                  onChange={(e) => setTwoFactorPassword(e.target.value)}
-                                  placeholder="Password required"
-                                  className="form-input"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-widest text-primary/70 ml-1">Current Code</Label>
-                                <Input
-                                  type="text"
-                                  value={twoFactorOtp}
-                                  onChange={(e) => setTwoFactorOtp(e.target.value)}
-                                  placeholder="000 000"
-                                  className="form-input font-mono"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-4 pt-2">
-                              <Button
-                                onClick={regenerateRecoveryCodes}
-                                disabled={isTwoFactorLoading || !twoFactorPassword || (!twoFactorOtp && !twoFactorRecoveryCode)}
-                                className="btn-secondary flex-1 h-11 rounded-xl font-bold border-white/10"
-                                variant="outline"
-                              >
-                                {isTwoFactorLoading ? <Loader2 size={18} className="animate-spin" /> : 'Refresh Recovery Keys'}
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={disableTwoFactor}
-                                disabled={isTwoFactorLoading || !twoFactorPassword || (!twoFactorOtp && !twoFactorRecoveryCode)}
-                                className="flex-1 h-11 rounded-xl font-bold bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-white transition-all"
-                              >
-                                Deactivate 2FA
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {generatedRecoveryCodes.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-6 rounded-2xl border border-warning/30 bg-warning/5"
-                      >
-                        <div className="flex items-center gap-2 text-warning mb-4">
-                          <ShieldCheck size={18} />
-                          <span className="font-bold uppercase tracking-widest text-xs">Emergency Recovery Protocol</span>
-                        </div>
-                        <p className="text-[11px] text-foreground/70 mb-6 leading-relaxed">
-                          Save these cryptographic keys in a secure offline location. They provide emergency access if your primary authentication device is compromised.
-                        </p>
-                        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-                          {generatedRecoveryCodes.map((code) => (
-                            <div key={code} className="p-3 rounded-xl bg-black/20 border border-white/10 font-mono text-[10px] font-bold text-foreground text-center tracking-widest">
-                              {code}
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </BentoCard>
-                </BentoGrid>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
       </div>
     </div>
   );

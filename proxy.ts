@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { hasSessionCookie } from '@/lib/auth-security';
+import { auth } from "@/auth";
+import { canAccessRoute } from "@/lib/permissions";
 import { allowedCorsOrigins } from '@/lib/env.server';
 import { attachRequestId, getRequestId } from '@/lib/request-id';
 
@@ -54,15 +55,18 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse) {
   return response;
 }
 
-export default function proxy(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
+  const session = await auth();
   const { pathname } = req.nextUrl;
   const isApiRoute = pathname.startsWith('/api');
-  const isAuthenticated = hasSessionCookie(req);
+  const isAuthenticated = !!session;
+  const userRole = session?.user?.role || 'MEMBER';
   const requestId = getRequestId(req);
 
   const finalizeResponse = (response: NextResponse) =>
     attachRequestId(response, requestId);
 
+  // 1. API Route Logic
   if (isApiRoute) {
     const origin = req.headers.get('origin');
     const isAllowedOrigin = !origin || allowedCorsOrigins.includes(origin);
@@ -105,6 +109,7 @@ export default function proxy(req: NextRequest) {
     );
   }
 
+  // 2. Page Route Logic
   const isPublicRoute = matchesPrefix(pathname, PUBLIC_ROUTES);
   const isProtectedPage = matchesPrefix(pathname, PROTECTED_PAGE_PREFIXES);
 
@@ -119,6 +124,19 @@ export default function proxy(req: NextRequest) {
     loginUrl.searchParams.set('redirectTo', pathname);
 
     return finalizeResponse(NextResponse.redirect(loginUrl));
+  }
+
+  // 3. RBAC Logic
+  if (isAuthenticated && isProtectedPage) {
+    // Determine the root of the module (e.g. /dashboard or /reports)
+    // Actually, canAccessRoute handles the path.
+    if (!canAccessRoute(userRole, pathname)) {
+      // If no access, redirect to dashboard or a safe fallback
+      const fallback = pathname.startsWith('/dashboard') ? '/dashboard' : '/dashboard';
+      // If they are on a subpage they shouldn't be, send them to the module root if they have access to it?
+      // For now, redirect to main dashboard as a safe baseline.
+      return finalizeResponse(NextResponse.redirect(new URL(fallback, req.url)));
+    }
   }
 
   const requestHeaders = new Headers(req.headers);

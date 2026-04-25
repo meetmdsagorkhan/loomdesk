@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
-import { isAdmin } from '@/lib/auth-utils';
+import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -17,16 +17,16 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const userId = searchParams.get('userId');
 
-    // Admin can see all schedules, members can only see their own
+    // Admin/Lead can see all schedules, members can only see their own
     const whereClause: {
       userId?: string;
       startDate?: { lte: Date };
       endDate?: { gte: Date };
-    } = isAdmin({ user: session.user })
+    } = isTeamLead(session)
       ? {}
       : { userId: session.user.id };
 
-    if (userId && isAdmin({ user: session.user })) {
+    if (userId && isTeamLead(session)) {
       whereClause.userId = userId;
     }
 

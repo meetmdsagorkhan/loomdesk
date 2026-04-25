@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { buildReportScoreMap, getReportScore } from '@/lib/performance-metrics';
 import { logger } from '@/lib/logger';
-
-type ReportScoreEvent = {
-  deduction: number;
-};
 
 export async function GET(
   request: NextRequest,
@@ -20,10 +17,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN and TEAM_LEAD can access QA routes
-    if (!isAdmin(session) && !isTeamLead(session)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // Check if user is manager or the report owner
+    const isManager = isAdmin(session) || isTeamLead(session);
 
     const report = await prisma.report.findUnique({
       where: { id: reportId },
@@ -37,9 +32,7 @@ export async function GET(
         },
         entries: {
           include: {
-            feedback: {
-              orderBy: { createdAt: 'asc' },
-            },
+            feedback: true,
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -50,16 +43,52 @@ export async function GET(
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
+    if (!isManager && report.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     // Calculate score for the report
-    const scoreEvents: ReportScoreEvent[] = await prisma.scoreEvent.findMany({
+    const scoreEvents = await prisma.scoreEvent.findMany({
       where: { reportId },
+      select: {
+        reportId: true,
+        deduction: true,
+      },
     });
 
-    const totalDeduction = scoreEvents.reduce((sum, event) => sum + event.deduction, 0);
-    const score = Math.max(0, 100 - totalDeduction);
+    const feedbackAuthorIds = Array.from(
+      new Set(
+        report.entries.flatMap((entry) => entry.feedback.map((feedback) => feedback.authorId))
+      )
+    );
+    const feedbackAuthors = await prisma.user.findMany({
+      where: {
+        id: {
+          in: feedbackAuthorIds.length > 0 ? feedbackAuthorIds : ['__none__'],
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+    const feedbackAuthorMap = new Map(feedbackAuthors.map((author) => [author.id, author]));
+    const scoreMap = buildReportScoreMap(scoreEvents);
+    const totalDeduction = scoreMap.get(reportId) ?? 0;
+    const score = getReportScore(reportId, scoreMap);
 
     return NextResponse.json({
       ...report,
+      entries: report.entries.map((entry) => ({
+        ...entry,
+        feedback: entry.feedback.map((feedback) => ({
+          ...feedback,
+          author: feedbackAuthorMap.get(feedback.authorId) ?? {
+            id: feedback.authorId,
+            name: 'Reviewer',
+          },
+        })),
+      })),
       score,
       totalDeduction,
     });

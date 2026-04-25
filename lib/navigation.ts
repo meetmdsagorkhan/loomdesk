@@ -7,53 +7,66 @@ export type NavIcon =
   | 'messages'
   | 'analytics'
   | 'scoring'
-  | 'settings';
+  | 'attendance'
+  | 'settings'
+  | 'profile';
+
 
 export type NavItem = {
   href: string;
-  label: string;
-  description: string;
+  label: string | { ADMIN: string; MEMBER: string; TEAM_LEAD?: string };
+  description: string | { ADMIN: string; MEMBER: string; TEAM_LEAD?: string };
   icon: NavIcon;
-  section: 'Overview' | 'Workflows' | 'Operations' | 'Admin';
+  section: 'Overview' | 'Workflows' | 'Operations' | 'Admin' | 'Account';
+
   matches?: string[];
+  roles?: string[]; // If undefined, visible to all
 };
 
 export const navItems: NavItem[] = [
   {
     href: '/dashboard',
-    label: 'Overview',
-    description: 'Scoreboard and summary',
+    label: { ADMIN: 'Team Overview', MEMBER: 'My Dashboard' },
+    description: { ADMIN: 'Full team performance snapshot', MEMBER: 'Your daily metrics and quick links' },
     icon: 'dashboard',
     section: 'Overview',
   },
   {
     href: '/reports',
-    label: 'Reports',
-    description: 'Daily reporting workspace',
+    label: { ADMIN: 'All Reports', MEMBER: 'My Reports' },
+    description: { ADMIN: 'Global reporting workspace', MEMBER: 'Create and review your logs' },
     icon: 'reports',
     section: 'Workflows',
     matches: ['/dashboard/reports'],
   },
   {
     href: '/qa',
-    label: 'QA Review',
-    description: 'Review reports and score work',
+    label: { ADMIN: 'QA Review', MEMBER: 'My Feedback' },
+    description: { ADMIN: 'Review and score reports', MEMBER: 'See review status and feedback' },
     icon: 'qa',
     section: 'Workflows',
     matches: ['/qa/', '/dashboard/qa', '/dashboard/qa/'],
   },
   {
+    href: '/scoring',
+    label: { ADMIN: 'Leaderboard', MEMBER: 'My Performance' },
+    description: { ADMIN: 'Team rankings and metrics', MEMBER: 'Your score and historical trends' },
+    icon: 'scoring',
+    section: 'Workflows',
+    matches: ['/dashboard/scoring'],
+  },
+  {
     href: '/leave',
-    label: 'Leave',
-    description: 'Requests and approvals',
+    label: { ADMIN: 'Leave Approvals', MEMBER: 'Request Leave' },
+    description: { ADMIN: 'Review time-off requests', MEMBER: 'Request and track time off' },
     icon: 'leave',
     section: 'Operations',
     matches: ['/leave/admin', '/dashboard/leave', '/dashboard/leave/admin'],
   },
   {
     href: '/shifts',
-    label: 'Shifts',
-    description: 'Templates, assignments, schedules',
+    label: { ADMIN: 'Shift Management', MEMBER: 'My Schedule' },
+    description: { ADMIN: 'Rosters and templates', MEMBER: 'Your upcoming shift timings' },
     icon: 'shifts',
     section: 'Operations',
     matches: ['/shifts/my-schedule', '/dashboard/shifts', '/dashboard/shifts/my-schedule'],
@@ -73,25 +86,26 @@ export const navItems: NavItem[] = [
     icon: 'analytics',
     section: 'Admin',
     matches: ['/dashboard/analytics'],
-  },
-
-  {
-    href: '/scoring',
-    label: 'Scoring',
-    description: 'Performance metrics',
-    icon: 'scoring',
-    section: 'Workflows',
-    matches: ['/dashboard/scoring'],
+    roles: ['ADMIN', 'TEAM_LEAD'],
   },
   {
     href: '/settings',
-    label: 'Settings',
-    description: 'Profile and preferences',
+    label: { ADMIN: 'Admin Settings', TEAM_LEAD: 'Admin Settings', MEMBER: 'My Settings' },
+    description: { ADMIN: 'Workspace members and team controls', TEAM_LEAD: 'Workspace members and team controls', MEMBER: 'Profile and security preferences' },
     icon: 'settings',
     section: 'Admin',
     matches: ['/dashboard/settings'],
+    roles: ['ADMIN', 'TEAM_LEAD'],
+  },
+  {
+    href: '/profile',
+    label: 'Profile',
+    description: 'Personal and security settings',
+    icon: 'profile',
+    section: 'Account',
   },
 ];
+
 
 export type RouteMeta = {
   title: string;
@@ -107,116 +121,122 @@ export function isNavItemActive(pathname: string, href: string, matches?: string
   return (matches ?? []).some((match) => pathname === match || pathname.startsWith(match));
 }
 
+export function getNavItemLabel(item: NavItem, role: string = 'MEMBER'): string {
+  if (typeof item.label === 'string') return item.label;
+  return item.label[role as keyof typeof item.label] || item.label.MEMBER;
+}
+
+export function getNavItemDescription(item: NavItem, role: string = 'MEMBER'): string {
+  if (typeof item.description === 'string') return item.description;
+  return item.description[role as keyof typeof item.description] || item.description.MEMBER;
+}
+
 const routeOverrides: Array<{
   test: (pathname: string) => boolean;
-  meta: RouteMeta;
+  meta: (role: string) => RouteMeta;
 }> = [
     {
       test: (pathname) => pathname === '/dashboard',
-      meta: {
-        title: 'Overview',
-        description: 'Track the team at a glance and spot what needs attention first.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'Team Overview' : 'My Dashboard',
+        description: role === 'ADMIN' 
+          ? 'Track the team at a glance and spot what needs attention first.'
+          : 'Your personal workspace hub for daily work and performance.',
         href: '/dashboard',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/reports' || pathname === '/dashboard/reports',
-      meta: {
-        title: 'Reports',
-        description: 'Create, review, and submit daily work logs without leaving the workflow.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'All Reports' : 'My Reports',
+        description: role === 'ADMIN'
+          ? 'View and filter all submitted work logs across the organization.'
+          : 'Create, review, and submit your daily work logs.',
         href: '/reports',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/qa' || pathname === '/dashboard/qa',
-      meta: {
-        title: 'QA Review',
-        description: 'Inspect submitted reports, leave feedback, and apply score deductions cleanly.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'QA Review' : 'My Feedback',
+        description: role === 'ADMIN'
+          ? 'Inspect submitted reports, leave feedback, and apply score deductions.'
+          : 'Review feedback and scores on your submitted reports.',
         href: '/qa',
-      },
+      }),
     },
     {
       test: (pathname) => pathname.startsWith('/qa/') || pathname.startsWith('/dashboard/qa/'),
-      meta: {
-        title: 'QA Detail',
-        description: 'A focused review surface for one report, its entries, and score history.',
+      meta: (role) => ({
+        title: 'Review Detail',
+        description: 'Detailed analysis of report entries and performance feedback.',
         href: '/qa',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/leave' || pathname === '/dashboard/leave',
-      meta: {
-        title: 'Leave',
-        description: 'Request time off, review status, and keep team coverage visible.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'Leave Approvals' : 'Request Leave',
+        description: role === 'ADMIN'
+          ? 'Manage team time-off requests and maintain coverage.'
+          : 'Request time off and track your approval status.',
         href: '/leave',
-      },
-    },
-    {
-      test: (pathname) =>
-        pathname === '/leave/admin' || pathname === '/dashboard/leave/admin',
-      meta: {
-        title: 'Leave Admin',
-        description: 'Approve or reject requests from a queue built for quick decisions.',
-        href: '/leave/admin',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/shifts' || pathname === '/dashboard/shifts',
-      meta: {
-        title: 'Shifts',
-        description: 'Manage shift templates and assignments from one operational hub.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'Shift Management' : 'My Schedule',
+        description: role === 'ADMIN'
+          ? 'Configure shift templates and manage team assignments.'
+          : 'Your upcoming work schedule and coverage windows.',
         href: '/shifts',
-      },
-    },
-    {
-      test: (pathname) =>
-        pathname === '/shifts/my-schedule' || pathname === '/dashboard/shifts/my-schedule',
-      meta: {
-        title: 'My Schedule',
-        description: 'See your assigned shifts and upcoming coverage windows clearly.',
-        href: '/shifts/my-schedule',
-      },
-    },
-    {
-      test: (pathname) => pathname === '/messages' || pathname === '/dashboard/messages',
-      meta: {
-        title: 'Messages',
-        description: 'Real-time communication with your team.',
-        href: '/messages',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/analytics' || pathname === '/dashboard/analytics',
-      meta: {
-        title: 'Analytics',
-        description: 'Follow performance trends, quality shifts, and operational pressure points.',
+      meta: (role) => ({
+        title: 'Team Analytics',
+        description: 'In-depth performance trends and operational metrics.',
         href: '/analytics',
-      },
+      }),
     },
-
     {
       test: (pathname) => pathname === '/scoring' || pathname === '/dashboard/scoring',
-      meta: {
-        title: 'Scoring',
-        description: 'Track your current score, historical trends, and ranking context.',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'Scoring Leaderboard' : 'My Performance',
+        description: role === 'ADMIN'
+          ? 'Comprehensive view of team performance and rankings.'
+          : 'Track your current score, rank, and quality trends.',
         href: '/scoring',
-      },
+      }),
     },
     {
       test: (pathname) => pathname === '/settings' || pathname === '/dashboard/settings',
-      meta: {
-        title: 'Settings',
-        description: 'Update profile details and tune the workspace to your preferences.',
+      meta: (role) => ({
+        title: role === 'ADMIN' || role === 'TEAM_LEAD' ? 'Admin Settings' : 'My Settings',
+        description: role === 'ADMIN' || role === 'TEAM_LEAD'
+          ? 'Manage workspace members, permissions, and team access.'
+          : 'Update your profile and personalize your workspace.',
         href: '/settings',
-      },
+      }),
+    },
+    {
+      test: (pathname) => pathname === '/profile',
+      meta: () => ({
+        title: 'Profile Settings',
+        description: 'Manage your personal information and security preferences.',
+        href: '/profile',
+      }),
     },
   ];
 
-export function getRouteMeta(pathname: string): RouteMeta {
+
+export function getRouteMeta(pathname: string, role: string = 'MEMBER'): RouteMeta {
   const match = routeOverrides.find((route) => route.test(pathname));
 
   if (match) {
-    return match.meta;
+    return match.meta(role);
   }
 
   return {

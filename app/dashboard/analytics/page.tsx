@@ -146,6 +146,30 @@ function AnalyticsContent() {
     fetchAnalytics();
   }, [user, userLoading, router, mounted, fetchAnalytics]);
 
+  useEffect(() => {
+    if (!mounted || userLoading) return;
+    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAnalytics();
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAnalytics();
+      }
+    }, 30000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [mounted, userLoading, user, fetchAnalytics]);
+
   // Prevent SSR rendering
   if (!mounted) {
     return (

@@ -2,24 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { buildReportScoreMap, getReportScore } from '@/lib/performance-metrics';
 import { logger } from '@/lib/logger';
-
-type ReportListItem = {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  _count: {
-    entries: number;
-  };
-};
-
-type ReportScoreEvent = {
-  reportId: string | null;
-  deduction: number;
-};
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,17 +13,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN and TEAM_LEAD can access QA routes
-    if (!isAdmin(session) && !isTeamLead(session)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
+    // Check if user is manager
+    const isManager = isAdmin(session) || isTeamLead(session);
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
     const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'SUBMITTED', 'DRAFT', or 'all'
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
+
+    // If not manager, strictly limit to their own reports
+    if (!isManager && userId && userId !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const whereClause: {
       status?: 'SUBMITTED' | 'DRAFT';
@@ -60,8 +46,10 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    if (userId) {
+    if (userId && isManager) {
       whereClause.userId = userId;
+    } else if (!isManager) {
+      whereClause.userId = session.user.id;
     }
 
     if (status === 'SUBMITTED' || status === 'DRAFT') {
@@ -94,27 +82,24 @@ export async function GET(request: NextRequest) {
       }),
       prisma.report.count({ where: whereClause }),
     ]);
-    const typedReports = reports as ReportListItem[];
 
     // Calculate score for each report (100 - total deductions)
-    const reportIds = typedReports.map((report) => report.id);
-    const scoreEvents: ReportScoreEvent[] = await prisma.scoreEvent.findMany({
+    const reportIds = reports.map((report) => report.id);
+    const scoreEvents = await prisma.scoreEvent.findMany({
       where: {
-        reportId: { in: reportIds },
+        reportId: { in: reportIds.length > 0 ? reportIds : ['__none__'] },
+      },
+      select: {
+        reportId: true,
+        deduction: true,
       },
     });
+    const scoreMap = buildReportScoreMap(scoreEvents);
 
-    const scoreMap = new Map<string, number>();
-    scoreEvents.forEach((event) => {
-      const currentScore = scoreMap.get(event.reportId || '') || 0;
-      scoreMap.set(event.reportId || '', currentScore + event.deduction);
-    });
-
-    const reportsWithScore = typedReports.map((report) => {
-      const totalDeduction = scoreMap.get(report.id) || 0;
+    const reportsWithScore = reports.map((report) => {
       return {
         ...report,
-        score: Math.max(0, 100 - totalDeduction),
+        score: getReportScore(report.id, scoreMap),
       };
     });
 

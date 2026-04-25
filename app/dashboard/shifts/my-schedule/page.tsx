@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import PageHeader from '@/components/shared/PageHeader';
+import GlassCard from '@/components/shared/GlassCard';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -104,44 +107,44 @@ export default function MySchedulePage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">My Schedule</h1>
-        <p className="text-muted-foreground mt-1">View your assigned shifts</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        badge="Schedule"
+        title="My Schedule"
+        subtitle="View your assigned shifts and upcoming work timings."
+      />
 
       {/* Week Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={goToPreviousWeek}>
+          <Button size="sm" variant="outline" onClick={goToPreviousWeek} className="rounded-xl border-white/10">
             <ChevronLeft size={16} />
           </Button>
-          <Button size="sm" variant="outline" onClick={goToToday}>
+          <Button size="sm" variant="outline" onClick={goToToday} className="rounded-xl border-white/10">
             Today
           </Button>
-          <Button size="sm" variant="outline" onClick={goToNextWeek}>
+          <Button size="sm" variant="outline" onClick={goToNextWeek} className="rounded-xl border-white/10">
             <ChevronRight size={16} />
           </Button>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {format(startOfWeek(currentWeek, { weekStartsOn: 1 }), 'MMM d, yyyy')} -{' '}
+        <div className="text-sm font-medium text-primary">
+          {format(startOfWeek(currentWeek, { weekStartsOn: 1 }), 'MMM d')} — {' '}
           {format(addDays(startOfWeek(currentWeek, { weekStartsOn: 1 }), 6), 'MMM d, yyyy')}
         </div>
       </div>
 
       {/* Weekly Calendar */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-border">
+      <GlassCard variant="default" padding="none">
+        <div className="grid grid-cols-7 border-b border-white/10">
           {weekDays.map((date) => (
             <div
               key={date.toISOString()}
-              className="p-4 text-center bg-muted/50"
+              className="p-4 text-center bg-white/5"
             >
-              <div className="text-sm font-medium text-muted-foreground">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {format(date, 'EEE')}
               </div>
-              <div className="text-2xl font-semibold text-foreground mt-1">
+              <div className={`text-xl font-bold mt-1 ${isSameDay(date, new Date()) ? 'text-primary' : 'text-foreground'}`}>
                 {format(date, 'd')}
               </div>
             </div>
@@ -155,42 +158,46 @@ export default function MySchedulePage() {
             return (
               <div
                 key={date.toISOString()}
-                className={`p-4 border-r border-border last:border-r-0 min-h-[150px] ${
-                  isToday ? 'bg-primary/5' : ''
+                className={`p-4 border-r border-white/10 last:border-r-0 min-h-[150px] transition-colors duration-300 ${
+                  isToday ? 'bg-primary/5' : 'hover:bg-white/5'
                 }`}
               >
                 {shift ? (
-                  <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 h-full flex flex-col">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-primary/10 border border-primary/20 rounded-xl p-3 h-full flex flex-col shadow-lg shadow-primary/5"
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <Clock size={16} className="text-primary" />
-                      <span className="font-medium text-foreground text-sm">
+                      <Clock size={14} className="text-primary" />
+                      <span className="font-bold text-foreground text-sm tracking-tight">
                         {shift.shift.name}
                       </span>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {shift.shift.startTime} - {shift.shift.endTime}
+                    <div className="text-xs font-medium text-primary/80 mt-auto">
+                      {shift.shift.startTime} — {shift.shift.endTime}
                     </div>
-                  </div>
+                  </motion.div>
                 ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <span className="text-sm text-muted-foreground">No shift</span>
+                  <div className="flex items-center justify-center h-full opacity-30">
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Off</span>
                   </div>
                 )}
               </div>
             );
           })}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-primary/10 border border-primary/30 rounded" />
-          <span>Assigned shift</span>
+          <div className="w-3 h-3 bg-primary/20 border border-primary/40 rounded-sm" />
+          <span>Assigned Shift</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-primary/5 rounded" />
-          <span>Today</span>
+          <div className="w-3 h-3 bg-primary/10 rounded-sm" />
+          <span>Current Day</span>
         </div>
       </div>
     </div>

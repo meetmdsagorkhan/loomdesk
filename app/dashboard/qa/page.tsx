@@ -101,12 +101,14 @@ export default function QAPage() {
     if (userLoading) return;
     if (!mounted) return;
 
-    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
+    if (!user) {
       router.push('/dashboard');
       return;
     }
 
-    fetchMembers();
+    if (isAdmin({ user }) || isTeamLead({ user })) {
+      fetchMembers();
+    }
     fetchReports();
   }, [user, userLoading, router, fetchReports, mounted]);
 
@@ -148,6 +150,7 @@ export default function QAPage() {
           size="sm"
           variant="outline"
           onClick={() => router.push(`/dashboard/qa/${row.original.id}`)}
+          className="rounded-xl"
         >
           <Eye size={16} className="mr-2" />
           View
@@ -162,7 +165,7 @@ export default function QAPage() {
     getCoreRowModel: getCoreRowModel(),
   });
   const filterInputClass =
-    'w-full rounded-xl border border-slate-300/50 bg-gradient-to-br from-white/90 via-white/70 to-white/90 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 backdrop-blur-md transition-all dark:border-slate-600/50 dark:from-slate-800/90 dark:via-slate-900/70 dark:to-slate-800/90';
+    'w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all';
 
   // Prevent SSR rendering
   if (!mounted) {
@@ -175,12 +178,26 @@ export default function QAPage() {
 
   if (userLoading || isLoading) {
     return (
-      <div className="space-y-8">
-        <PageHeader
-          badge="QA Review"
-          title="Review submitted reports"
-          subtitle="Review and score team member reports to ensure quality and provide feedback."
-        />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        badge={isManager ? "QA Review" : "My Feedback"}
+        title={isManager ? "Review submitted reports" : "Quality and feedback history"}
+        subtitle={isManager 
+          ? "Review and score team member reports to ensure quality and provide feedback." 
+          : "View your performance scores and review feedback from your team leads."
+        }
+      />
+
+      {isManager && (
         <GlassCard variant="panel" padding="md">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Date Picker */}
@@ -227,7 +244,7 @@ export default function QAPage() {
 
             {/* Apply Button */}
             <div className="flex items-end">
-              <Button onClick={handleApplyFilters} disabled={isFilterLoading} className="w-full">
+              <Button onClick={handleApplyFilters} disabled={isFilterLoading} className="w-full rounded-xl">
                 {isFilterLoading ? (
                   <Loader2 size={16} className="mr-2 animate-spin" />
                 ) : (
@@ -238,159 +255,44 @@ export default function QAPage() {
             </div>
           </div>
         </GlassCard>
-
-        {/* Reports Table */}
-        <GlassCard variant="panel" padding="none" className="overflow-hidden">
-          <div className="border-b border-white/15 px-5 py-4 md:px-6">
-            <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
-          </div>
-          {reports.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
-                <p className="text-muted-foreground">No reports found matching your filters.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 md:p-6">
-              <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
-              <table className="w-full">
-                <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-5 py-3.5 text-sm">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          )}
-        </GlassCard>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <PageHeader
-        badge="QA Review"
-        title="Review submitted reports"
-        subtitle="Review and score team member reports to ensure quality and provide feedback."
-      />
-      <GlassCard variant="panel" padding="md">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Date Picker */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className={filterInputClass}
-            />
-          </div>
-
-          {/* Member Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Member</label>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className={filterInputClass}
-            >
-              <option value="">All Members</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className={filterInputClass}
-            >
-              <option value="SUBMITTED">Submitted</option>
-              <option value="DRAFT">Draft</option>
-              <option value="all">All</option>
-            </select>
-          </div>
-
-          {/* Apply Button */}
-          <div className="flex items-end">
-            <Button onClick={handleApplyFilters} disabled={isFilterLoading} className="w-full">
-              {isFilterLoading ? (
-                <Loader2 size={16} className="mr-2 animate-spin" />
-              ) : (
-                <Filter size={16} className="mr-2" />
-              )}
-              {isFilterLoading ? 'Applying...' : 'Apply Filters'}
-            </Button>
-          </div>
-        </div>
-      </GlassCard>
+      )}
 
       {/* Reports Table */}
       <GlassCard variant="panel" padding="none" className="overflow-hidden">
-        <div className="border-b border-white/15 px-5 py-4 md:px-6">
-          <h2 className="text-lg font-semibold text-foreground">Submitted Reports</h2>
+        <div className="border-b border-white/10 px-6 py-4">
+          <h2 className="text-lg font-semibold text-foreground">
+            {isManager ? "Submitted Reports" : "My Recent Reports"}
+          </h2>
         </div>
         {reports.length === 0 ? (
           <div className="p-12 text-center">
             <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
-              <p className="text-muted-foreground">No reports found matching your filters.</p>
+              <p className="text-muted-foreground">No reports found.</p>
             </div>
           </div>
         ) : (
           <div className="p-4 md:p-6">
-            <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
-            <table className="w-full">
-              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
+            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/5">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                        className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-muted-foreground"
                       >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                       </th>
-                    ))}
-                  </tr>
-                ))}
+                    ))
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
+                  <tr key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-5 py-3.5 text-sm">
+                      <td key={cell.id} className="px-6 py-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}

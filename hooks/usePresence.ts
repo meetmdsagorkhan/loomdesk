@@ -12,10 +12,12 @@ export function usePresence(currentUser: { id: string; name: string; email: stri
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
   useEffect(() => {
-    if (!supabase || !currentUser) return;
+    const client = supabase;
+
+    if (!client || !currentUser) return;
 
     // Create a global presence channel
-    const channel = supabase.channel('presence:global', {
+    const channel = client.channel('presence:global', {
       config: {
         presence: {
           key: currentUser.id,
@@ -30,9 +32,9 @@ export function usePresence(currentUser: { id: string; name: string; email: stri
         
         // Flatten the presence state into a simple array
         Object.keys(state).forEach((key) => {
-          const presences = state[key] as any[];
+          const presences = state[key] as OnlineUser[];
           if (presences.length > 0) {
-            users.push(presences[0] as OnlineUser);
+            users.push(presences[0]);
           }
         });
         
@@ -50,7 +52,7 @@ export function usePresence(currentUser: { id: string; name: string; email: stri
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [currentUser]);
 

@@ -5,11 +5,6 @@ declare module "next-auth" {
     user: {
       id: string
       role: string
-      image?: string | null
-      position?: string | null
-      department?: string | null
-      company?: string | null
-      joiningDate?: Date | null
       rememberMe?: boolean
       sessionVersion?: number
       twoFactorEnabled?: boolean
@@ -21,15 +16,9 @@ declare module "next-auth" {
     email: string
     name: string
     role: string
-    image?: string | null
-    position?: string | null
-    department?: string | null
-    company?: string | null
-    joiningDate?: Date | null
     rememberMe?: boolean
     sessionVersion?: number
     twoFactorEnabled?: boolean
-    createdAt?: string
   }
 }
 
@@ -37,11 +26,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string
     role: string
-    image?: string | null
-    position?: string | null
-    department?: string | null
-    company?: string | null
-    joiningDate?: Date | null
     rememberMe?: boolean
     sessionVersion?: number
     sessionExpiresAt?: number

@@ -18,14 +18,12 @@ export async function GET() {
     }
 
     const users = await db.user.findMany({
-      where: {
-        isActive: true,
-      },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        isActive: true,
         image: true,
         createdAt: true,
       },

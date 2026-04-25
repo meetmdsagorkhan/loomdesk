@@ -119,8 +119,10 @@ export default function ShiftsPage() {
     if (userLoading) return;
     if (!mounted) return;
 
-    if (!user || !isAdmin({ user })) {
-      router.push('/dashboard');
+    // Team Leads and Admins can manage shifts
+    // Members are redirected to their own schedule
+    if (!user || (!isAdmin({ user }) && user.role !== 'TEAM_LEAD')) {
+      router.push('/shifts/my-schedule');
       return;
     }
 

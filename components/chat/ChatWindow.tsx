@@ -3,6 +3,7 @@ import { Loader2, Check, CheckCheck } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import MessageInput from './MessageInput';
+import { hasPermission } from '@/lib/permissions';
 
 interface ChatWindowProps {
   contactId: string;
@@ -29,6 +30,8 @@ export default function ChatWindow({ contactId, contactName }: ChatWindowProps) 
     broadcastTyping,
     broadcastRead,
   } = useChat(roomId, user ? { id: user.id, name: user.name } : null);
+
+  const canPost = !isChannel || contactId !== 'channel:announcements' || hasPermission(user?.role, 'post_announcements');
 
   useEffect(() => {
     if (!user) return;
@@ -143,11 +146,18 @@ export default function ChatWindow({ contactId, contactName }: ChatWindowProps) 
         <div ref={messagesEndRef} className="h-1 w-1" />
       </div>
 
-      <MessageInput 
-        receiverId={contactId} 
-        onMessageSent={handleMessageSent} 
-        broadcastTyping={broadcastTyping}
-      />
+      {canPost ? (
+        <MessageInput 
+          receiverId={contactId} 
+          onMessageSent={handleMessageSent} 
+          broadcastTyping={broadcastTyping}
+        />
+      ) : (
+        <div className="p-4 bg-muted/20 border-t border-border/40 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full" />
+          Only Administrators can post to this channel.
+        </div>
+      )}
     </div>
   );
 }

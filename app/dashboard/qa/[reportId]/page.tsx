@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 
 type Feedback = {
   id: string;
@@ -78,6 +80,9 @@ export default function QADetailPage() {
   const [feedbackEntryId, setFeedbackEntryId] = useState<string | null>(null);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [isAddingFeedback, setIsAddingFeedback] = useState(false);
+
+  const { user } = useCurrentUser();
+  const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
 
   const fetchReport = useCallback(async () => {
     try {
@@ -373,18 +378,20 @@ export default function QADetailPage() {
                     )}
                   </div>
 
-                  {/* Deduct Score Button */}
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => {
-                      setDeductEntryId(entry.id);
-                      setShowDeductModal(true);
-                    }}
-                  >
-                    <MinusCircle size={14} className="mr-2" />
-                    Deduct Score
-                  </Button>
+                  {/* Deduct Score Button (Managers only) */}
+                  {isManager && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        setDeductEntryId(entry.id);
+                        setShowDeductModal(true);
+                      }}
+                    >
+                      <MinusCircle size={14} className="mr-2" />
+                      Deduct Score
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

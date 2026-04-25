@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
-import type { Prisma } from '@prisma/client';
+import {
+  buildReportScoreMap,
+  calculateAverageScore,
+  getReportScore,
+} from '@/lib/performance-metrics';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
@@ -13,7 +17,14 @@ export async function GET() {
     }
 
     const [reports, activeUsers]: [
-      Array<{ id: string; date: Date }>,
+      Array<{
+        id: string;
+        userId: string;
+        date: Date;
+        submittedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }>,
       Array<{ id: string }>
     ] = await Promise.all([
       prisma.report.findMany({
@@ -23,7 +34,11 @@ export async function GET() {
         },
         select: {
           id: true,
+          userId: true,
           date: true,
+          submittedAt: true,
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: { date: 'desc' },
       }),
@@ -34,19 +49,21 @@ export async function GET() {
     ]);
 
     const reportIds = reports.map((report) => report.id);
+    const activeUserIds = activeUsers.map((user) => user.id);
 
-    const [reportScoreEvents, allUserScoreEvents]: [
-      Prisma.ScoreEventGetPayload<{
-        select: {
-          id: true;
-          reportId: true;
-          severity: true;
-          deduction: true;
-          reason: true;
-          createdAt: true;
-        };
-      }>[], 
-      Array<{ userId: string; deduction: number }>
+    const [reportScoreEvents, allActiveReports]: [
+      Array<{
+        id: string;
+        reportId: string | null;
+        severity: 'MINOR' | 'MAJOR';
+        deduction: number;
+        reason: string;
+        createdAt: Date;
+      }>,
+      Array<{
+        id: string;
+        userId: string;
+      }>
     ] = await Promise.all([
       prisma.scoreEvent.findMany({
         where: {
@@ -64,21 +81,38 @@ export async function GET() {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.scoreEvent.findMany({
+      prisma.report.findMany({
         where: {
           userId: {
-            in: activeUsers.map((user) => user.id),
+            in: activeUserIds,
           },
+          status: 'SUBMITTED',
         },
         select: {
+          id: true,
           userId: true,
-          deduction: true,
         },
       }),
     ]);
 
+    const allActiveReportIds = allActiveReports.map((report) => report.id);
+    const allScoreEvents = await prisma.scoreEvent.findMany({
+      where: {
+        reportId: {
+          in: allActiveReportIds.length > 0 ? allActiveReportIds : ['__none__'],
+        },
+      },
+      select: {
+        userId: true,
+        reportId: true,
+        deduction: true,
+        createdAt: true,
+      },
+    });
+
     const deductionsByReport = new Map<string, typeof reportScoreEvents>();
-    const totalDeductionByUser = new Map<string, number>();
+    const overallScoreMap = buildReportScoreMap(allScoreEvents);
+    const personalScoreMap = buildReportScoreMap(reportScoreEvents);
 
     for (const event of reportScoreEvents) {
       if (!event.reportId) {
@@ -90,19 +124,9 @@ export async function GET() {
       deductionsByReport.set(event.reportId, group);
     }
 
-    for (const event of allUserScoreEvents) {
-      totalDeductionByUser.set(
-        event.userId,
-        (totalDeductionByUser.get(event.userId) ?? 0) + event.deduction
-      );
-    }
-
     const reportsWithScores = reports.map((report) => {
       const scoreEvents = deductionsByReport.get(report.id) ?? [];
-      const score = Math.max(
-        0,
-        100 - scoreEvents.reduce((sum, event) => sum + event.deduction, 0)
-      );
+      const score = getReportScore(report.id, personalScoreMap);
 
       return {
         reportId: report.id,
@@ -112,18 +136,29 @@ export async function GET() {
       };
     });
 
-    const currentScore = Math.max(0, 100 - (totalDeductionByUser.get(session.user.id) ?? 0));
-    const averageScore =
-      reportsWithScores.length > 0
-        ? reportsWithScores.reduce((sum, report) => sum + report.score, 0) / reportsWithScores.length
-        : 100;
+    const currentScore = reportsWithScores[0]?.score ?? 0;
+    const averageScore = calculateAverageScore(
+      reportsWithScores.map((report) => report.score)
+    );
+
+    const reportsByUser = new Map<string, number[]>();
+
+    for (const report of allActiveReports) {
+      const scores = reportsByUser.get(report.userId) ?? [];
+      scores.push(getReportScore(report.id, overallScoreMap));
+      reportsByUser.set(report.userId, scores);
+    }
 
     const rankedUsers = activeUsers
       .map((user) => ({
         userId: user.id,
-        score: Math.max(0, 100 - (totalDeductionByUser.get(user.id) ?? 0)),
+        score: calculateAverageScore(reportsByUser.get(user.id) ?? []),
+        totalReports: (reportsByUser.get(user.id) ?? []).length,
       }))
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.totalReports - a.totalReports;
+      });
 
     const rank =
       rankedUsers.findIndex((entry) => entry.userId === session.user.id) + 1 || rankedUsers.length;

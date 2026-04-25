@@ -21,10 +21,12 @@ export function useChat(
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    if (!supabase || !currentUser || !roomId) return;
+    const client = supabase;
+
+    if (!client || !currentUser || !roomId) return;
 
     // Connect to room-specific channel
-    const channel = supabase.channel(`chat:${roomId}`);
+    const channel = client.channel(`chat:${roomId}`);
     channelRef.current = channel;
 
     channel
@@ -44,8 +46,8 @@ export function useChat(
             try {
               const audio = new Audio('/sounds/notification.mp3');
               audio.volume = 0.5;
-              audio.play().catch(e => console.log('Audio auto-play blocked', e));
-            } catch (e) {
+              audio.play().catch((error) => console.log('Audio auto-play blocked', error));
+            } catch {
               // Ignore audio errors
             }
           }
@@ -79,7 +81,7 @@ export function useChat(
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
       channelRef.current = null;
     };
   }, [roomId, currentUser]);

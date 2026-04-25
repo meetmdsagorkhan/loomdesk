@@ -19,16 +19,17 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   ...(nextAuthUrl.startsWith("https://")
     ? [
-        {
-          key: "Strict-Transport-Security",
-          value: "max-age=31536000; includeSubDomains; preload",
-        },
-      ]
+      {
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains; preload",
+      },
+    ]
     : []),
 ];
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  allowedDevOrigins: ['192.168.0.106'],
   async headers() {
     return [
       {

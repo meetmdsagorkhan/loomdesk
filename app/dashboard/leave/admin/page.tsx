@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+import PageHeader from '@/components/shared/PageHeader';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
@@ -152,24 +153,15 @@ export default function LeaveAdminPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <section className="glass-card rounded-3xl p-6 card-elevation-md">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-            Leave Management
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            Review and manage leave requests
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Approve or reject pending requests, filter by status or member, and track team leave from one place.
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        badge="Leave Management"
+        title="Review and manage leave requests"
+        subtitle="Approve or reject pending requests, filter by status or member, and track team leave from one place."
+      />
 
       {/* Filter Bar */}
-      <section className="glass-card rounded-3xl p-6 card-elevation-md">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="glass-card rounded-3xl p-4 card-elevation-md md:p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Status</label>
@@ -215,21 +207,21 @@ export default function LeaveAdminPage() {
       {/* Pending Requests Section */}
       {selectedStatus === 'PENDING' && pendingRequests.length > 0 && (
         <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
-          <div className="border-b border-border/60 p-6 bg-warning/5">
+          <div className="border-b border-border/60 bg-warning/5 p-4 md:p-6">
             <h2 className="text-lg font-semibold text-foreground">
               Pending Requests ({pendingRequests.length})
             </h2>
           </div>
           <div className="divide-y divide-border/40">
             {pendingRequests.map((leave) => (
-              <div key={leave.id} className="p-6">
-                <div className="flex items-start justify-between gap-4">
+              <div key={leave.id} className="p-4 md:p-6">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                       <h3 className="font-medium text-foreground">{leave.user.name}</h3>
                       <span className="text-sm text-muted-foreground">{leave.user.email}</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
                       <div>
                         <span className="text-muted-foreground">Dates:</span>{' '}
                         <span className="text-foreground">
@@ -250,14 +242,14 @@ export default function LeaveAdminPage() {
                     </div>
                     <div className="mt-2">
                       <span className="text-sm text-muted-foreground">Reason: </span>
-                      <span className="text-sm text-foreground">{leave.reason}</span>
+                      <span className="text-sm text-foreground break-words">{leave.reason}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-destructive border-destructive hover:bg-destructive/10 rounded-xl"
+                      className="w-full rounded-xl border-destructive text-destructive hover:bg-destructive/10 sm:w-auto"
                       disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
@@ -269,7 +261,7 @@ export default function LeaveAdminPage() {
                     </Button>
                     <Button
                       size="sm"
-                      className="bg-success text-success-foreground hover:bg-success/90 rounded-xl"
+                      className="w-full rounded-xl bg-success text-success-foreground hover:bg-success/90 sm:w-auto"
                       disabled={isProcessing}
                       onClick={() => {
                         setActionLeaveId(leave.id);
@@ -289,7 +281,7 @@ export default function LeaveAdminPage() {
 
       {/* All Requests Table */}
       <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
-        <div className="border-b border-border/60 p-6">
+        <div className="border-b border-border/60 p-4 md:p-6">
           <h2 className="text-lg font-semibold text-foreground">
             All Requests ({leaveRequests.length})
           </h2>
@@ -302,54 +294,117 @@ export default function LeaveAdminPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto p-6">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border/60 backdrop-blur-sm">
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Start Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">End Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Days</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Reason</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Applied On</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaveRequests.map((leave) => (
-                  <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30 backdrop-blur-sm">
-                    <td className="px-6 py-4 text-sm text-foreground">{leave.user.name}</td>
-                    <td className="px-6 py-4 text-sm text-foreground">
-                      {format(new Date(leave.startDate), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-foreground">
-                      {format(new Date(leave.endDate), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-foreground">
-                      {getDaysCount(leave.startDate, leave.endDate)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">
-                      {leave.reason}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge
-                        variant={
-                          leave.status === 'APPROVED'
-                            ? 'success'
-                            : leave.status === 'REJECTED'
-                            ? 'danger'
-                            : 'warning'
-                        }
-                        label={leave.status}
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {format(new Date(leave.createdAt), 'MMM d, yyyy')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="p-4 md:p-6">
+            <div className="hidden lg:block">
+              <div className="overflow-x-auto rounded-2xl border border-border/40 bg-background/30 backdrop-blur-sm">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border/60 backdrop-blur-sm">
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Member</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Start Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">End Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Days</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Reason</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-muted-foreground">Applied On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveRequests.map((leave) => (
+                      <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30 backdrop-blur-sm">
+                        <td className="px-6 py-4 text-sm text-foreground">{leave.user.name}</td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {format(new Date(leave.startDate), 'MMM d, yyyy')}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {format(new Date(leave.endDate), 'MMM d, yyyy')}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {getDaysCount(leave.startDate, leave.endDate)}
+                        </td>
+                        <td className="max-w-xs truncate px-6 py-4 text-sm text-muted-foreground">
+                          {leave.reason}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge
+                            variant={
+                              leave.status === 'APPROVED'
+                                ? 'success'
+                                : leave.status === 'REJECTED'
+                                ? 'danger'
+                                : 'warning'
+                            }
+                            label={leave.status}
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {format(new Date(leave.createdAt), 'MMM d, yyyy')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="space-y-3 lg:hidden">
+              {leaveRequests.map((leave) => (
+                <div
+                  key={leave.id}
+                  className="rounded-2xl border border-border/40 bg-background/35 p-4 backdrop-blur-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{leave.user.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{leave.user.email}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        leave.status === 'APPROVED'
+                          ? 'success'
+                          : leave.status === 'REJECTED'
+                          ? 'danger'
+                          : 'warning'
+                      }
+                      label={leave.status}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Dates
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">
+                        {format(new Date(leave.startDate), 'MMM d')} - {format(new Date(leave.endDate), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Duration
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">
+                        {getDaysCount(leave.startDate, leave.endDate)} days
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Reason
+                      </p>
+                      <p className="mt-1 text-sm text-foreground break-words">{leave.reason}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Applied
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">
+                        {format(new Date(leave.createdAt), 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>

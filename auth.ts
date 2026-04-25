@@ -257,11 +257,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          image: user.image,
-          position: user.position,
-          department: user.department,
-          company: user.company,
-          joiningDate: user.joiningDate,
           sessionVersion: user.sessionVersion,
           twoFactorEnabled: user.twoFactorEnabled,
           rememberMe,
@@ -277,11 +272,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.image = user.image
-        token.position = user.position
-        token.department = user.department
-        token.company = user.company
-        token.joiningDate = user.joiningDate
         token.sessionVersion = user.sessionVersion ?? 0
         token.twoFactorEnabled = user.twoFactorEnabled ?? false
         token.rememberMe = user.rememberMe ?? false
@@ -302,14 +292,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const currentUser = await prisma.user.findUnique({
         where: { id: tokenUserId },
         select: {
-          id: true,
-          role: true,
-          image: true,
-          position: true,
-          department: true,
-          company: true,
-          joiningDate: true,
           isActive: true,
+          role: true,
           sessionVersion: true,
           twoFactorEnabled: true,
         },
@@ -324,11 +308,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       token.role = currentUser.role
-      token.image = currentUser.image
-      token.position = currentUser.position
-      token.department = currentUser.department
-      token.company = currentUser.company
-      token.joiningDate = currentUser.joiningDate
       token.sessionVersion = currentUser.sessionVersion
       token.twoFactorEnabled = currentUser.twoFactorEnabled
       return token
@@ -338,11 +317,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const u = session.user as any
         u.id = token.id as string
         u.role = token.role as string
-        u.image = token.image as string | null
-        u.position = token.position as string | null
-        u.department = token.department as string | null
-        u.company = token.company as string | null
-        u.joiningDate = token.joiningDate as Date | null
         u.rememberMe = !!token.rememberMe
         u.sessionVersion = +(token.sessionVersion ?? 0)
         u.twoFactorEnabled = !!token.twoFactorEnabled
