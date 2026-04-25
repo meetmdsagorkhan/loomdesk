@@ -24,9 +24,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   allowedDevOrigins: ['192.168.0.106'],
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
   async headers() {
     return [
       {
