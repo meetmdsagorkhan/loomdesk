@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const ipAddress = getRequestIp(request);
 
@@ -25,7 +25,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     const invitation = await prisma.invitation.findUnique({
       where: { id },
