@@ -18,21 +18,26 @@ type EmailVerificationEmailInput = {
 
 function wrapEmail(title: string, intro: string, ctaLabel: string, ctaUrl: string, outro: string) {
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #111827; background: #f8fafc; padding: 24px;">
-      <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #e5e7eb;">
-        <p style="font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #6366f1; font-weight: 700; margin: 0 0 12px;">LoomDesk</p>
-        <h1 style="font-size: 24px; margin: 0 0 16px;">${title}</h1>
-        <p style="font-size: 15px; line-height: 1.7; margin: 0 0 24px;">${intro}</p>
-        <a href="${ctaUrl}" style="display: inline-block; padding: 12px 18px; border-radius: 999px; background: #111827; color: #ffffff; text-decoration: none; font-weight: 600;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e2e8f0; background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%); padding: 40px 24px;">
+      <div style="max-width: 560px; margin: 0 auto; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(139, 92, 246, 0.1);">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <img src="https://loomdesk.online/logo.png" alt="LoomDesk" style="height: 48px; width: auto; margin: 0 auto;" />
+        </div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 20px; background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${title}</h1>
+        <p style="font-size: 16px; line-height: 1.8; margin: 0 0 32px; color: #cbd5e1;">${intro}</p>
+        <a href="${ctaUrl}" style="display: inline-block; padding: 16px 32px; border-radius: 16px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; font-weight: 600; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.2); transition: all 0.3s ease;">
           ${ctaLabel}
         </a>
-        <p style="font-size: 13px; line-height: 1.7; margin: 24px 0 0; color: #6b7280;">
+        <p style="font-size: 14px; line-height: 1.7; margin: 32px 0 0; color: #94a3b8;">
           ${outro}
         </p>
-        <p style="font-size: 12px; line-height: 1.7; margin: 16px 0 0; color: #9ca3af;">
+        <p style="font-size: 13px; line-height: 1.7; margin: 20px 0 0; color: #64748b; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
           If the button does not work, copy and paste this link into your browser:<br />
-          <a href="${ctaUrl}" style="color: #6366f1;">${ctaUrl}</a>
+          <a href="${ctaUrl}" style="color: #a78bfa; text-decoration: underline;">${ctaUrl}</a>
         </p>
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+          <p style="font-size: 12px; color: #64748b; margin: 0;">© 2024 LoomDesk. All rights reserved.</p>
+        </div>
       </div>
     </div>
   `.trim();

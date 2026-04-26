@@ -37,7 +37,7 @@ export async function sendTransactionalEmail(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: env.EMAIL_FROM,
+      from: `LoomDesk <${env.EMAIL_FROM}>`,
       reply_to: env.EMAIL_REPLY_TO,
       to: [payload.to],
       subject: payload.subject,
