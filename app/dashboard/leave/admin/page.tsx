@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import { format, differenceInDays } from 'date-fns';
 import { Check, X, Loader2, Calendar, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Badge from '@/components/shared/Badge';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import PageHeader from '@/components/shared/PageHeader';
@@ -165,32 +171,34 @@ export default function LeaveAdminPage() {
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-            <Select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="form-input"
-            >
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="all">All</option>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="form-input">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
             </Select>
           </div>
 
           {/* Member Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Member</label>
-            <Select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="form-input"
-            >
-              <option value="">All Members</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger className="form-input">
+                <SelectValue placeholder="All Members" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Members</SelectItem>
+                {members.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
 

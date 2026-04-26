@@ -6,7 +6,13 @@ import { Clock, Loader2, Plus, Trash2, Pencil, X, AlertCircle } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -674,15 +680,18 @@ export default function ShiftsPage() {
               <Label className="form-label">Member</Label>
               <Select
                 value={assignForm.userId}
-                onChange={(e) => setAssignForm({ ...assignForm, userId: e.target.value })}
-                className="form-input"
+                onValueChange={(value) => setAssignForm({ ...assignForm, userId: value })}
               >
-                <option value="">Select member</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
+                <SelectTrigger className="form-input">
+                  <SelectValue placeholder="Select member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
 
@@ -690,15 +699,18 @@ export default function ShiftsPage() {
               <Label className="form-label">Shift</Label>
               <Select
                 value={assignForm.shiftId}
-                onChange={(e) => setAssignForm({ ...assignForm, shiftId: e.target.value })}
-                className="form-input"
+                onValueChange={(value) => setAssignForm({ ...assignForm, shiftId: value })}
               >
-                <option value="">Select shift</option>
-                {shifts.map((shift) => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name} ({shift.startTime} - {shift.endTime})
-                  </option>
-                ))}
+                <SelectTrigger className="form-input">
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shifts.map((shift) => (
+                    <SelectItem key={shift.id} value={shift.id}>
+                      {shift.name} ({shift.startTime} - {shift.endTime})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
 
@@ -851,13 +863,16 @@ export default function ShiftsPage() {
               <Label className="form-label">Member</Label>
               <Select
                 value={exceptionForm.userId}
-                onChange={(e) => setExceptionForm({ ...exceptionForm, userId: e.target.value })}
-                className="form-input"
+                onValueChange={(value) => setExceptionForm({ ...exceptionForm, userId: value })}
               >
-                <option value="">Select member</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
-                ))}
+                <SelectTrigger className="form-input">
+                  <SelectValue placeholder="Select member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
@@ -873,14 +888,17 @@ export default function ShiftsPage() {
               <Label className="form-label">Action</Label>
               <Select
                 value={exceptionForm.shiftId}
-                onChange={(e) => setExceptionForm({ ...exceptionForm, shiftId: e.target.value })}
-                className="form-input"
+                onValueChange={(value) => setExceptionForm({ ...exceptionForm, shiftId: value })}
               >
-                <option value="">Select action</option>
-                <option value="off">🏖️ Day Off (Holiday)</option>
-                {shifts.map((shift) => (
-                  <option key={shift.id} value={shift.id}>🏢 Work: {shift.name}</option>
-                ))}
+                <SelectTrigger className="form-input">
+                  <SelectValue placeholder="Select action" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="off">🏖️ Day Off (Holiday)</SelectItem>
+                  {shifts.map((shift) => (
+                    <SelectItem key={shift.id} value={shift.id}>🏢 Work: {shift.name}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div>
