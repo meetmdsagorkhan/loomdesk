@@ -52,6 +52,13 @@ export async function PATCH(
     }
 
     if (targetUser.role === 'ADMIN') {
+      logger.warn('Attempted to modify admin account', {
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        targetId: targetUser.id,
+        targetEmail: targetUser.email,
+        action: payload.action,
+      });
       return NextResponse.json({ error: 'Admin accounts cannot be modified here' }, { status: 400 });
     }
 

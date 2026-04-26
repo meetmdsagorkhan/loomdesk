@@ -10,7 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
@@ -145,7 +151,8 @@ function MemberRow({
     actionState?.id === member.id &&
     (actionState.action === 'pause' || actionState.action === 'resume');
   const isDeleting = actionState?.id === member.id && actionState.action === 'delete';
-  const actionsDisabled = isCurrentUser || member.role === 'ADMIN' || isPausing || isDeleting;
+  const isAdmin = member.role === 'ADMIN';
+  const actionsDisabled = isCurrentUser || isAdmin || isPausing || isDeleting;
 
   return (
     <motion.tr
@@ -189,29 +196,37 @@ function MemberRow({
       <td className="py-3.5 pl-3 pr-5">
         {canManageMembers ? (
           <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => onTogglePause(member)}
-              disabled={actionsDisabled}
-              className={cn(
-                'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-                isPaused
-                  ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15'
-                  : 'border border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
-              )}
-            >
-              {isPausing ? <Loader2 size={12} className="animate-spin" /> : <PauseCircle size={12} />}
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(member)}
-              disabled={actionsDisabled}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/10 px-2.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-              Delete
-            </button>
+            {isAdmin ? (
+              <span className="text-xs text-muted-foreground italic" title="Admin accounts cannot be modified">
+                Protected
+              </span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onTogglePause(member)}
+                  disabled={actionsDisabled}
+                  className={cn(
+                    'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+                    isPaused
+                      ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/15'
+                      : 'border border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
+                  )}
+                >
+                  {isPausing ? <Loader2 size={12} className="animate-spin" /> : <PauseCircle size={12} />}
+                  {isPaused ? 'Resume' : 'Pause'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(member)}
+                  disabled={actionsDisabled}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/10 px-2.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  Delete
+                </button>
+              </>
+            )}
           </div>
         ) : null}
       </td>
@@ -469,16 +484,17 @@ export default function SettingsPage() {
               </div>
 
               {/* role filter */}
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="h-8 px-2.5 text-xs rounded-lg bg-muted/60 border border-border/60 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-              >
-                <option value="ALL">All Roles</option>
-                <option value="ADMIN">Admin</option>
-                <option value="TEAM_LEAD">Team Lead</option>
-                <option value="MEMBER">Member</option>
-              </select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="h-8 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Roles</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="TEAM_LEAD">Team Lead</SelectItem>
+                  <SelectItem value="MEMBER">Member</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -583,12 +599,16 @@ export default function SettingsPage() {
               </Label>
               <Select
                 value={inviteData.role}
-                onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
-                className="form-input bg-transparent"
+                onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
               >
-                <option value="MEMBER">Member — Standard access</option>
-                <option value="TEAM_LEAD">Team Lead — Management access</option>
-                <option value="ADMIN">Admin — Full control</option>
+                <SelectTrigger className="form-input bg-transparent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MEMBER">Member — Standard access</SelectItem>
+                  <SelectItem value="TEAM_LEAD">Team Lead — Management access</SelectItem>
+                  <SelectItem value="ADMIN">Admin — Full control</SelectItem>
+                </SelectContent>
               </Select>
 
               {/* Role description */}

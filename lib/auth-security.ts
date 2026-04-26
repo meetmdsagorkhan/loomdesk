@@ -216,6 +216,30 @@ export async function getAccountLockStatePersistent(
   identifier: string,
   options: LockoutOptions
 ) {
+  // Check if this is an admin account - admins should never be locked out
+  try {
+    const { prisma } = await import('@/lib/db');
+    const adminUser = await prisma.user.findUnique({
+      where: { email: getLockKey(identifier) },
+      select: { role: true },
+    });
+    
+    // Bypass lockout for admin accounts
+    if (adminUser?.role === 'ADMIN') {
+      return {
+        locked: false,
+        failureCount: 0,
+        retryAfterMs: 0,
+      };
+    }
+  } catch (error) {
+    // If database check fails, proceed with normal lockout check
+    logger.warn('Failed to check admin status for lockout bypass', {
+      identifier,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
   const { available, row: existing } = await readPersistedLockState(identifier);
 
   if (!available || !existing) {
