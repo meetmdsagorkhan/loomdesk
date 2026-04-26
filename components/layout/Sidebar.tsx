@@ -362,7 +362,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
                           : 'rounded-2xl px-3 py-2.5 min-h-[44px]',
                         isActive
                           ? 'glass-pill border-white/30 bg-white/45 text-slate-900 dark:bg-white/10 dark:text-white shadow-sm'
-                          : 'text-sidebar-foreground/65 hover:bg-white/30 dark:hover:bg-white/8 hover:text-sidebar-foreground',
+                          : 'text-sidebar-foreground/65 hover:bg-white/40 dark:hover:bg-white/15 hover:text-sidebar-foreground hover:backdrop-blur-sm',
                       )}
                     >
                       {/* active indicator bar */}
