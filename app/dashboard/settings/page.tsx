@@ -243,6 +243,8 @@ export default function SettingsPage() {
   /* invite state */
   const [inviteData, setInviteData] = useState({ email: '', role: 'MEMBER' });
   const [isInviting, setIsInviting] = useState(false);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
 
   /* team state */
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -268,9 +270,28 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const fetchInvitations = useCallback(async () => {
+    if (!canManageMembers) return;
+    setInvitationsLoading(true);
+    try {
+      const res = await fetch('/api/auth/invite');
+      if (!res.ok) throw new Error('Failed to fetch invitations');
+      const data = await res.json();
+      setInvitations(data.invitations ?? []);
+    } catch (e) {
+      handleApiError(e, 'Admin Settings');
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, [canManageMembers]);
+
   useEffect(() => {
     if (isManager) fetchMembers();
   }, [isManager, fetchMembers]);
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,10 +309,27 @@ export default function SettingsPage() {
       }
       showToast('Invitation sent successfully', 'success');
       setInviteData({ email: '', role: 'MEMBER' });
+      fetchInvitations();
     } catch (err) {
       handleApiError(err, 'Settings');
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/auth/invite/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        handleApiError('Failed to revoke invitation', 'Settings');
+        return;
+      }
+      showToast('Invitation revoked successfully', 'success');
+      fetchInvitations();
+    } catch (err) {
+      handleApiError(err, 'Settings');
     }
   };
 
@@ -652,6 +690,40 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
+
+          {/* Pending Invitations */}
+          {invitations.length > 0 && (
+            <div className="border-t border-border/50 p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Mail size={14} className="text-primary" />
+                Pending Invitations ({invitations.length})
+              </h3>
+              <div className="space-y-3">
+                {invitations.map((invitation) => (
+                  <div
+                    key={invitation.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/60"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{invitation.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {invitation.role.replace('_', ' ')} • Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => handleRevokeInvitation(invitation.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      Revoke
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
 
       </div>

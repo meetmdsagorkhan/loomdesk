@@ -49,12 +49,12 @@ export async function POST(request: NextRequest) {
     const { email, role } = createInviteSchema.parse(body);
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if invitation already exists
+    // Check if invitation already exists and is not expired
     const existingInvitation = await prisma.invitation.findUnique({
       where: { email: normalizedEmail },
     });
 
-    if (existingInvitation && existingInvitation.status === 'PENDING') {
+    if (existingInvitation && existingInvitation.status === 'PENDING' && existingInvitation.expiresAt > new Date()) {
       return NextResponse.json({ error: 'Invitation already pending for this email' }, { status: 400 });
     }
 
