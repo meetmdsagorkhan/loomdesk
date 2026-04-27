@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { env } from '@/lib/env.server';
 import { logger } from '@/lib/logger';
 import { consumeRateLimitPersistent } from '@/lib/rate-limit';
+import { supabase } from '@/lib/supabase';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
       };
     }>[] = await prisma.message.findMany({
       where: params.data.channel
-        ? { channel: params.data.channel }
+        ? { channel: params.data.channel as string }
         : params.data.userId
           ? {
             OR: [
@@ -133,8 +134,8 @@ export async function POST(request: NextRequest) {
     const message = await prisma.message.create({
       data: {
         senderId: session.user.id,
-        receiverId: receiverId || null,
-        channel: channel || null,
+        receiverId: receiverId || undefined,
+        channel: channel || undefined,
         content,
       },
       include: {
@@ -146,6 +147,55 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Broadcast the message via Supabase for real-time delivery
+    if (supabase) {
+      const roomId = channel 
+        ? `channel:${channel}`
+        : [session.user.id, receiverId].sort().join('_');
+      
+      const broadcastPayload = {
+        id: message.id,
+        senderId: session.user.id,
+        senderName: message.sender.name,
+        senderEmail: message.sender.email,
+        receiverId: message.receiverId,
+        channel: message.channel,
+        content: message.content,
+        createdAt: message.createdAt,
+        read: message.read,
+        readAt: message.readAt,
+      };
+
+      try {
+        await supabase.channel(`chat:${roomId}`).send({
+          type: 'broadcast',
+          event: 'new_message',
+          payload: broadcastPayload,
+        });
+      } catch (broadcastError) {
+        logger.error('Failed to broadcast message', { error: broadcastError });
+        // Don't fail the request if broadcast fails
+      }
+    }
+
+    // Create notification for direct messages
+    if (receiverId && !channel) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: receiverId,
+            type: 'NEW_MESSAGE',
+            title: `New message from ${message.sender.name}`,
+            message: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+            read: false,
+          },
+        });
+      } catch (notificationError) {
+        logger.error('Failed to create notification', { error: notificationError });
+        // Don't fail the request if notification creation fails
+      }
+    }
 
     return NextResponse.json({
       id: message.id,

@@ -67,7 +67,7 @@ export default function ChatWindow({ contactId, contactName }: ChatWindowProps) 
     };
 
     fetchHistory();
-  }, [contactId, user]);
+  }, [contactId, user?.id]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
