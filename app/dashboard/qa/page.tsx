@@ -55,7 +55,8 @@ export default function QAPage() {
     try {
       const response = await fetch('/api/users');
       const data = await response.json();
-      setMembers(data.users || []);
+      // Filter out ADMIN users from the member list
+      setMembers((data.users || []).filter((u: { role: string }) => u.role !== 'ADMIN'));
     } catch (error) {
       // Silently fail - members list will be empty
     }

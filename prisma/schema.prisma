@@ -38,6 +38,7 @@ model User {
   notifications  Notification[]
   sentMessages  Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageReceiver")
+  forwardedMessages Message[] @relation("OriginalSender")
   invitedBy     String?
   invitations   Invitation[] @relation("invitedBy")
   emailVerificationTokens EmailVerificationToken[]
@@ -232,20 +233,27 @@ model Notification {
 }
 
 model Message {
-  id         String    @id @default(cuid())
-  senderId   String
-  sender     User      @relation("MessageSender", fields: [senderId], references: [id])
-  receiverId String?   // Null means it's a channel message
-  receiver   User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
-  channel    String?   // 'general', 'announcements', etc.
-  content    String
-  read       Boolean   @default(false)
-  readAt     DateTime? // Tracks exactly when it was read for read receipts
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  senderId       String
+  sender         User      @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId     String?   // Null means it's a channel message
+  receiver       User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  channel        String?   // 'general', 'announcements', etc.
+  content        String
+  read           Boolean   @default(false)
+  readAt         DateTime? // Tracks exactly when it was read for read receipts
+  replyToId      String?   // ID of the message being replied to
+  replyTo        Message?  @relation("MessageReply", fields: [replyToId], references: [id])
+  replies       Message[] @relation("MessageReply")
+  isForwarded    Boolean   @default(false)
+  originalSenderId String?  // Original sender if forwarded
+  originalSender User?     @relation("OriginalSender", fields: [originalSenderId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, read, createdAt])
+  @@index([replyToId])
 }
 
 enum Role {
@@ -263,11 +271,13 @@ enum InvitationStatus {
 enum ReportStatus {
   DRAFT
   SUBMITTED
+  REVIEWED
 }
 
 enum EntryType {
   TICKET
   CHAT
+  MISCELLANEOUS
 }
 
 enum EntryStatus {

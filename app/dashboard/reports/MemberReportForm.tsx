@@ -22,7 +22,7 @@ import { handleApiError } from '@/lib/error-handler';
 
 type ReportEntry = {
   id: string;
-  type: 'TICKET' | 'CHAT';
+  type: 'TICKET' | 'CHAT' | 'MISCELLANEOUS';
   referenceId: string;
   status: 'SOLVED' | 'PENDING';
   note: string;
@@ -276,12 +276,11 @@ export default function MemberReportForm() {
     {
       accessorKey: 'type',
       header: 'Type',
-      cell: ({ row }) => (
-        <Badge
-          variant={row.original.type === 'TICKET' ? 'info' : 'success'}
-          label={row.original.type}
-        />
-      ),
+      cell: ({ row }) => {
+        const variant = row.original.type === 'TICKET' ? 'info' : 
+                       row.original.type === 'CHAT' ? 'success' : 'warning';
+        return <Badge variant={variant} label={row.original.type} />;
+      },
     },
     {
       accessorKey: 'referenceId',
@@ -410,6 +409,18 @@ export default function MemberReportForm() {
                     />
                     <div className={segmentClassName}>
                       Chat
+                    </div>
+                  </label>
+                  <label className="flex-1">
+                    <input
+                      type="radio"
+                      value="MISCELLANEOUS"
+                      checked={entryForm.type === 'MISCELLANEOUS'}
+                      onChange={(event) => handleFieldChange('type', event.target.value)}
+                      className="peer sr-only"
+                    />
+                    <div className={segmentClassName}>
+                      Misc
                     </div>
                   </label>
                 </div>

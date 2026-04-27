@@ -13,6 +13,49 @@ const updateUserSchema = z.object({
   action: z.enum(['pause', 'resume']),
 });
 
+export async function GET(
+  request: NextRequest,
+  context: RouteContext<'/api/users/[id]'>
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await context.params;
+
+    const user = await db.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        isActive: true,
+        position: true,
+        department: true,
+        company: true,
+        joiningDate: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    logger.error('Failed to fetch user', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   context: RouteContext<'/api/users/[id]'>

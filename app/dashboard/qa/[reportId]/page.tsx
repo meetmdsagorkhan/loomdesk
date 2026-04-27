@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2, X, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import { showToast } from '@/components/shared/Toast';
@@ -31,7 +31,7 @@ type Feedback = {
 
 type ReportEntry = {
   id: string;
-  type: 'TICKET' | 'CHAT';
+  type: 'TICKET' | 'CHAT' | 'MISCELLANEOUS';
   referenceId: string;
   status: 'SOLVED' | 'PENDING';
   note: string;
@@ -80,6 +80,10 @@ export default function QADetailPage() {
   const [feedbackEntryId, setFeedbackEntryId] = useState<string | null>(null);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [isAddingFeedback, setIsAddingFeedback] = useState(false);
+  const [isMarkingOk, setIsMarkingOk] = useState(false);
+  const [isMarkingReviewed, setIsMarkingReviewed] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const { user } = useCurrentUser();
   const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
@@ -123,6 +127,31 @@ export default function QADetailPage() {
         next.delete(entryId);
       } else {
         next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  const toggleNote = (entryId: string) => {
+    setExpandedNotes((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  const toggleField = (entryId: string, field: string) => {
+    setExpandedFields((prev) => {
+      const next = new Set(prev);
+      const key = `${entryId}-${field}`;
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
       }
       return next;
     });
@@ -197,6 +226,54 @@ export default function QADetailPage() {
     }
   };
 
+  const handleMarkOk = async (entryId: string) => {
+    setIsMarkingOk(true);
+    try {
+      const response = await fetch('/api/qa/entries/mark-ok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId,
+        }),
+      });
+
+      if (!response.ok) {
+        showToast('Failed to mark as OK', 'error');
+        return;
+      }
+
+      await fetchReport();
+      showToast('Marked as OK', 'success');
+    } catch (error) {
+      showToast('Failed to mark as OK', 'error');
+    } finally {
+      setIsMarkingOk(false);
+    }
+  };
+
+  const handleMarkReviewed = async () => {
+    if (!report) return;
+
+    setIsMarkingReviewed(true);
+    try {
+      const response = await fetch(`/api/qa/reports/${report.id}/review`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        showToast('Failed to mark as reviewed', 'error');
+        return;
+      }
+
+      await fetchReport();
+      showToast('Report marked as reviewed', 'success');
+    } catch (error) {
+      showToast('Failed to mark as reviewed', 'error');
+    } finally {
+      setIsMarkingReviewed(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -230,15 +307,32 @@ export default function QADetailPage() {
         title="Report Review"
         subtitle="Review entries, add feedback, and apply score deductions."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/dashboard/qa')}
-            className="rounded-xl"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            Back
-          </Button>
+          <div className="flex gap-2">
+            {isManager && report.status === 'SUBMITTED' && (
+              <Button
+                size="sm"
+                onClick={handleMarkReviewed}
+                disabled={isMarkingReviewed}
+                className="rounded-xl"
+              >
+                {isMarkingReviewed ? (
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                ) : (
+                  <CheckCircle size={16} className="mr-2" />
+                )}
+                Mark as Reviewed
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/dashboard/qa')}
+              className="rounded-xl"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Back
+            </Button>
+          </div>
         }
       />
 
@@ -269,6 +363,13 @@ export default function QADetailPage() {
         <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-medium text-foreground">Entries ({report.entries.length})</h2>
         </div>
+        {/* Header Row */}
+        <div className="px-4 py-3 bg-white/10 dark:bg-slate-900/30 border-b border-white/15 grid grid-cols-[auto_1fr_auto_2fr] gap-4 items-center pl-14">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Type</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reference ID</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Status</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Note</div>
+        </div>
         <div className="divide-y divide-white/15">
           {report.entries.map((entry) => (
             <div key={entry.id} className="border-b border-white/15 last:border-0">
@@ -283,15 +384,29 @@ export default function QADetailPage() {
                     <ChevronDown size={20} />
                   )}
                 </button>
-                <div className="flex-1 grid grid-cols-4 gap-4">
+                <div className="flex-1 grid grid-cols-[auto_1fr_auto_2fr] gap-4 items-center">
                   <div>
-                    <Badge variant={entry.type === 'TICKET' ? 'info' : 'success'} label={entry.type} />
+                    <Badge 
+                      variant={entry.type === 'TICKET' ? 'info' : entry.type === 'CHAT' ? 'success' : 'warning'} 
+                      label={entry.type} 
+                    />
                   </div>
-                  <div className="text-sm text-foreground">{entry.referenceId}</div>
+                  <div 
+                    className="text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => toggleField(entry.id, 'referenceId')}
+                    title={entry.referenceId}
+                  >
+                    {expandedFields.has(`${entry.id}-referenceId`) ? entry.referenceId : (entry.referenceId.length > 20 ? entry.referenceId.substring(0, 20) + '...' : entry.referenceId)}
+                  </div>
                   <div>
                     <Badge variant={entry.status === 'SOLVED' ? 'success' : 'warning'} label={entry.status} />
                   </div>
-                  <div className="text-sm text-muted-foreground truncate">{entry.note}</div>
+                  <div 
+                    className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => toggleNote(entry.id)}
+                  >
+                    {expandedNotes.has(entry.id) ? entry.note : entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '')}
+                  </div>
                 </div>
               </div>
               
@@ -376,20 +491,35 @@ export default function QADetailPage() {
                     )}
                   </div>
 
-                  {/* Deduct Score Button (Managers only) */}
-                  {isManager && (
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        setDeductEntryId(entry.id);
-                        setShowDeductModal(true);
-                      }}
+                      variant="outline"
+                      onClick={() => handleMarkOk(entry.id)}
+                      disabled={isMarkingOk}
                     >
-                      <MinusCircle size={14} className="mr-2" />
-                      Deduct Score
+                      {isMarkingOk ? (
+                        <Loader2 size={14} className="animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle size={14} className="mr-2" />
+                      )}
+                      Mark OK
                     </Button>
-                  )}
+                    {isManager && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setDeductEntryId(entry.id);
+                          setShowDeductModal(true);
+                        }}
+                      >
+                        <MinusCircle size={14} className="mr-2" />
+                        Deduct Score
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

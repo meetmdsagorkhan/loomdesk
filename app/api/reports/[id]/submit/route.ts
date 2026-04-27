@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { logger } from '@/lib/logger';
+import { createNotification } from '@/lib/notifications';
+import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +52,33 @@ export async function POST(
         submittedAt: new Date(),
       },
     });
+
+    // Notify admins and team leads about new report submission
+    try {
+      const managers = await prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN', 'TEAM_LEAD'] },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      const reportDate = format(new Date(report.date), 'MMM d, yyyy');
+
+      for (const manager of managers) {
+        await createNotification({
+          userId: manager.id,
+          type: 'NEW_REPORT',
+          title: 'New Report Submitted',
+          message: `${session.user.name} submitted their report for ${reportDate}.`,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to send report submission notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json(updatedReport);
   } catch (error) {

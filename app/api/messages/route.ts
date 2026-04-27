@@ -14,6 +14,9 @@ const createMessageSchema = z.object({
   receiverId: z.string().nullable().optional(),
   channel: z.string().nullable().optional(),
   content: z.string().trim().min(1, 'Message cannot be empty').max(2000, 'Message is too long'),
+  replyToId: z.string().nullable().optional(),
+  isForwarded: z.boolean().optional(),
+  originalSenderId: z.string().nullable().optional(),
 });
 
 const getMessagesSchema = z.object({
@@ -37,17 +40,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: params.error.issues[0]?.message ?? 'Invalid request' }, { status: 400 });
     }
 
-    const messages: Prisma.MessageGetPayload<{
-      include: {
-        sender: {
-          select: {
-            id: true;
-            name: true;
-            email: true;
-          };
-        };
-      };
-    }>[] = await prisma.message.findMany({
+    const messages = await prisma.message.findMany({
       where: params.data.channel
         ? { channel: params.data.channel as string }
         : params.data.userId
@@ -66,6 +59,22 @@ export async function GET(request: NextRequest) {
             email: true,
           },
         },
+        replyTo: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        originalSender: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -82,6 +91,15 @@ export async function GET(request: NextRequest) {
         createdAt: message.createdAt,
         read: message.read,
         readAt: message.readAt,
+        replyToId: message.replyToId,
+        replyTo: message.replyTo ? {
+          id: message.replyTo.id,
+          content: message.replyTo.content,
+          senderName: message.replyTo.sender.name,
+        } : null,
+        isForwarded: message.isForwarded,
+        originalSenderId: message.originalSenderId,
+        originalSenderName: message.originalSender?.name,
       }))
     );
   } catch (error) {
@@ -114,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { receiverId, channel, content } = createMessageSchema.parse(body);
+    const { receiverId, channel, content, replyToId, isForwarded, originalSenderId } = createMessageSchema.parse(body);
 
     if (receiverId) {
       if (receiverId === session.user.id) {
@@ -137,12 +155,31 @@ export async function POST(request: NextRequest) {
         receiverId: receiverId || undefined,
         channel: channel || undefined,
         content,
+        replyToId: replyToId || undefined,
+        isForwarded: isForwarded || false,
+        originalSenderId: originalSenderId || undefined,
       },
       include: {
         sender: {
           select: {
             name: true,
             email: true,
+          },
+        },
+        replyTo: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        originalSender: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -208,6 +245,15 @@ export async function POST(request: NextRequest) {
       createdAt: message.createdAt,
       read: message.read,
       readAt: message.readAt,
+      replyToId: message.replyToId,
+      replyTo: message.replyTo ? {
+        id: message.replyTo.id,
+        content: message.replyTo.content,
+        senderName: message.replyTo.sender.name,
+      } : null,
+      isForwarded: message.isForwarded,
+      originalSenderId: message.originalSenderId,
+      originalSenderName: message.originalSender?.name,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

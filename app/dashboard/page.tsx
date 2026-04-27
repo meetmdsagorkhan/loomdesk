@@ -27,13 +27,11 @@ type DashboardAnalytics = {
     pendingLeaves: number;
     avgScore: number;
     totalDeductions: number;
-    attendanceRate: number;
   };
   leaderboard: Array<{
     name: string;
     reports: number;
     avgScore: number;
-    attendanceRate: number;
   }>;
 };
 
@@ -75,13 +73,6 @@ export default function DashboardPage() {
           change: 12,
         },
         {
-          title: 'Attendance',
-          value: `${analytics.kpi.activeMembers > 1 ? (analytics.kpi.attendanceRate || 0) : (analytics.kpi.attendanceRate || 0)}%`,
-          icon: <Users size={18} />,
-          color: 'success',
-          change: 0,
-        },
-        {
           title: isAdminView ? 'Avg Score' : 'My Score',
           value: analytics.kpi.avgScore || 0,
           icon: <TrendingUp size={18} />,
@@ -103,7 +94,6 @@ export default function DashboardPage() {
         member: item.name || 'Unknown',
         reports: item.reports || 0,
         avgScore: item.avgScore || 0,
-        attendanceRate: `${item.attendanceRate || 0}%`,
       }))
     : [];
 
@@ -181,9 +171,6 @@ export default function DashboardPage() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Avg Score
                     </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Attendance
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,11 +184,6 @@ export default function DashboardPage() {
                       <td className="px-5 py-3.5 text-sm text-foreground">
                         <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300 backdrop-blur-sm">
                           {row.avgScore}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-foreground">
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300 backdrop-blur-sm">
-                          {row.attendanceRate}
                         </span>
                       </td>
                     </tr>
@@ -218,7 +200,7 @@ export default function DashboardPage() {
                 className="glass-card rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:shadow-none backdrop-blur-sm"
               >
                 <p className="text-sm font-semibold text-foreground">{row.member}</p>
-                <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Reports</p>
                     <p className="mt-1 text-sm font-medium text-foreground">{row.reports}</p>
@@ -226,10 +208,6 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Avg</p>
                     <p className="mt-1 text-sm font-medium text-foreground">{row.avgScore}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Attendance</p>
-                    <p className="mt-1 text-sm font-medium text-foreground">{row.attendanceRate}</p>
                   </div>
                 </div>
               </div>

@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Menu, Bell, Sun, Moon, Loader2, X, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDistanceToNow } from 'date-fns';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { SubmissionModal } from '@/components/feedback/SubmissionModal';
 
@@ -31,17 +30,39 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const fetchNotifications = useCallback(async () => {
     try {
       if (!user) return;
 
       const response = await fetch('/api/notifications');
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error('Failed to fetch notifications:', response.status);
+        return;
+      }
 
       const data = await response.json();
+      console.log('Notifications data:', data);
       setNotifications(data.notifications || []);
       setUnreadCount((data.notifications || []).filter((n: Notification) => !n.is_read).length);
     } catch (error) {
+      console.error('Error fetching notifications:', error);
       // Silently fail - notifications are optional
     }
   }, [user]);
@@ -57,9 +78,13 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
       const response = await fetch(`/api/notifications/${id}/read`, {
         method: 'POST',
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error('Failed to mark notification as read:', response.status);
+        return;
+      }
       fetchNotifications();
     } catch (error) {
+      console.error('Error marking notification as read:', error);
       // Silently fail
     }
   };
@@ -88,7 +113,23 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
     }
 
     // Navigate based on notification type
-    // This is a placeholder - you can add navigation logic based on notification type
+    if (notification.type === 'NEW_MESSAGE') {
+      // Navigate to messages page
+      window.location.href = '/dashboard/messages';
+    } else if (notification.type === 'SCORE_DEDUCTION' || notification.type === 'NEW_FEEDBACK') {
+      // Navigate to scoring page
+      window.location.href = '/dashboard/scoring';
+    } else if (notification.type === 'LEAVE_UPDATE') {
+      // Navigate to leave page
+      window.location.href = '/dashboard/leave';
+    } else if (notification.type === 'SHIFT_ASSIGNMENT') {
+      // Navigate to shifts page
+      window.location.href = '/dashboard/shifts/my-schedule';
+    } else if (notification.type === 'NEW_REPORT') {
+      // Navigate to QA page
+      window.location.href = '/dashboard/qa';
+    }
+    
     setIsOpen(false);
   };
 
@@ -100,6 +141,10 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         return <Check size={16} className="text-primary" />;
       case 'LEAVE_UPDATE':
         return <Check size={16} className="text-green-500" />;
+      case 'SHIFT_ASSIGNMENT':
+        return <Check size={16} className="text-blue-500" />;
+      case 'NEW_REPORT':
+        return <Check size={16} className="text-purple-500" />;
       default:
         return <Bell size={16} className="text-muted-foreground" />;
     }
@@ -132,24 +177,25 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         </button>
 
         {/* Notifications */}
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-          <DropdownMenuTrigger>
-            <div className="glass-pill relative flex h-12 w-12 items-center justify-center rounded-full cursor-pointer">
-              <Bell size={20} className="text-foreground" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg backdrop-blur-sm">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="glass-panel w-80 max-h-[400px] overflow-y-auto rounded-3xl p-2"
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="glass-pill relative flex h-12 w-12 items-center justify-center rounded-full cursor-pointer"
+        >
+          <Bell size={20} className="text-foreground" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg backdrop-blur-sm">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        {isOpen && (
+          <div 
             ref={dropdownRef}
+            className="absolute bottom-16 right-0 w-80 max-h-[400px] overflow-y-auto glass-panel rounded-3xl p-2 shadow-xl z-50"
           >
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Notifications</span>
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-sm font-semibold text-foreground">Notifications</span>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
@@ -163,17 +209,17 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
                   )}
                 </button>
               )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            </div>
+            <div className="border-t border-white/10 my-2" />
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No notifications
               </div>
             ) : (
               notifications.map((notification) => (
-                <DropdownMenuItem
+                <div
                   key={notification.id}
-                  className="cursor-pointer rounded-2xl p-3"
+                  className="cursor-pointer rounded-2xl p-3 hover:bg-white/5 transition-colors"
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3 w-full">
@@ -195,11 +241,11 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
                       </p>
                     </div>
                   </div>
-                </DropdownMenuItem>
+                </div>
               ))
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        )}
       </div>
     </>
   );

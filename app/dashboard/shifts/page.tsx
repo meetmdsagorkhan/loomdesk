@@ -188,7 +188,8 @@ export default function ShiftsPage() {
         return;
       }
       const data = await response.json();
-      setMembers(data.users || []);
+      // Filter out ADMIN users from the member list
+      setMembers((data.users || []).filter((u: { role: string }) => u.role !== 'ADMIN'));
     } catch (error) {
       handleApiError(error, 'Shift Management');
     }

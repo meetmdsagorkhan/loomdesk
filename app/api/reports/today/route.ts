@@ -13,7 +13,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Calculate the shift date: if current time is before 6 AM, it belongs to previous day's shift
+    // Day shift: 9 AM - 6 PM, Night shift: 6 PM - 3 AM
+    const now = new Date();
     const today = new Date();
+    
+    // If it's before 6 AM, use previous day (night shift that started yesterday)
+    if (now.getHours() < 6) {
+      today.setDate(today.getDate() - 1);
+    }
+    
     today.setUTCHours(0, 0, 0, 0);
 
     // Try to find today's report

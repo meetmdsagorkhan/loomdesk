@@ -45,20 +45,12 @@ export const fetchCache = 'force-no-store';
 type AnalyticsData = {
   kpi: {
     totalReports: number;
-    attendanceRate: number;
     avgScore: number;
     totalDeductions: number;
     pendingLeaves: number;
     activeMembers: number;
   };
   dailyReports: { date: string; count: number }[];
-  attendanceBreakdown: {
-    name: string;
-    present: number;
-    late: number;
-    absent: number;
-    leave: number;
-  }[];
   weeklyScoreTrend: { week: string; avgScore: number }[];
   entryDistribution: {
     tickets: number;
@@ -69,7 +61,6 @@ type AnalyticsData = {
     reports: number;
     avgScore: number;
     deductions: number;
-    attendanceRate: number;
   }[];
   ticketRatios: {
     daily: {
@@ -341,15 +332,6 @@ function AnalyticsContent() {
 
           <BentoCard>
             <div className="flex items-center justify-between mb-2">
-              <TrendingUp size={20} className="text-success" />
-              <span className="text-xs text-muted-foreground">Rate</span>
-            </div>
-            <div className="text-2xl font-bold text-foreground">{analytics.kpi.attendanceRate}%</div>
-            <div className="text-sm text-muted-foreground">Attendance</div>
-          </BentoCard>
-
-          <BentoCard>
-            <div className="flex items-center justify-between mb-2">
               <Award size={20} className="text-warning" />
               <span className="text-xs text-muted-foreground">Avg</span>
             </div>
@@ -535,23 +517,6 @@ function AnalyticsContent() {
             </ResponsiveContainer>
           </BentoCard>
 
-          <BentoCard>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Attendance Breakdown</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.attendanceBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="name" className="text-xs text-muted-foreground" />
-                <YAxis className="text-xs text-muted-foreground" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="present" stackId="a" fill="hsl(var(--success))" name="Present" />
-                <Bar dataKey="late" stackId="a" fill="hsl(var(--warning))" name="Late" />
-                <Bar dataKey="absent" stackId="a" fill="hsl(var(--destructive))" name="Absent" />
-                <Bar dataKey="leave" stackId="a" fill="hsl(var(--info))" name="Leave" />
-              </BarChart>
-            </ResponsiveContainer>
-          </BentoCard>
-
           <BentoCard colSpan={2}>
             <h2 className="text-lg font-semibold text-foreground mb-4">QA Score Trend</h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -587,27 +552,24 @@ function AnalyticsContent() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Rank</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Member</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reports</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Avg Score</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Deductions</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Attendance</th>
                 </tr>
               </thead>
               <tbody>
                 {analytics.leaderboard.map((member, index) => (
                   <tr
-                    key={index}
+                    key={`${member.name}-${index}`}
                     className="border-b border-white/15 last:border-0 transition-colors hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm"
                   >
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        {index === 0 && <Crown size={16} className="text-warning" />}
-                        <span className="text-sm font-semibold text-foreground">{index + 1}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-muted-foreground">#{index + 1}</span>
+                        <span className="text-sm font-semibold text-foreground">{member.name}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm font-medium text-foreground">{member.name}</td>
                     <td className="px-5 py-3.5 text-sm text-foreground">{member.reports}</td>
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -621,11 +583,6 @@ function AnalyticsContent() {
                     <td className="px-5 py-3.5">
                       <span className="inline-flex rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
                         {member.deductions}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
-                        {member.attendanceRate}%
                       </span>
                     </td>
                   </tr>
@@ -645,7 +602,7 @@ function AnalyticsContent() {
                 <p className="text-sm font-semibold text-foreground">{member.name}</p>
                 <span className="text-xs font-semibold text-muted-foreground">#{index + 1}</span>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Reports</p>
                   <p className="mt-1 text-sm font-medium text-foreground">{member.reports}</p>
@@ -653,10 +610,6 @@ function AnalyticsContent() {
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Score</p>
                   <p className="mt-1 text-sm font-medium text-foreground">{member.avgScore}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Attendance</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{member.attendanceRate}%</p>
                 </div>
               </div>
             </div>

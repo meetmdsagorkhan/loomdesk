@@ -18,7 +18,6 @@ type LeaderboardMember = {
   reports: number;
   avgScore: number;
   deductions: number;
-  attendanceRate: number;
 };
 
 type RecentScore = {
@@ -172,7 +171,6 @@ export default function ScoringPage() {
                       <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Member</th>
                       <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-muted-foreground text-center">Reports</th>
                       <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-muted-foreground text-center">Score</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-muted-foreground text-center">Attendance</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -185,9 +183,6 @@ export default function ScoringPage() {
                           <span className={`font-bold ${getScoreColor(member.avgScore)}`}>
                             {member.avgScore}%
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Badge variant="default" label={`${member.attendanceRate}%`} />
                         </td>
                       </tr>
                     ))}

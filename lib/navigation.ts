@@ -7,7 +7,6 @@ export type NavIcon =
   | 'messages'
   | 'analytics'
   | 'scoring'
-  | 'attendance'
   | 'submissions'
   | 'settings'
   | 'profile';
@@ -39,6 +38,7 @@ export const navItems: NavItem[] = [
     icon: 'reports',
     section: 'Workflows',
     matches: ['/dashboard/reports'],
+    roles: ['MEMBER', 'TEAM_LEAD'],
   },
   {
     href: '/qa',

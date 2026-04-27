@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const entrySchema = z.object({
-  type: z.enum(['TICKET', 'CHAT']),
+  type: z.enum(['TICKET', 'CHAT', 'MISCELLANEOUS']),
   referenceId: z.string().min(1, 'Reference ID is required'),
   status: z.enum(['SOLVED', 'PENDING']),
   note: z.string().optional(),

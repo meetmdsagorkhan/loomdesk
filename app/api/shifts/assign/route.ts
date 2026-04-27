@@ -5,6 +5,8 @@ import { isAdmin } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/notifications';
+import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +125,23 @@ export async function POST(request: NextRequest) {
         shift: true,
       },
     });
+
+    // Send notification to member
+    try {
+      const startDate = format(start, 'MMM d, yyyy');
+      const endDateText = end ? ` to ${format(end, 'MMM d, yyyy')}` : '';
+      await createNotification({
+        userId,
+        type: 'SHIFT_ASSIGNMENT',
+        title: 'New Shift Assigned',
+        message: `You have been assigned to ${shift.name} shift from ${startDate}${endDateText}.`,
+      });
+    } catch (error) {
+      logger.error('Failed to send shift assignment notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json(assignment);
   } catch (error) {

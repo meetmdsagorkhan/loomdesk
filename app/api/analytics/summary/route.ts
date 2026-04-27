@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { Role } from '@prisma/client';
 import {
   buildReportScoreMap,
   buildWeeklyScoreTrend,
-  calculateAttendanceSummaries,
   calculateAverageScore,
   getDateRangeBounds,
   getReportScore,
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     );
 
     const userWhere = canViewTeamAnalytics
-      ? { isActive: true }
+      ? { isActive: true, role: { not: Role.ADMIN } }
       : { id: session.user.id, isActive: true };
 
     const users = await prisma.user.findMany({
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     const userIds = users.map((user: { id: string }) => user.id);
 
-    const [reports, approvedLeaves, shiftAssignments, pendingLeaves, entries] = await Promise.all([
+    const [reports, approvedLeaves, pendingLeaves, entries] = await Promise.all([
       prisma.report.findMany({
         where: {
           userId: { in: userIds },
@@ -85,23 +85,6 @@ export async function GET(request: NextRequest) {
           userId: true,
           startDate: true,
           endDate: true,
-        },
-      }),
-      prisma.shiftAssignment.findMany({
-        where: {
-          userId: { in: userIds },
-          startDate: { lte: end },
-          OR: [{ endDate: { equals: null } }, { endDate: { gte: start } }],
-        },
-        select: {
-          userId: true,
-          startDate: true,
-          endDate: true,
-          shift: {
-            select: {
-              reportDeadline: true,
-            },
-          },
         },
       }),
       prisma.leaveRequest.count({
@@ -144,14 +127,6 @@ export async function GET(request: NextRequest) {
     });
 
     const reportScoreMap = buildReportScoreMap(scoreEvents);
-    const attendance = calculateAttendanceSummaries({
-      users,
-      reports,
-      approvedLeaves,
-      shiftAssignments,
-      start,
-      end,
-    });
 
     const scoresByUser = new Map<string, number[]>();
 
@@ -165,7 +140,6 @@ export async function GET(request: NextRequest) {
       .map((user: { id: string; name: string }) => {
         const userReports = reports.filter((report: { userId: string }) => report.userId === user.id);
         const userScoreEvents = scoreEvents.filter((event: { userId: string }) => event.userId === user.id);
-        const userAttendance = attendance.summaries.find((summary: { userId: string }) => summary.userId === user.id);
 
         return {
           name: user.name,
@@ -174,7 +148,6 @@ export async function GET(request: NextRequest) {
           deductions: Number(
             userScoreEvents.reduce((sum: number, event: { deduction: number }) => sum + event.deduction, 0).toFixed(1)
           ),
-          attendanceRate: userAttendance?.attendanceRate ?? 0,
         };
       })
       .sort((a: { avgScore: number; reports: number; name: string }, b: { avgScore: number; reports: number; name: string }) => {
@@ -209,7 +182,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       kpi: {
         totalReports: reports.length,
-        attendanceRate: attendance.overallAttendanceRate,
         avgScore: calculateAverageScore(allScores),
         totalDeductions: Number(
           scoreEvents.reduce((sum: number, event: { deduction: number }) => sum + event.deduction, 0).toFixed(1)
@@ -218,13 +190,6 @@ export async function GET(request: NextRequest) {
         activeMembers: users.length,
       },
       dailyReports,
-      attendanceBreakdown: attendance.summaries.map((summary) => ({
-        name: summary.name,
-        present: summary.present,
-        late: summary.late,
-        absent: summary.absent,
-        leave: summary.leave,
-      })),
       weeklyScoreTrend: buildWeeklyScoreTrend({
         reports,
         scoreMap: reportScoreMap,

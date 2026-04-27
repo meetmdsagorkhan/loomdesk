@@ -10,6 +10,15 @@ export type ChatMessage = {
   createdAt: string | Date;
   read: boolean;
   readAt: string | Date | null;
+  replyToId?: string;
+  replyTo?: {
+    id: string;
+    content: string;
+    senderName: string;
+  };
+  isForwarded?: boolean;
+  originalSenderId?: string;
+  originalSenderName?: string;
 };
 
 export function useChat(

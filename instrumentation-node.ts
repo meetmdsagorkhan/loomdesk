@@ -22,14 +22,20 @@ if (!globalThis.__loomdeskInstrumentationRegistered && process.env.NODE_ENV !== 
     });
   });
 
-  // Start cron jobs for scheduled tasks
-  try {
-    startCronJobs();
-    console.log('[loomdesk] Cron jobs started successfully');
-  } catch (error) {
-    console.error('[loomdesk] Failed to start cron jobs', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+  // Start cron jobs for scheduled tasks (delayed to avoid instrumentation issues)
+  // Cron jobs disabled in dev mode to avoid Prisma initialization issues
+  if (process.env.NODE_ENV === 'production') {
+    setTimeout(async () => {
+      try {
+        const { startCronJobs } = await import('./lib/cron-jobs');
+        startCronJobs();
+        console.log('[loomdesk] Cron jobs started successfully');
+      } catch (error) {
+        console.error('[loomdesk] Failed to start cron jobs', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }, 1000);
   }
 
   console.log('[loomdesk] Node instrumentation registered', {

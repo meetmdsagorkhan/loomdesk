@@ -52,7 +52,6 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   qa: CheckSquare,
   leave: CalendarOff,
   shifts: Clock,
-  attendance: UserCheck,
   analytics: BarChart2,
   messages: MessageSquare,
   scoring: TrendingUp,
