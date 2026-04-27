@@ -2,8 +2,69 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { logger } from '@/lib/logger';
+import { entrySchema } from '@/lib/validations/report';
 
 export const dynamic = 'force-dynamic';
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; entryId: string }> }
+) {
+  try {
+    const session = await auth();
+    const { id: reportId, entryId } = await params;
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { status, note, pendingReason } = entrySchema.partial().parse(body);
+
+    // Verify report belongs to user
+    const report = await prisma.report.findUnique({
+      where: { id: reportId },
+    });
+
+    if (!report) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+
+    // Allow users to update their own entries, admins can update any
+    if (report.userId !== session.user.id && session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Verify entry belongs to report
+    const entry = await prisma.reportEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry || entry.reportId !== reportId) {
+      return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
+    }
+
+    // Update entry
+    const updatedEntry = await prisma.reportEntry.update({
+      where: { id: entryId },
+      data: {
+        ...(status && { status }),
+        ...(note !== undefined && { note }),
+        ...(pendingReason !== undefined && { pendingReason }),
+      },
+    });
+
+    return NextResponse.json(updatedEntry);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
+    }
+    logger.error('Update entry error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return NextResponse.json({ error: 'Failed to update entry' }, { status: 500 });
+  }
+}
 
 export async function DELETE(
   request: NextRequest,

@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Calculate score for each report (100 - total deductions)
-    const reportIds = reports.map((report) => report.id);
+    const reportIds = reports.map((report: { id: string }) => report.id);
     const scoreEvents = await prisma.scoreEvent.findMany({
       where: {
         reportId: { in: reportIds },
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     });
     const scoreMap = buildReportScoreMap(scoreEvents);
 
-    const reportsWithScore = reports.map((report) => {
+    const reportsWithScore = reports.map((report: { id: string }) => {
       return {
         ...report,
         score: getReportScore(report.id, scoreMap),

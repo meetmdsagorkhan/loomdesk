@@ -13,6 +13,7 @@ import {
   Loader2,
   Crown,
 } from 'lucide-react';
+import Badge from '@/components/shared/Badge';
 import {
   LineChart,
   Line,
@@ -70,6 +71,29 @@ type AnalyticsData = {
     deductions: number;
     attendanceRate: number;
   }[];
+  ticketRatios: {
+    daily: {
+      totalTickets: number;
+      solvedTickets: number;
+      pendingTickets: number;
+      ratio: number;
+      isAlarming: boolean;
+    };
+    weekly: {
+      totalTickets: number;
+      solvedTickets: number;
+      pendingTickets: number;
+      ratio: number;
+      isAlarming: boolean;
+    };
+    monthly: {
+      totalTickets: number;
+      solvedTickets: number;
+      pendingTickets: number;
+      ratio: number;
+      isAlarming: boolean;
+    };
+  };
 };
 
 function AnalyticsContent() {
@@ -126,6 +150,26 @@ function AnalyticsContent() {
       
       const data = await response.json();
       setAnalytics(data);
+
+      // Fetch ticket ratios
+      const dailyResponse = await fetch('/api/ticket-ratios?period=daily');
+      const weeklyResponse = await fetch('/api/ticket-ratios?period=weekly');
+      const monthlyResponse = await fetch('/api/ticket-ratios?period=monthly');
+
+      if (dailyResponse.ok && weeklyResponse.ok && monthlyResponse.ok) {
+        const daily = await dailyResponse.json();
+        const weekly = await weeklyResponse.json();
+        const monthly = await monthlyResponse.json();
+
+        setAnalytics(prev => ({
+          ...prev!,
+          ticketRatios: {
+            daily,
+            weekly,
+            monthly,
+          },
+        }));
+      }
     } catch (error) {
       handleApiError(error, 'Analytics Dashboard');
       setAnalytics(null);
@@ -341,6 +385,105 @@ function AnalyticsContent() {
           </BentoCard>
         </BentoGrid>
       </section>
+
+      {/* Ticket Ratios Section */}
+      <GlassCard variant="panel" padding="md">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Ticket Resolution Ratios</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Daily */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Daily</span>
+              <Badge
+                variant={analytics.ticketRatios?.daily.isAlarming ? 'danger' : 'success'}
+                label={analytics.ticketRatios?.daily.isAlarming ? 'Alarming' : 'Good'}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-medium text-foreground">{analytics.ticketRatios?.daily.totalTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Solved:</span>
+                <span className="font-medium text-success">{analytics.ticketRatios?.daily.solvedTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Pending:</span>
+                <span className="font-medium text-warning">{analytics.ticketRatios?.daily.pendingTickets || 0}</span>
+              </div>
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">Ratio:</span>
+                  <span className="text-lg font-bold text-foreground">{analytics.ticketRatios?.daily.ratio.toFixed(1) || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Weekly */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Weekly</span>
+              <Badge 
+                variant={analytics.ticketRatios?.weekly.isAlarming ? 'danger' : 'success'} 
+                label={analytics.ticketRatios?.weekly.isAlarming ? 'Alarming' : 'Good'}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-medium text-foreground">{analytics.ticketRatios?.weekly.totalTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Solved:</span>
+                <span className="font-medium text-success">{analytics.ticketRatios?.weekly.solvedTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Pending:</span>
+                <span className="font-medium text-warning">{analytics.ticketRatios?.weekly.pendingTickets || 0}</span>
+              </div>
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">Ratio:</span>
+                  <span className="text-lg font-bold text-foreground">{analytics.ticketRatios?.weekly.ratio.toFixed(1) || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Monthly</span>
+              <Badge 
+                variant={analytics.ticketRatios?.monthly.isAlarming ? 'danger' : 'success'} 
+                label={analytics.ticketRatios?.monthly.isAlarming ? 'Alarming' : 'Good'}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-medium text-foreground">{analytics.ticketRatios?.monthly.totalTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Solved:</span>
+                <span className="font-medium text-success">{analytics.ticketRatios?.monthly.solvedTickets || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Pending:</span>
+                <span className="font-medium text-warning">{analytics.ticketRatios?.monthly.pendingTickets || 0}</span>
+              </div>
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">Ratio:</span>
+                  <span className="text-lg font-bold text-foreground">{analytics.ticketRatios?.monthly.ratio.toFixed(1) || 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
 
       {/* Charts - Bento Grid */}
       <section>

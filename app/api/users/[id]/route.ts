@@ -152,7 +152,7 @@ export async function DELETE(
       },
     });
 
-    const reportEntryIds = reportEntries.map((entry) => entry.id);
+    const reportEntryIds = reportEntries.map((entry: { id: string }) => entry.id);
 
     await db.$transaction([
       db.feedback.deleteMany({

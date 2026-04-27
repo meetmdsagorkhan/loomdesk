@@ -55,6 +55,12 @@ export default function MemberReportForm() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [entryForm, setEntryForm] = useState<EntryFormData>(defaultEntryForm);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof EntryFormData, string>>>({});
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [isUpdatingEntry, setIsUpdatingEntry] = useState(false);
+  const [updateForm, setUpdateForm] = useState<{ status: 'SOLVED' | 'PENDING'; pendingReason?: string }>({
+    status: 'SOLVED',
+    pendingReason: '',
+  });
 
   const handleFieldChange = (field: keyof EntryFormData, value: string) => {
     setEntryForm((prev) => ({ ...prev, [field]: value }));
@@ -215,6 +221,52 @@ export default function MemberReportForm() {
     }
   };
 
+  const onUpdateEntryStatus = async (entryId: string) => {
+    if (!report) return;
+
+    setIsUpdatingEntry(true);
+
+    try {
+      const response = await fetch(`/api/reports/${report.id}/entries/${entryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: updateForm.status,
+          pendingReason: updateForm.status === 'PENDING' ? updateForm.pendingReason : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        handleApiError(result.error || 'Failed to update entry', 'Daily Report');
+        return;
+      }
+
+      const updatedEntry = await response.json();
+      setReport({
+        ...report,
+        entries: report.entries.map((entry) =>
+          entry.id === entryId ? updatedEntry : entry
+        ),
+      });
+      setEditingEntryId(null);
+      setUpdateForm({ status: 'SOLVED', pendingReason: '' });
+      showToast('Entry status updated', 'success');
+    } catch (error) {
+      handleApiError(error, 'Daily Report');
+    } finally {
+      setIsUpdatingEntry(false);
+    }
+  };
+
+  const onEditEntry = (entry: ReportEntry) => {
+    setEditingEntryId(entry.id);
+    setUpdateForm({
+      status: entry.status,
+      pendingReason: entry.pendingReason || '',
+    });
+  };
+
   const columns: ColumnDef<ReportEntry>[] = [
     {
       accessorKey: 'index',
@@ -261,13 +313,22 @@ export default function MemberReportForm() {
       accessorKey: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-        <button
-          onClick={() => setDeleteEntryId(row.original.id)}
-          className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-          disabled={report?.status === 'SUBMITTED'}
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onEditEntry(row.original)}
+            className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors"
+            title="Update status"
+          >
+            <CheckCircle2 size={16} />
+          </button>
+          <button
+            onClick={() => setDeleteEntryId(row.original.id)}
+            className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
+            disabled={report?.status === 'SUBMITTED'}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -306,10 +367,10 @@ export default function MemberReportForm() {
       />
 
       {isSubmitted && (
-        <GlassCard variant="panel" padding="sm" className="border border-warning/30 bg-warning/10">
+        <GlassCard variant="panel" padding="sm" className="border border-info/30 bg-info/10">
           <div className="flex items-center gap-3">
-            <AlertCircle size={20} className="text-warning" />
-            <span className="text-sm text-foreground">Report submitted. Contact admin to unlock.</span>
+            <CheckCircle2 size={20} className="text-info" />
+            <span className="text-sm text-foreground">Report submitted. You can still update ticket statuses using the edit button.</span>
           </div>
         </GlassCard>
       )}
@@ -540,6 +601,19 @@ export default function MemberReportForm() {
         title="Submit Report"
         description={`You are about to submit ${entryCount} ${entryCount === 1 ? 'entry' : 'entries'}. This cannot be undone.`}
         confirmLabel="Submit"
+      />
+
+      <ConfirmModal
+        isOpen={!!editingEntryId}
+        onCancel={() => {
+          setEditingEntryId(null);
+          setUpdateForm({ status: 'SOLVED', pendingReason: '' });
+        }}
+        onConfirm={() => editingEntryId && onUpdateEntryStatus(editingEntryId)}
+        title="Update Ticket Status"
+        description={`Update the status of this ticket. Current status: ${updateForm.status}. ${updateForm.status === 'PENDING' ? 'Pending reason: ' + (updateForm.pendingReason || 'None') : ''}`}
+        confirmLabel="Update"
+        variant="default"
       />
     </div>
   );

@@ -60,7 +60,7 @@ export async function GET(
 
     const feedbackAuthorIds = Array.from(
       new Set(
-        report.entries.flatMap((entry) => entry.feedback.map((feedback) => feedback.authorId))
+        report.entries.flatMap((entry: { feedback: { authorId: string }[] }) => entry.feedback.map((feedback: { authorId: string }) => feedback.authorId))
       )
     );
     const feedbackAuthors = await prisma.user.findMany({
@@ -74,16 +74,16 @@ export async function GET(
         name: true,
       },
     });
-    const feedbackAuthorMap = new Map(feedbackAuthors.map((author) => [author.id, author]));
+    const feedbackAuthorMap = new Map(feedbackAuthors.map((author: { id: string; name: string }) => [author.id, author]));
     const scoreMap = buildReportScoreMap(scoreEvents);
     const totalDeduction = scoreMap.get(reportId) ?? 0;
     const score = getReportScore(reportId, scoreMap);
 
     return NextResponse.json({
       ...report,
-      entries: report.entries.map((entry) => ({
+      entries: report.entries.map((entry: { id: string; type: string; referenceId: string; status: string; note: string; pendingReason: string | null; createdAt: Date; feedback: { id: string; authorId: string; comment: string; createdAt: Date }[] }) => ({
         ...entry,
-        feedback: entry.feedback.map((feedback) => ({
+        feedback: entry.feedback.map((feedback: { id: string; authorId: string; comment: string; createdAt: Date }) => ({
           ...feedback,
           author: feedbackAuthorMap.get(feedback.authorId) ?? {
             id: feedback.authorId,

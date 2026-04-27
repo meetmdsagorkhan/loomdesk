@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const userIds = users.map((user) => user.id);
+    const userIds = users.map((user: { id: string }) => user.id);
 
     const [reports, approvedLeaves, shiftAssignments, pendingLeaves, entries] = await Promise.all([
       prisma.report.findMany({
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         where: {
           userId: { in: userIds },
           startDate: { lte: end },
-          OR: [{ endDate: null }, { endDate: { gte: start } }],
+          OR: [{ endDate: { equals: null } }, { endDate: { gte: start } }],
         },
         select: {
           userId: true,
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const reportIds = reports.map((report) => report.id);
+    const reportIds = reports.map((report: { id: string }) => report.id);
     const scoreEvents = await prisma.scoreEvent.findMany({
       where: {
         userId: { in: userIds },
@@ -162,22 +162,22 @@ export async function GET(request: NextRequest) {
     }
 
     const leaderboard = users
-      .map((user) => {
-        const userReports = reports.filter((report) => report.userId === user.id);
-        const userScoreEvents = scoreEvents.filter((event) => event.userId === user.id);
-        const userAttendance = attendance.summaries.find((summary) => summary.userId === user.id);
+      .map((user: { id: string; name: string }) => {
+        const userReports = reports.filter((report: { userId: string }) => report.userId === user.id);
+        const userScoreEvents = scoreEvents.filter((event: { userId: string }) => event.userId === user.id);
+        const userAttendance = attendance.summaries.find((summary: { userId: string }) => summary.userId === user.id);
 
         return {
           name: user.name,
           reports: userReports.length,
           avgScore: calculateAverageScore(scoresByUser.get(user.id) ?? []),
           deductions: Number(
-            userScoreEvents.reduce((sum, event) => sum + event.deduction, 0).toFixed(1)
+            userScoreEvents.reduce((sum: number, event: { deduction: number }) => sum + event.deduction, 0).toFixed(1)
           ),
           attendanceRate: userAttendance?.attendanceRate ?? 0,
         };
       })
-      .sort((a, b) => {
+      .sort((a: { avgScore: number; reports: number; name: string }, b: { avgScore: number; reports: number; name: string }) => {
         if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
         if (b.reports !== a.reports) return b.reports - a.reports;
         return a.name.localeCompare(b.name);
@@ -202,9 +202,9 @@ export async function GET(request: NextRequest) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const tickets = entries.filter((entry) => entry.type === 'TICKET').length;
-    const chats = entries.filter((entry) => entry.type === 'CHAT').length;
-    const allScores = reports.map((report) => getReportScore(report.id, reportScoreMap));
+    const tickets = entries.filter((entry: { type: string }) => entry.type === 'TICKET').length;
+    const chats = entries.filter((entry: { type: string }) => entry.type === 'CHAT').length;
+    const allScores = reports.map((report: { id: string }) => getReportScore(report.id, reportScoreMap));
 
     return NextResponse.json({
       kpi: {
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
         attendanceRate: attendance.overallAttendanceRate,
         avgScore: calculateAverageScore(allScores),
         totalDeductions: Number(
-          scoreEvents.reduce((sum, event) => sum + event.deduction, 0).toFixed(1)
+          scoreEvents.reduce((sum: number, event: { deduction: number }) => sum + event.deduction, 0).toFixed(1)
         ),
         pendingLeaves,
         activeMembers: users.length,

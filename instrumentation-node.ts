@@ -1,3 +1,5 @@
+import { startCronJobs } from './lib/cron-jobs';
+
 export {};
 
 declare global {
@@ -19,6 +21,16 @@ if (!globalThis.__loomdeskInstrumentationRegistered && process.env.NODE_ENV !== 
       reason: reason instanceof Error ? reason.message : String(reason),
     });
   });
+
+  // Start cron jobs for scheduled tasks
+  try {
+    startCronJobs();
+    console.log('[loomdesk] Cron jobs started successfully');
+  } catch (error) {
+    console.error('[loomdesk] Failed to start cron jobs', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   console.log('[loomdesk] Node instrumentation registered', {
     pid: process.pid,
