@@ -23,7 +23,8 @@ export async function GET() {
       today.setDate(today.getDate() - 1);
     }
     
-    today.setUTCHours(0, 0, 0, 0);
+    // Use local timezone instead of UTC to avoid timezone-related date shifts
+    today.setHours(0, 0, 0, 0);
 
     // Try to find today's report
     let report = await prisma.report.findUnique({

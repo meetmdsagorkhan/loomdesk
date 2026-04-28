@@ -4,6 +4,10 @@ import { auth } from '@/auth';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/notifications';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,15 +41,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { type, title, description } = submissionSchema.parse(body);
+    const contentType = request.headers.get('content-type') || '';
+    
+    let type: string;
+    let title: string;
+    let description: string;
+    let imageUrl: string | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      type = formData.get('type') as string;
+      title = formData.get('title') as string;
+      description = formData.get('description') as string;
+      const imageFile = formData.get('image') as File | null;
+
+      // Validate required fields
+      const parsed = submissionSchema.parse({ type, title, description });
+
+      // Handle image upload if provided
+      if (imageFile && imageFile.size > 0) {
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Create unique filename
+        const timestamp = Date.now();
+        const filename = `${timestamp}-${imageFile.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+        const uploadDir = join(process.cwd(), 'public', 'uploads', 'submissions');
+
+        // Ensure directory exists
+        if (!existsSync(uploadDir)) {
+          await mkdir(uploadDir, { recursive: true });
+        }
+
+        // Write file
+        const filepath = join(uploadDir, filename);
+        await writeFile(filepath, buffer);
+
+        imageUrl = `/uploads/submissions/${filename}`;
+      }
+    } else {
+      const body = await request.json();
+      const parsed = submissionSchema.parse(body);
+      type = parsed.type;
+      title = parsed.title;
+      description = parsed.description;
+    }
 
     const submission = await prisma.userSubmission.create({
       data: {
         userId: session.user.id,
-        type,
+        type: type as any,
         title,
         description,
+        imageUrl,
       },
     });
 
@@ -55,6 +103,33 @@ export async function POST(request: NextRequest) {
       type,
       ipAddress,
     });
+
+    // Notify admins and team leads about new submission
+    try {
+      const managers = await prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN', 'TEAM_LEAD'] },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      const typeLabel = type === 'FEEDBACK' ? 'Feedback' : type === 'BUG_REPORT' ? 'Bug Report' : 'Feature Request';
+
+      for (const manager of managers) {
+        await createNotification({
+          userId: manager.id,
+          type: 'NEW_SUBMISSION',
+          title: 'New Submission Received',
+          message: `${session.user.name} submitted a new ${typeLabel}: ${title}`,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to send submission notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json(submission);
   } catch (error) {

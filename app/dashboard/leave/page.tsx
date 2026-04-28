@@ -259,15 +259,15 @@ export default function LeavePage() {
                   }
                 }
               }}
-              className="w-full rounded-2xl border-0 [--cell-size:2.15rem] sm:[--cell-size:2.5rem]"
+              className="w-full rounded-2xl border-0 [--cell-size:1.8rem] sm:[--cell-size:2rem] md:[--cell-size:2.15rem] lg:[--cell-size:2.5rem]"
               numberOfMonths={calendarMonths}
               classNames={{
                 root: 'w-full',
                 months: cn(
-                  'grid w-full gap-4',
+                  'grid w-full gap-2 sm:gap-4',
                   calendarMonths === 2 ? 'xl:grid-cols-2' : 'grid-cols-1'
                 ),
-                month: 'min-w-0',
+                month: 'min-w-0 flex-shrink-0',
                 table: 'w-full table-fixed border-collapse',
                 day: "h-full w-full aspect-square p-0 hover:bg-primary/10 transition-colors",
                 day_button: "h-full w-full aspect-square hover:bg-primary/10",

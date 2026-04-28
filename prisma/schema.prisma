@@ -166,6 +166,7 @@ model UserSubmission {
   status      SubmissionStatus @default(OPEN)
   priority    SubmissionPriority @default(MEDIUM)
   adminNote   String?
+  imageUrl    String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

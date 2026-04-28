@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Bug, Lightbulb, Loader2 } from 'lucide-react';
+import { MessageSquare, Bug, Lightbulb, Loader2, Upload, X } from 'lucide-react';
 import { showToast } from '@/components/shared/Toast';
 
 type SubmissionType = 'FEEDBACK' | 'BUG_REPORT' | 'FEATURE_REQUEST';
@@ -17,6 +17,33 @@ export function SubmissionModal() {
   const [type, setType] = useState<SubmissionType>('FEEDBACK');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5MB', 'error');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,10 +54,17 @@ export function SubmissionModal() {
 
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('type', type);
+      formData.append('title', title);
+      formData.append('description', description);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
       const response = await fetch('/api/submissions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, title, description }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -41,6 +75,7 @@ export function SubmissionModal() {
       setOpen(false);
       setTitle('');
       setDescription('');
+      removeImage();
     } catch (error) {
       showToast('Failed to submit. Please try again.', 'error');
     } finally {
@@ -127,6 +162,44 @@ export function SubmissionModal() {
               placeholder="Please provide details..."
               className="mt-2 min-h-[120px]"
             />
+          </div>
+          <div>
+            <Label htmlFor="image">Image (Optional)</Label>
+            <div className="mt-2">
+              {!imagePreview ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Upload size={24} className="text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Click to upload an image</p>
+                  <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-xl"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 p-2 bg-destructive text-white rounded-full hover:bg-destructive/90 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                id="image"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </div>
           </div>
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
