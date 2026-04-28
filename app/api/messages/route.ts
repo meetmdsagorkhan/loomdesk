@@ -8,6 +8,8 @@ import { consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { supabase } from '@/lib/supabase';
 import type { Prisma } from '@prisma/client';
 
+// Messages API with real-time broadcasting
+
 export const dynamic = 'force-dynamic';
 
 const createMessageSchema = z.object({
