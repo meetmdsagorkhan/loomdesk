@@ -61,6 +61,7 @@ export default function MemberReportForm() {
     status: 'SOLVED',
     pendingReason: '',
   });
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const handleFieldChange = (field: keyof EntryFormData, value: string) => {
     setEntryForm((prev) => ({ ...prev, [field]: value }));
@@ -69,19 +70,20 @@ export default function MemberReportForm() {
 
   const fetchReport = useCallback(async () => {
     try {
-      const response = await fetch('/api/reports/today');
+      const response = await fetch(`/api/reports?date=${selectedDate}`);
       if (!response.ok) {
         handleApiError('Failed to fetch report', 'Daily Report');
         return;
       }
       const data = await response.json();
-      setReport(data);
+      const reportData = data.reports?.[0] || null;
+      setReport(reportData);
     } catch (error) {
       handleApiError(error, 'Daily Report');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchReport();
@@ -355,7 +357,7 @@ export default function MemberReportForm() {
     <div className="space-y-8">
       <PageHeader
         badge="Daily Report"
-        title={format(new Date(), 'EEEE, MMMM d, yyyy')}
+        title={format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
         subtitle="Track your daily work entries, add tickets and chats, and submit your report for review."
         actions={
           <Badge
@@ -364,6 +366,19 @@ export default function MemberReportForm() {
           />
         }
       />
+
+      {/* Date Picker */}
+      <GlassCard variant="panel" padding="md">
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-foreground">Select Date:</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        </div>
+      </GlassCard>
 
       {isSubmitted && (
         <GlassCard variant="panel" padding="sm" className="border border-info/30 bg-info/10">

@@ -40,7 +40,7 @@ export default function ReportsPage() {
   const [mounted, setMounted] = useState(false);
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState('');
 
   const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
 
@@ -52,7 +52,9 @@ export default function ReportsPage() {
     if (!isManager) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/reports?date=${selectedDate}`);
+      const params = new URLSearchParams();
+      if (selectedDate) params.append('date', selectedDate);
+      const response = await fetch(`/api/reports?${params}`);
       const data = await response.json();
       setReports(data.reports || []);
     } catch (error) {

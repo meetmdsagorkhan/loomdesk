@@ -41,9 +41,9 @@ export default function QAPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('SUBMITTED');
+  const [selectedStatus, setSelectedStatus] = useState('');
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -237,9 +237,9 @@ export default function QAPage() {
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className={filterInputClass}
               >
+                <option value="">All Statuses</option>
                 <option value="SUBMITTED">Submitted</option>
                 <option value="DRAFT">Draft</option>
-                <option value="all">All</option>
               </select>
             </div>
 
