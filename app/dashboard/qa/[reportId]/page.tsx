@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { cn } from '@/lib/utils';
 
 type Feedback = {
   id: string;
@@ -41,6 +42,7 @@ type ReportEntry = {
 
 type ScoreEvent = {
   id: string;
+  entryId: string | null;
   severity: 'MINOR' | 'MAJOR';
   deduction: number;
   reason: string;
@@ -84,6 +86,15 @@ export default function QADetailPage() {
   const [isMarkingReviewed, setIsMarkingReviewed] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
+  const [reviewedEntries, setReviewedEntries] = useState<Set<string>>(new Set());
+  const [hideReviewed, setHideReviewed] = useState(false);
+
+  const isEntryReviewed = useCallback((entryId: string, feedbackLength: number) => {
+    const hasFeedback = feedbackLength > 0;
+    const hasDeduction = scoreEvents.some((event) => event.entryId === entryId);
+    const wasMarkedOkLocally = reviewedEntries.has(entryId);
+    return hasFeedback || hasDeduction || wasMarkedOkLocally;
+  }, [scoreEvents, reviewedEntries]);
 
   const { user } = useCurrentUser();
   const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
@@ -183,6 +194,11 @@ export default function QADetailPage() {
 
       await fetchReport();
       await fetchScoreEvents(report.user.id);
+      setReviewedEntries((prev) => {
+        const next = new Set(prev);
+        next.add(deductEntryId);
+        return next;
+      });
       setShowDeductModal(false);
       setDeductSeverity('MINOR');
       setDeductReason('');
@@ -218,6 +234,11 @@ export default function QADetailPage() {
       await fetchReport();
       setFeedbackComment('');
       setFeedbackEntryId(null);
+      setReviewedEntries((prev) => {
+        const next = new Set(prev);
+        next.add(entryId);
+        return next;
+      });
       showToast('Feedback added', 'success');
     } catch (error) {
       showToast('Failed to add feedback', 'error');
@@ -244,6 +265,11 @@ export default function QADetailPage() {
 
       await fetchReport();
       showToast('Marked as OK', 'success');
+      setReviewedEntries((prev) => {
+        const next = new Set(prev);
+        next.add(entryId);
+        return next;
+      });
     } catch (error) {
       showToast('Failed to mark as OK', 'error');
     } finally {
@@ -364,33 +390,54 @@ export default function QADetailPage() {
           <h2 className="text-lg font-medium text-foreground">Entries ({report.entries.length})</h2>
         </div>
         {/* Header Row */}
-        <div className="px-4 py-3 bg-white/10 dark:bg-slate-900/30 border-b border-white/15 grid grid-cols-[auto_1fr_auto_2fr] gap-4 items-center pl-14">
+        <div className="px-4 py-3 bg-white/10 dark:bg-slate-900/30 border-b border-white/15 grid grid-cols-[240px_1fr_120px_2fr] gap-4 items-center pl-14">
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Type</div>
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reference ID</div>
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Status</div>
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Note</div>
         </div>
         <div className="divide-y divide-white/15">
-          {report.entries.map((entry) => (
-            <div key={entry.id} className="border-b border-white/15 last:border-0">
-              <div className="p-4 flex items-center gap-4">
-                <button
-                  onClick={() => toggleEntry(entry.id)}
-                  className="rounded-lg p-2 transition-colors hover:bg-white/30 dark:hover:bg-white/10"
-                >
-                  {expandedEntries.has(entry.id) ? (
-                    <ChevronUp size={20} />
-                  ) : (
-                    <ChevronDown size={20} />
-                  )}
-                </button>
-                <div className="flex-1 grid grid-cols-[auto_1fr_auto_2fr] gap-4 items-center">
-                  <div>
-                    <Badge 
-                      variant={entry.type === 'TICKET' ? 'info' : entry.type === 'CHAT' ? 'success' : 'warning'} 
-                      label={entry.type} 
-                    />
-                  </div>
+          {report.entries.map((entry) => {
+            const reviewed = isEntryReviewed(entry.id, entry.feedback?.length || 0);
+            return (
+              <div key={entry.id} className="border-b border-white/15 last:border-0">
+                <div className="p-4 flex items-center gap-4">
+                    <button
+                      onClick={() => toggleEntry(entry.id)}
+                      className="rounded-lg p-2 transition-colors hover:bg-white/30 dark:hover:bg-white/10"
+                    >
+                      {expandedEntries.has(entry.id) ? (
+                        <ChevronUp size={20} />
+                      ) : (
+                        <ChevronDown size={20} />
+                      )}
+                    </button>
+                    <div className="flex-1 grid grid-cols-[240px_1fr_120px_2fr] gap-4 items-center">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={entry.type === 'TICKET' ? 'info' : entry.type === 'CHAT' ? 'success' : 'warning'} 
+                          label={entry.type} 
+                        />
+                        {(() => {
+                          const scoreEvent = scoreEvents.find((e) => e.entryId === entry.id);
+                          if (scoreEvent) {
+                            return (
+                              <span className="text-[10px] font-bold tracking-wider text-rose-400 bg-rose-500/15 px-2.5 py-1 rounded-full select-none shadow-sm flex items-center whitespace-nowrap">
+                                Mark Deducted -{scoreEvent.deduction}
+                              </span>
+                            );
+                          }
+                          if (reviewed) {
+                            const hasFeedback = entry.feedback && entry.feedback.length > 0;
+                            return (
+                              <span className="text-[10px] font-bold tracking-wider text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full select-none shadow-sm flex items-center whitespace-nowrap">
+                                {hasFeedback ? 'FEEDBACK' : 'MARKED OK'}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                   <div 
                     className="text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
                     onClick={() => toggleField(entry.id, 'referenceId')}
@@ -445,85 +492,92 @@ export default function QADetailPage() {
                     )}
 
                     {/* Add Feedback Form */}
-                    {feedbackEntryId === entry.id ? (
-                      <div className="mt-3 space-y-2">
-                        <textarea
-                          value={feedbackComment}
-                          onChange={(e) => setFeedbackComment(e.target.value)}
-                          placeholder="Add your feedback..."
-                          rows={2}
-                          className="w-full rounded-lg border border-white/20 bg-background/70 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddFeedback(entry.id)}
-                            disabled={isAddingFeedback || !feedbackComment.trim()}
-                          >
-                            {isAddingFeedback ? (
-                              <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                              'Add'
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setFeedbackEntryId(null);
-                              setFeedbackComment('');
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                    {isManager && report.status !== 'REVIEWED' && (
+                      feedbackEntryId === entry.id ? (
+                        <div className="mt-3 space-y-2">
+                          <textarea
+                            value={feedbackComment}
+                            onChange={(e) => setFeedbackComment(e.target.value)}
+                            placeholder="Add your feedback..."
+                            rows={2}
+                            className="w-full rounded-lg border border-white/20 bg-background/70 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddFeedback(entry.id)}
+                              disabled={isAddingFeedback || !feedbackComment.trim()}
+                            >
+                              {isAddingFeedback ? (
+                                <Loader2 size={16} className="animate-spin" />
+                              ) : (
+                                'Add'
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setFeedbackEntryId(null);
+                                setFeedbackComment('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-3"
-                        onClick={() => setFeedbackEntryId(entry.id)}
-                      >
-                        <MessageSquare size={14} className="mr-2" />
-                        Add Feedback
-                      </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3"
+                          onClick={() => setFeedbackEntryId(entry.id)}
+                        >
+                          <MessageSquare size={14} className="mr-2" />
+                          Add Feedback
+                        </Button>
+                      )
                     )}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 flex-wrap">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkOk(entry.id)}
-                      disabled={isMarkingOk}
-                    >
-                      {isMarkingOk ? (
-                        <Loader2 size={14} className="animate-spin mr-2" />
-                      ) : (
-                        <CheckCircle size={14} className="mr-2" />
-                      )}
-                      Mark OK
-                    </Button>
-                    {isManager && (
+                  {isManager && report.status !== 'REVIEWED' && (
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setDeductEntryId(entry.id);
-                          setShowDeductModal(true);
-                        }}
+                        variant="outline"
+                        onClick={() => handleMarkOk(entry.id)}
+                        disabled={isMarkingOk || reviewed}
                       >
-                        <MinusCircle size={14} className="mr-2" />
-                        Deduct Score
+                        {isMarkingOk ? (
+                          <Loader2 size={14} className="animate-spin mr-2" />
+                        ) : (
+                          <CheckCircle size={14} className="mr-2" />
+                        )}
+                        Mark OK
                       </Button>
-                    )}
-                  </div>
+                      {isManager && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setDeductEntryId(entry.id);
+                            setShowDeductModal(true);
+                          }}
+                          disabled={reviewed}
+                        >
+                          <MinusCircle size={14} className="mr-2" />
+                          Deduct Score
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               )}
-            </div>
-          ))}
+                </div>
+              )
+            })}
         </div>
       </GlassCard>
 

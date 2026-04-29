@@ -71,6 +71,7 @@ export default function DashboardPage() {
           icon: <FileText size={18} />,
           color: 'primary',
           change: 12,
+          href: '/reports',
         },
         {
           title: isAdminView ? 'Avg Score' : 'My Score',
@@ -78,6 +79,7 @@ export default function DashboardPage() {
           icon: <TrendingUp size={18} />,
           color: 'warning',
           change: 3,
+          href: '/scoring',
         },
         {
           title: isAdminView ? 'Deductions' : 'Pending Leaves',
@@ -85,6 +87,7 @@ export default function DashboardPage() {
           icon: isAdminView ? <CheckCircle size={18} /> : <CalendarDays size={18} />,
           color: 'accent',
           change: 0,
+          href: isAdminView ? '/qa' : '/leave',
         },
       ]
     : [];
@@ -127,14 +130,15 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4 md:p-6">
             {metricCards.map((metric) => (
-              <StatCard
-                key={metric.title}
-                title={metric.title}
-                value={metric.value}
-                icon={metric.icon}
-                color={metric.color}
-                change={metric.change}
-              />
+              <Link href={metric.href} key={metric.title} className="block transition-transform duration-200 hover:scale-[1.02] cursor-pointer">
+                <StatCard
+                  title={metric.title}
+                  value={metric.value}
+                  icon={metric.icon}
+                  color={metric.color}
+                  change={metric.change}
+                />
+              </Link>
             ))}
           </div>
         </GlassCard>

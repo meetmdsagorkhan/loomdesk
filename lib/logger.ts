@@ -5,7 +5,13 @@ function formatMetadata(metadata: Record<string, unknown> | undefined) {
     return undefined;
   }
 
-  const filteredEntries = Object.entries(metadata).filter(([, value]) => value !== undefined);
+  const filteredEntries = Object.entries(metadata).filter(([, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return false;
+    }
+    const strValue = String(value);
+    return strValue !== 'undefined' && strValue !== '' && strValue !== 'null';
+  });
 
   if (filteredEntries.length === 0) {
     return undefined;
@@ -21,7 +27,7 @@ function writeBrowserLog(
 ) {
   const payload = formatMetadata(metadata);
 
-  if (payload) {
+  if (payload && typeof payload === 'object' && Object.keys(payload).length > 0) {
     globalThis.console[level](`[loomdesk] ${message}`, payload);
     return;
   }

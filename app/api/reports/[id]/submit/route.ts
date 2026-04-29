@@ -51,6 +51,9 @@ export async function POST(
         status: 'SUBMITTED',
         submittedAt: new Date(),
       },
+      include: {
+        entries: true,
+      },
     });
 
     // Notify admins and team leads about new report submission

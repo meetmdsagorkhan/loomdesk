@@ -8,9 +8,25 @@ export type ApiError = {
 };
 
 export function handleApiError(error: unknown, context: string, showToastError: boolean = true) {
-  logger.error(context, {
-    error: error instanceof Error ? error.message : String(error),
-  });
+  let errorLogMessage: string | undefined;
+  
+  if (error instanceof Error) {
+    errorLogMessage = error.message;
+  } else if (typeof error === 'string') {
+    errorLogMessage = error;
+  } else if (typeof error === 'object' && error !== null) {
+    const apiError = error as ApiError;
+    errorLogMessage = apiError.message || apiError.error;
+  } else {
+    errorLogMessage = String(error);
+  }
+  
+  // Only log if there's a meaningful error message
+  if (errorLogMessage && errorLogMessage.trim() !== '' && errorLogMessage !== 'undefined') {
+    logger.error(context, {
+      error: errorLogMessage,
+    });
+  }
 
   let errorMessage = 'An unexpected error occurred';
 

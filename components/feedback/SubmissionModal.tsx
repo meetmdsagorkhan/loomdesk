@@ -107,13 +107,11 @@ export function SubmissionModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <button
-          className="glass-pill flex h-12 w-12 items-center justify-center rounded-full hover:scale-110 transition-transform"
-          title="Submit Feedback"
-        >
-          <MessageSquare size={20} className="text-foreground" />
-        </button>
+      <DialogTrigger
+        className="glass-pill flex h-12 w-12 items-center justify-center rounded-full hover:scale-110 transition-transform"
+        title="Submit Feedback"
+      >
+        <MessageSquare size={20} className="text-foreground" />
       </DialogTrigger>
       <DialogContent className="glass-panel rounded-3xl border-0 sm:max-w-[500px]">
         <DialogHeader>

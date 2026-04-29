@@ -264,8 +264,7 @@ export default function LeavePage() {
               classNames={{
                 root: 'w-full',
                 months: cn(
-                  'grid w-full gap-2 sm:gap-4',
-                  calendarMonths === 2 ? 'xl:grid-cols-2' : 'grid-cols-1'
+                  'w-full !flex !flex-row !gap-6 !items-start !justify-start'
                 ),
                 month: 'min-w-0 flex-shrink-0',
                 table: 'w-full table-fixed border-collapse',

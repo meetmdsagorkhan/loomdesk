@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Trash2, Loader2, AlertCircle, CheckCircle2, Pencil, Info, Calendar as CalendarIcon, History, ChevronDown } from 'lucide-react';
 import {
   flexRender,
   useReactTable,
@@ -10,7 +10,7 @@ import {
   ColumnDef,
 } from '@tanstack/react-table';
 import { entrySchema, type EntryFormData } from '@/lib/validations/report';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Badge from '@/components/shared/Badge';
@@ -19,6 +19,10 @@ import GlassCard from '@/components/shared/GlassCard';
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 type ReportEntry = {
   id: string;
@@ -57,11 +61,17 @@ export default function MemberReportForm() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof EntryFormData, string>>>({});
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [isUpdatingEntry, setIsUpdatingEntry] = useState(false);
-  const [updateForm, setUpdateForm] = useState<{ status: 'SOLVED' | 'PENDING'; pendingReason?: string }>({
+  const [updateForm, setUpdateForm] = useState<{ status: 'SOLVED' | 'PENDING'; pendingReason?: string; note?: string }>({
     status: 'SOLVED',
     pendingReason: '',
+    note: '',
   });
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [previousReports, setPreviousReports] = useState<Report[]>([]);
+  const [showPreviousReports, setShowPreviousReports] = useState(false);
+  const [expandedReports, setExpandedReports] = useState<Record<string, boolean>>({});
+  const [isFetchingPrevious, setIsFetchingPrevious] = useState(false);
+  const [visiblePreviousCount, setVisiblePreviousCount] = useState(5);
 
   const handleFieldChange = (field: keyof EntryFormData, value: string) => {
     setEntryForm((prev) => ({ ...prev, [field]: value }));
@@ -89,6 +99,29 @@ export default function MemberReportForm() {
     fetchReport();
   }, [fetchReport]);
 
+  const fetchPreviousReports = async () => {
+    setIsFetchingPrevious(true);
+    try {
+      const response = await fetch('/api/reports?status=SUBMITTED&limit=100');
+      if (!response.ok) {
+        handleApiError('Failed to fetch previous reports', 'Previous Reports');
+        return;
+      }
+      const data = await response.json();
+      setPreviousReports(data.reports || []);
+    } catch (error) {
+      handleApiError(error, 'Previous Reports');
+    } finally {
+      setIsFetchingPrevious(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showPreviousReports) {
+      fetchPreviousReports();
+    }
+  }, [showPreviousReports]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -109,6 +142,46 @@ export default function MemberReportForm() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchReport]);
+
+  const createReportForDate = async (date: string) => {
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        console.log('Report creation failed:', { status: response.status, result });
+        
+        // If report already exists, fetch the existing report instead of failing
+        if (response.status === 409) {
+          console.log('Handling 409 conflict, fetching existing report');
+          const existingReportResponse = await fetch(`/api/reports?date=${date}`);
+          if (existingReportResponse.ok) {
+            const existingData = await existingReportResponse.json();
+            console.log('Existing report data:', existingData);
+            return existingData.reports?.[0] || null;
+          }
+        }
+        
+        const errorMessage = result.error || 'Failed to create report';
+        if (errorMessage && errorMessage.trim() !== '') {
+          handleApiError(errorMessage, 'Daily Report');
+        }
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage && errorMessage.trim() !== '') {
+        handleApiError(errorMessage, 'Daily Report');
+      }
+      return null;
+    }
+  };
 
   const onAddEntry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -136,28 +209,41 @@ export default function MemberReportForm() {
       return;
     }
 
-    if (!report) return;
+    let currentReport = report;
+    
+    // Create a report if one doesn't exist for the selected date
+    if (!currentReport) {
+      currentReport = await createReportForDate(selectedDate);
+      if (!currentReport) {
+        return; // Error already handled in createReportForDate
+      }
+      setReport(currentReport);
+    }
 
     const data = parsed.data;
     setIsSubmittingEntry(true);
 
     try {
-      const response = await fetch(`/api/reports/${report.id}/entries`, {
+      const response = await fetch(`/api/reports/${currentReport.id}/entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
+      const result = await response.json();
+      
       if (!response.ok) {
-        const result = await response.json();
-        handleApiError(result.error || 'Failed to add entry', 'Daily Report');
+        const errorMessage = result.error || 'Failed to add entry';
+        if (errorMessage && errorMessage.trim() !== '') {
+          handleApiError(errorMessage, 'Daily Report');
+        }
         return;
       }
 
-      const newEntry = await response.json();
+      const newEntry = result;
       setReport({
-        ...report,
-        entries: [...report.entries, newEntry],
+        ...currentReport,
+        entries: [...(currentReport.entries || []), newEntry],
       });
 
       setEntryForm(defaultEntryForm);
@@ -166,7 +252,10 @@ export default function MemberReportForm() {
       showToast('Entry added to today\'s report', 'success');
       setTimeout(() => setShowSavedIndicator(false), 2000);
     } catch (error) {
-      handleApiError(error, 'Daily Report');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage && errorMessage.trim() !== '') {
+        handleApiError(errorMessage, 'Daily Report');
+      }
     } finally {
       setIsSubmittingEntry(false);
     }
@@ -187,7 +276,7 @@ export default function MemberReportForm() {
 
       setReport({
         ...report,
-        entries: report.entries.filter((entry) => entry.id !== entryId),
+        entries: (report.entries || []).filter((entry) => entry.id !== entryId),
       });
       setDeleteEntryId(null);
       showToast('Entry removed', 'success');
@@ -235,6 +324,7 @@ export default function MemberReportForm() {
         body: JSON.stringify({
           status: updateForm.status,
           pendingReason: updateForm.status === 'PENDING' ? updateForm.pendingReason : null,
+          note: updateForm.note || '',
         }),
       });
 
@@ -247,7 +337,7 @@ export default function MemberReportForm() {
       const updatedEntry = await response.json();
       setReport({
         ...report,
-        entries: report.entries.map((entry) =>
+        entries: (report.entries || []).map((entry) =>
           entry.id === entryId ? updatedEntry : entry
         ),
       });
@@ -266,6 +356,7 @@ export default function MemberReportForm() {
     setUpdateForm({
       status: entry.status,
       pendingReason: entry.pendingReason || '',
+      note: entry.note || '',
     });
   };
 
@@ -313,24 +404,29 @@ export default function MemberReportForm() {
     {
       accessorKey: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEditEntry(row.original)}
-            className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors"
-            title="Update status"
-          >
-            <CheckCircle2 size={16} />
-          </button>
-          <button
-            onClick={() => setDeleteEntryId(row.original.id)}
-            className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-            disabled={report?.status === 'SUBMITTED'}
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const isSubmitted = report?.status === 'SUBMITTED';
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onEditEntry(row.original)}
+              className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors cursor-pointer"
+              title="Update status"
+            >
+              <Pencil size={16} />
+            </button>
+            {!isSubmitted && (
+              <button
+                onClick={() => setDeleteEntryId(row.original.id)}
+                className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors cursor-pointer"
+                title="Delete entry"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -349,7 +445,7 @@ export default function MemberReportForm() {
   }
 
   const isSubmitted = report?.status === 'SUBMITTED';
-  const entryCount = report?.entries.length || 0;
+  const entryCount = report?.entries?.length || 0;
   const segmentClassName =
     'rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 px-4 py-3 text-center text-sm font-medium text-muted-foreground transition-all cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600 peer-focus-visible:ring-2 peer-focus-visible:ring-purple-500';
 
@@ -369,22 +465,184 @@ export default function MemberReportForm() {
 
       {/* Date Picker */}
       <GlassCard variant="panel" padding="md">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="text-sm font-medium text-foreground">Select Date:</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
+          <Popover>
+            <PopoverTrigger
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "w-[240px] justify-start text-left font-normal rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground",
+                !selectedDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(new Date(selectedDate), "PPP") : <span>Pick a date</span>}
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border border-white/10" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate ? (() => {
+                  const [y, m, d] = selectedDate.split('-').map(Number);
+                  return new Date(y, m - 1, d);
+                })() : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    setSelectedDate(`${year}-${month}-${day}`);
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant="outline"
+            className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground ml-auto sm:ml-0"
+            onClick={() => setShowPreviousReports(!showPreviousReports)}
+          >
+            <History className="mr-2 h-4 w-4" />
+            {showPreviousReports ? 'Hide Previous' : 'Previous Reports'}
+          </Button>
         </div>
       </GlassCard>
 
+      {/* Collapsible Previous Reports List */}
+      {showPreviousReports && (
+        <GlassCard variant="panel" padding="md" className="mt-4">
+          <h3 className="text-md font-semibold text-foreground mb-4">Submitted Reports</h3>
+          {isFetchingPrevious ? (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : previousReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center p-4">No previous reports found.</p>
+          ) : (
+            <div className="space-y-2">
+              {previousReports.slice(0, visiblePreviousCount).map((prevReport) => {
+                const isExpanded = expandedReports[prevReport.id];
+                return (
+                  <div
+                    key={prevReport.id}
+                    className="rounded-xl border border-white/10 bg-white/5 overflow-hidden transition-colors hover:bg-white/10"
+                  >
+                    {/* Minimized Header */}
+                    <div
+                      className="flex items-center justify-between p-3 cursor-pointer select-none"
+                      onClick={() =>
+                        setExpandedReports((prev) => ({
+                          ...prev,
+                          [prevReport.id]: !prev[prevReport.id],
+                        }))
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold text-foreground">
+                          {format(new Date(prevReport.date), 'PPP')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="success"
+                          label={`${prevReport.entries?.length || 0} Entries`}
+                        />
+                        <ChevronDown
+                          className={cn(
+                            'h-4 w-4 text-muted-foreground transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="border-t border-white/10 bg-white/5 p-3 space-y-2">
+                        {prevReport.entries && prevReport.entries.length > 0 ? (
+                          prevReport.entries.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-start justify-between gap-3 p-2 rounded-lg bg-white/5 text-sm"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">
+                                    {entry.type}
+                                  </span>
+                                  {entry.referenceId && (
+                                    <span className="font-mono text-xs text-muted-foreground">
+                                      {entry.referenceId}
+                                    </span>
+                                  )}
+                                  <span
+                                    className={cn(
+                                      'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                                      entry.status === 'SOLVED'
+                                        ? 'bg-green-500/10 text-green-500'
+                                        : 'bg-yellow-500/10 text-yellow-500'
+                                    )}
+                                  >
+                                    {entry.status}
+                                  </span>
+                                </div>
+                                <p className="text-foreground mt-1 text-xs">
+                                  {entry.note}
+                                </p>
+                                {entry.pendingReason && (
+                                  <p className="text-yellow-500 mt-1 text-[11px] bg-yellow-500/10 p-1.5 rounded">
+                                    Reason: {entry.pendingReason}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center p-2">
+                            No entries in this report.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              
+              {previousReports.length > visiblePreviousCount && (
+                <div className="flex justify-center mt-3 pt-2 border-t border-white/5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-primary hover:text-primary-foreground hover:bg-primary/20 rounded-xl"
+                    onClick={() => setVisiblePreviousCount((prev) => prev + 5)}
+                  >
+                    See More
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </GlassCard>
+      )}
+
       {isSubmitted && (
-        <GlassCard variant="panel" padding="sm" className="border border-info/30 bg-info/10">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={20} className="text-info" />
-            <span className="text-sm text-foreground">Report submitted. You can still update ticket statuses using the edit button.</span>
+        <GlassCard 
+          variant="panel" 
+          padding="md" 
+          className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl shadow-[0_8px_32px_rgba(16,185,129,0.05)] rounded-2xl"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
+              <Info size={18} />
+            </div>
+            <div className="flex flex-col space-y-1">
+              <span className="text-sm font-semibold text-foreground tracking-wide">Report Submitted</span>
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                Your daily entries are locked. You can still update individual ticket statuses using the pencil icon below.
+              </span>
+            </div>
           </div>
         </GlassCard>
       )}
@@ -393,8 +651,9 @@ export default function MemberReportForm() {
         <GlassCard variant="panel" padding="none" className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">
             <h2 className="text-lg font-semibold text-foreground">Add Entry</h2>
-            <span className="glass-pill rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
-              Saved to database
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
+              <CheckCircle2 size={13} className="text-emerald-500" />
+              Auto Saved
             </span>
           </div>
           <form onSubmit={onAddEntry} className="space-y-5 p-5 md:p-6">
@@ -629,18 +888,112 @@ export default function MemberReportForm() {
         confirmLabel="Submit"
       />
 
-      <ConfirmModal
-        isOpen={!!editingEntryId}
-        onCancel={() => {
-          setEditingEntryId(null);
-          setUpdateForm({ status: 'SOLVED', pendingReason: '' });
+      <Dialog 
+        open={!!editingEntryId} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingEntryId(null);
+            setUpdateForm({ status: 'SOLVED', pendingReason: '', note: '' });
+          }
         }}
-        onConfirm={() => editingEntryId && onUpdateEntryStatus(editingEntryId)}
-        title="Update Ticket Status"
-        description={`Update the status of this ticket. Current status: ${updateForm.status}. ${updateForm.status === 'PENDING' ? 'Pending reason: ' + (updateForm.pendingReason || 'None') : ''}`}
-        confirmLabel="Update"
-        variant="default"
-      />
+      >
+        <DialogContent className="sm:max-w-[425px] p-6 border-white/10">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg font-semibold text-foreground">Update Ticket Status</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Modify current state variables and provide situational context.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="mb-2 block text-xs font-semibold text-foreground tracking-wide">Status</Label>
+              <div className="flex gap-2">
+                <label className="flex-1">
+                  <input
+                    type="radio"
+                    name="update-status"
+                    value="SOLVED"
+                    checked={updateForm.status === 'SOLVED'}
+                    onChange={(e) => setUpdateForm(prev => ({ ...prev, status: e.target.value as 'SOLVED' | 'PENDING' }))}
+                    className="peer sr-only"
+                  />
+                  <div className={segmentClassName}>
+                    Solved
+                  </div>
+                </label>
+                <label className="flex-1">
+                  <input
+                    type="radio"
+                    name="update-status"
+                    value="PENDING"
+                    checked={updateForm.status === 'PENDING'}
+                    onChange={(e) => setUpdateForm(prev => ({ ...prev, status: e.target.value as 'SOLVED' | 'PENDING' }))}
+                    className="peer sr-only"
+                  />
+                  <div className={segmentClassName}>
+                    Pending
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {updateForm.status === 'PENDING' && (
+              <div>
+                <Label className="mb-2 block text-xs font-semibold text-foreground tracking-wide">Pending Reason</Label>
+                <Input
+                  type="text"
+                  value={updateForm.pendingReason}
+                  onChange={(e) => setUpdateForm(prev => ({ ...prev, pendingReason: e.target.value }))}
+                  placeholder="Why is it pending?"
+                  className="w-full text-sm"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="mb-2 block text-xs font-semibold text-foreground tracking-wide">Note <span className="text-primary">*</span></Label>
+              <textarea
+                value={updateForm.note}
+                onChange={(e) => setUpdateForm(prev => ({ ...prev, note: e.target.value }))}
+                placeholder="Provide notes/details regarding the current status change."
+                className="w-full min-h-[80px] rounded-xl border border-white/10 bg-slate-900/10 dark:bg-slate-900/50 p-3 text-sm text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30 focus:outline-none backdrop-blur-sm transition-all placeholder:text-muted-foreground/60 leading-relaxed"
+                required
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setEditingEntryId(null);
+                setUpdateForm({ status: 'SOLVED', pendingReason: '', note: '' });
+              }}
+              className="rounded-xl px-5 text-sm"
+              disabled={isUpdatingEntry}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!updateForm.note || updateForm.note.trim() === '') {
+                  showToast('Please provide a note for this change.', 'error');
+                  return;
+                }
+                if (editingEntryId) {
+                  onUpdateEntryStatus(editingEntryId);
+                }
+              }}
+              className="rounded-xl px-5 text-sm bg-primary hover:bg-primary/90 text-white shadow-lg"
+              disabled={isUpdatingEntry}
+            >
+              {isUpdatingEntry ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

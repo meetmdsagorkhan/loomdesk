@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { Loader2, Filter, Eye, FileText } from 'lucide-react';
+import { Loader2, Filter, Eye, FileText, Calendar as CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   flexRender,
@@ -15,8 +15,11 @@ import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
 import Badge from '@/components/shared/Badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import MemberReportForm from './MemberReportForm';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -175,12 +178,36 @@ export default function ReportsPage() {
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-full md:w-64">
             <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Filter by Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            <Popover>
+              <PopoverTrigger
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full justify-start text-left font-normal rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground py-2.5",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(new Date(selectedDate), "PPP") : <span>Pick a date</span>}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border border-white/10" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate ? (() => {
+                    const [y, m, d] = selectedDate.split('-').map(Number);
+                    return new Date(y, m - 1, d);
+                  })() : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      setSelectedDate(`${year}-${month}-${day}`);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <Button onClick={fetchTeamReports} disabled={isLoading} className="rounded-xl">
             {isLoading ? <Loader2 size={16} className="animate-spin mr-2" /> : <Filter size={16} className="mr-2" />}

@@ -30,30 +30,30 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--success-bg": "hsl(142.1, 76.2%, 36.3%)",
-          "--success-text": "hsl(0, 0%, 98%)",
-          "--success-border": "hsl(142.1, 76.2%, 36.3%)",
-          "--error-bg": "hsl(0, 84.2%, 60.2%)",
-          "--error-text": "hsl(0, 0%, 98%)",
-          "--error-border": "hsl(0, 84.2%, 60.2%)",
-          "--warning-bg": "hsl(38, 92%, 50%)",
-          "--warning-text": "hsl(0, 0%, 98%)",
-          "--warning-border": "hsl(38, 92%, 50%)",
-          "--info-bg": "hsl(217, 91%, 60%)",
-          "--info-text": "hsl(0, 0%, 98%)",
-          "--info-border": "hsl(217, 91%, 60%)",
+          "--normal-bg": "var(--glass-bg)",
+          "--normal-text": "hsl(var(--foreground))",
+          "--normal-border": "var(--glass-border-soft)",
+          "--success-bg": "hsla(142, 71%, 45%, 0.15)",
+          "--success-text": "hsl(var(--foreground))",
+          "--success-border": "hsla(142, 71%, 45%, 0.3)",
+          "--error-bg": "hsla(0, 84.2%, 60.2%, 0.15)",
+          "--error-text": "hsl(var(--foreground))",
+          "--error-border": "hsla(0, 84.2%, 60.2%, 0.3)",
+          "--warning-bg": "hsla(38, 92%, 50%, 0.15)",
+          "--warning-text": "hsl(var(--foreground))",
+          "--warning-border": "hsla(38, 92%, 50%, 0.3)",
+          "--info-bg": "hsla(199, 89%, 48%, 0.15)",
+          "--info-text": "hsl(var(--foreground))",
+          "--info-border": "hsla(199, 89%, 48%, 0.3)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
-          description: "cn-toast-description",
-          actionButton: "cn-toast-action-button",
-          cancelButton: "cn-toast-cancel-button",
+          toast: "glass-card group toast group-[.toaster]:rounded-2xl group-[.toaster]:shadow-lg group-[.toaster]:backdrop-blur-md group-[.toaster]:p-4 group-[.toaster]:text-sm group-[.toaster]:text-foreground group-[.toaster]:border-white/10",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-xl",
+          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-xl",
         },
       }}
       {...props}

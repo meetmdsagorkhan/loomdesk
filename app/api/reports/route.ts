@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const whereClause: {
       userId?: string;
       status?: 'SUBMITTED' | 'DRAFT';
-      date?: {
+      date?: Date | {
         gte: Date;
         lt: Date;
       };
@@ -46,15 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (date) {
-      const targetDate = new Date(date);
-      targetDate.setHours(0, 0, 0, 0);
-      const nextDay = new Date(targetDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      whereClause.date = {
-        gte: targetDate,
-        lt: nextDay,
-      };
+      whereClause.date = new Date(date);
     }
 
     const [reports, total] = await Promise.all([
@@ -67,6 +59,9 @@ export async function GET(request: NextRequest) {
               name: true,
               email: true,
             },
+          },
+          entries: {
+            orderBy: { createdAt: 'asc' },
           },
           _count: {
             select: { entries: true },
@@ -142,6 +137,9 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         date: new Date(date),
         status: 'DRAFT',
+      },
+      include: {
+        entries: true,
       },
     });
 
