@@ -41,8 +41,8 @@ export default function MessagesPage() {
         const response = await fetch('/api/users');
         if (response.ok) {
           const data = await response.json();
-          // Filter out the current user and ADMIN users
-          setMembers(data.users?.filter((m: User) => m.id !== user.id && m.role !== 'ADMIN') || []);
+          // Filter out the current user
+          setMembers(data.users?.filter((m: User) => m.id !== user.id) || []);
         }
       } catch (error) {
         handleApiError('Failed to fetch members', 'Messages');

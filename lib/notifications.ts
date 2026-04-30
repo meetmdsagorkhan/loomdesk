@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { prisma } from '@/lib/db';
 
 export type AppNotification = {
   id: string;
@@ -41,14 +42,26 @@ export async function createNotification(input: {
     return { success: false as const, reason: 'disabled' as const };
   }
 
-  const { error } = await supabase.from('notifications').insert({
-    user_id: input.userId,
-    type: input.type,
-    title: input.title,
-    message: input.message,
-  });
+  try {
+    const notification = await prisma.notification.create({
+      data: {
+        userId: input.userId,
+        type: input.type,
+        title: input.title,
+        message: input.message,
+      },
+    });
 
-  if (error) {
+    if (supabase) {
+      supabase.channel(`notifications:${input.userId}`).send({
+        type: 'broadcast',
+        event: 'new_notification',
+        payload: notification
+      });
+    }
+
+    return { success: true as const };
+  } catch (error) {
     throw error;
   }
 

@@ -67,7 +67,8 @@ export default function MySchedulePage() {
   const getShiftForDay = (date: Date) => {
     return assignments.find((assignment) => {
       const start = new Date(assignment.startDate);
-      const end = new Date(assignment.endDate);
+      // Treat null endDate as the maximum possible date (until further notice)
+      const end = assignment.endDate ? new Date(assignment.endDate) : new Date(8640000000000000);
       return isSameDay(date, start) || (date >= start && date <= end);
     });
   };

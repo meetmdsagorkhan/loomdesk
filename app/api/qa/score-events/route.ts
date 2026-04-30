@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp, consumeRateLimitPersistent } from '@/lib/rate-limit';
 import { createNotification } from '@/lib/notifications';
+import { startOfMonth } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
+    const currentMonthStart = startOfMonth(new Date());
+
     const scoreEvents = await prisma.scoreEvent.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      },
       include: {
         user: {
           select: {
@@ -114,8 +122,14 @@ export async function POST(request: NextRequest) {
     const deduction = severity === 'MINOR' ? 0.5 : 1.0;
 
     // Calculate current score for user
+    const currentMonthStart = startOfMonth(new Date());
     const existingScoreEvents = await prisma.scoreEvent.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        createdAt: {
+          gte: currentMonthStart
+        }
+      },
       take: 100,
     });
 

@@ -91,9 +91,39 @@ export function useChat(
       )
       .subscribe();
 
+    // Polling fallback mechanism
+    const intervalId = window.setInterval(async () => {
+      try {
+        const isChannel = roomId.startsWith('channel:');
+        const endpoint = isChannel
+          ? `/api/messages?channel=${roomId.replace('channel:', '')}`
+          : `/api/messages?userId=${roomId.replace('user:', '')}`;
+          
+        const response = await fetch(endpoint);
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedMessages = data.messages || [];
+          setMessages((prev) => {
+            const newMessages = fetchedMessages.filter(
+              (m: ChatMessage) => !prev.some((p) => p.id === m.id)
+            );
+            if (newMessages.length > 0) {
+              return [...prev, ...newMessages].sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              );
+            }
+            return prev;
+          });
+        }
+      } catch (e) {
+        // Ignore polling errors
+      }
+    }, 10000);
+
     return () => {
-      client.removeChannel(channel);
+      if (client) client.removeChannel(channel);
       channelRef.current = null;
+      window.clearInterval(intervalId);
     };
   }, [roomId, currentUser]);
 

@@ -17,8 +17,8 @@ interface Notification {
   type: string;
   title: string;
   message: string;
-  is_read: boolean;
-  created_at: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
@@ -60,7 +60,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
       const data = await response.json();
       console.log('Notifications data:', data);
       setNotifications(data.notifications || []);
-      setUnreadCount((data.notifications || []).filter((n: Notification) => !n.is_read).length);
+      setUnreadCount((data.notifications || []).filter((n: Notification) => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       // Silently fail - notifications are optional
@@ -98,7 +98,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
       if (!response.ok) return;
       fetchNotifications();
 
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
       // Silently fail - notification read status is optional
@@ -108,7 +108,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.is_read) {
+    if (!notification.read) {
       await markAsRead(notification.id);
     }
 
@@ -183,8 +183,9 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
         >
           <Bell size={20} className="text-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground shadow-lg backdrop-blur-sm">
-              {unreadCount}
+            <span className="absolute top-2 right-2 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive border-2 border-background"></span>
             </span>
           )}
         </button>
@@ -229,7 +230,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
                         <p className="text-sm font-medium text-foreground truncate">
                           {notification.title}
                         </p>
-                        {!notification.is_read && (
+                        {!notification.read && (
                           <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
                         )}
                       </div>
@@ -237,7 +238,7 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                       </p>
                     </div>
                   </div>

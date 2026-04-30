@@ -93,7 +93,8 @@ export async function GET(request: NextRequest) {
           status: 'PENDING',
         },
       }),
-      prisma.reportEntry.findMany({
+      prisma.reportEntry.groupBy({
+        by: ['type'],
         where: {
           report: {
             userId: { in: userIds },
@@ -104,8 +105,8 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        select: {
-          type: true,
+        _count: {
+          _all: true,
         },
       }),
     ]);
@@ -175,8 +176,8 @@ export async function GET(request: NextRequest) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    const tickets = entries.filter((entry: { type: string }) => entry.type === 'TICKET').length;
-    const chats = entries.filter((entry: { type: string }) => entry.type === 'CHAT').length;
+    const tickets = entries.find((e: { type: string; _count: { _all: number } }) => e.type === 'TICKET')?._count._all ?? 0;
+    const chats = entries.find((e: { type: string; _count: { _all: number } }) => e.type === 'CHAT')?._count._all ?? 0;
     const allScores = reports.map((report: { id: string }) => getReportScore(report.id, reportScoreMap));
 
     return NextResponse.json({

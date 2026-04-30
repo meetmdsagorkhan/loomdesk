@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import {
@@ -90,8 +91,6 @@ type AnalyticsData = {
 function AnalyticsContent() {
   const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState('30days');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -101,112 +100,78 @@ function AnalyticsContent() {
     setMounted(true);
   }, []);
 
-  const fetchAnalytics = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      let startDate: string | undefined;
-      let endDate: string | undefined;
-
-      const now = new Date();
-
-      switch (dateRange) {
-        case '7days':
-          startDate = subDays(now, 7).toISOString().split('T')[0];
-          endDate = now.toISOString().split('T')[0];
-          break;
-        case '30days':
-          startDate = subDays(now, 30).toISOString().split('T')[0];
-          endDate = now.toISOString().split('T')[0];
-          break;
-        case 'thisMonth':
-          startDate = startOfMonth(now).toISOString().split('T')[0];
-          endDate = endOfMonth(now).toISOString().split('T')[0];
-          break;
-        case 'custom':
-          startDate = customStart;
-          endDate = customEnd;
-          break;
-      }
-
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-
-      const response = await fetch(`/api/analytics/summary?${params}`);
-      
-      if (!response.ok) {
-        handleApiError('Failed to fetch analytics data', 'Analytics Dashboard');
-        return;
-      }
-      
-      const data = await response.json();
-      setAnalytics(data);
-
-      // Fetch ticket ratios
-      const dailyResponse = await fetch('/api/ticket-ratios?period=daily');
-      const weeklyResponse = await fetch('/api/ticket-ratios?period=weekly');
-      const monthlyResponse = await fetch('/api/ticket-ratios?period=monthly');
-
-      if (dailyResponse.ok && weeklyResponse.ok && monthlyResponse.ok) {
-        const daily = await dailyResponse.json();
-        const weekly = await weeklyResponse.json();
-        const monthly = await monthlyResponse.json();
-
-        setAnalytics(prev => ({
-          ...prev!,
-          ticketRatios: {
-            daily,
-            weekly,
-            monthly,
-          },
-        }));
-      }
-    } catch (error) {
-      handleApiError(error, 'Analytics Dashboard');
-      setAnalytics(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dateRange, customStart, customEnd]);
+  const isManager = user && (isAdmin({ user }) || isTeamLead({ user }));
 
   useEffect(() => {
     if (userLoading) return;
     if (!mounted) return;
 
-    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) {
+    if (!isManager) {
       router.push('/dashboard');
-      return;
+    }
+  }, [userLoading, mounted, isManager, router]);
+
+  const getParams = () => {
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+
+    const now = new Date();
+
+    switch (dateRange) {
+      case '7days':
+        startDate = subDays(now, 7).toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case '30days':
+        startDate = subDays(now, 30).toISOString().split('T')[0];
+        endDate = now.toISOString().split('T')[0];
+        break;
+      case 'thisMonth':
+        startDate = startOfMonth(now).toISOString().split('T')[0];
+        endDate = endOfMonth(now).toISOString().split('T')[0];
+        break;
+      case 'custom':
+        startDate = customStart;
+        endDate = customEnd;
+        break;
     }
 
-    fetchAnalytics();
-  }, [user, userLoading, router, mounted, fetchAnalytics]);
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return params;
+  };
 
-  useEffect(() => {
-    if (!mounted || userLoading) return;
-    if (!user || (!isAdmin({ user }) && !isTeamLead({ user }))) return;
+  const fetcher = async (url: string) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch');
+    return res.json();
+  };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchAnalytics();
-      }
-    };
+  const { data: summaryData, error: summaryError, isLoading: summaryLoading } = useSWR(
+    isManager && mounted ? `/api/analytics/summary?${getParams().toString()}` : null,
+    fetcher,
+    { refreshInterval: 30000, revalidateOnFocus: true }
+  );
 
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchAnalytics();
-      }
-    }, 30000);
+  const { data: dailyTickets } = useSWR(isManager && mounted ? '/api/ticket-ratios?period=daily' : null, fetcher);
+  const { data: weeklyTickets } = useSWR(isManager && mounted ? '/api/ticket-ratios?period=weekly' : null, fetcher);
+  const { data: monthlyTickets } = useSWR(isManager && mounted ? '/api/ticket-ratios?period=monthly' : null, fetcher);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+  const isLoading = userLoading || !mounted || summaryLoading;
+  const hasError = summaryError;
 
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [mounted, userLoading, user, fetchAnalytics]);
+  const analytics = summaryData ? {
+    ...summaryData,
+    ticketRatios: dailyTickets && weeklyTickets && monthlyTickets ? {
+      daily: dailyTickets,
+      weekly: weeklyTickets,
+      monthly: monthlyTickets,
+    } : null,
+  } : null;
 
   // Prevent SSR rendering
-  if (!mounted) {
+  if (!mounted || userLoading || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -222,7 +187,7 @@ function AnalyticsContent() {
     );
   }
 
-  if (!analytics) {
+  if (hasError || (!analytics && !isLoading)) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -232,6 +197,8 @@ function AnalyticsContent() {
       </div>
     );
   }
+
+  if (!analytics) return null;
 
   const getTooltipValue = (
     value: number | string | readonly (number | string)[] | undefined

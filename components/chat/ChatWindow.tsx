@@ -119,7 +119,6 @@ export default function ChatWindow({ contactId, contactName, setSelectedContact 
 
   const handleMessageSent = (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
-    broadcastMessage(message);
     setReplyToMessage(null);
   };
 

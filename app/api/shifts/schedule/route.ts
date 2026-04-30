@@ -20,11 +20,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Admin/Lead can see all schedules, members can only see their own
-    const whereClause: {
-      userId?: string;
-      startDate?: { lte: Date };
-      endDate?: { gte: Date };
-    } = isTeamLead(session)
+    const whereClause: any = isTeamLead(session)
       ? {}
       : { userId: session.user.id };
 
@@ -34,7 +30,10 @@ export async function GET(request: NextRequest) {
 
     if (startDate && endDate) {
       whereClause.startDate = { lte: new Date(endDate) };
-      whereClause.endDate = { gte: new Date(startDate) };
+      whereClause.OR = [
+        { endDate: { gte: new Date(startDate) } },
+        { endDate: null }
+      ];
     }
 
     const assignments = await prisma.shiftAssignment.findMany({

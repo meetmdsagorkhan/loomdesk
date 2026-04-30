@@ -119,6 +119,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Date is required' }, { status: 400 });
     }
 
+    const reportDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    reportDate.setHours(0, 0, 0, 0);
+
+    if (reportDate.getTime() !== today.getTime()) {
+      return NextResponse.json({ error: 'New reports can only be created for the current date' }, { status: 400 });
+    }
+
     // Check if report already exists for this date
     const existingReport = await prisma.report.findFirst({
       where: {

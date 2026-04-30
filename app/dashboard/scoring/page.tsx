@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Award, Loader2, Target, Trophy, Users, Star } from 'lucide-react';
+import { TrendingUp, Award, Loader2, Target, Trophy, Users, Star, AlertCircle } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { format } from 'date-fns';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
@@ -36,6 +36,7 @@ type RecentScore = {
 
 type ScoringData = {
   currentScore: number;
+  monthlyScore: number;
   totalReports: number;
   averageScore: number;
   rank: number;
@@ -195,10 +196,19 @@ export default function ScoringPage() {
       ) : (
         <>
           {/* Member View: Stats */}
+          {personalData && personalData.monthlyScore < 90 && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl flex items-start gap-3 shadow-sm backdrop-blur-sm">
+              <AlertCircle size={20} className="mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-bold tracking-tight">Danger Zone</p>
+                <p className="text-xs mt-1 opacity-90">Your monthly score has fallen below 90. Consistent low scores may lead to mandatory training or a final warning.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Current Score"
-              value={personalData?.currentScore || 0}
+              title="Monthly Score"
+              value={personalData?.monthlyScore || 0}
               icon={<Target size={18} />}
               color="primary"
             />

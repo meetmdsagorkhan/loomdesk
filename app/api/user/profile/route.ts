@@ -20,6 +20,7 @@ const updateProfileSchema = z.object({
   position: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
   company: z.string().optional().nullable(),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and hyphens").optional().nullable(),
   joiningDate: z.string().optional().nullable().transform((val) => val ? new Date(val) : val),
 });
 
@@ -37,6 +38,7 @@ export async function GET() {
         id: true,
         email: true,
         emailVerifiedAt: true,
+        username: true,
         name: true,
         role: true,
         image: true,
@@ -96,6 +98,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (profileUpdates.username) {
+      const existingUser = await prisma.user.findUnique({
+        where: { username: profileUpdates.username },
+      });
+
+      if (existingUser && existingUser.id !== session.user.id) {
+        return NextResponse.json({ error: "Username already taken" }, { status: 400 });
+      }
+    }
+
     if ((currentPassword && !newPassword) || (!currentPassword && newPassword)) {
       return NextResponse.json(
         { error: "Provide both current and new password to change your password" },
@@ -139,6 +151,7 @@ export async function PATCH(request: NextRequest) {
         id: true,
         email: true,
         emailVerifiedAt: true,
+        username: true,
         name: true,
         role: true,
         image: true,
