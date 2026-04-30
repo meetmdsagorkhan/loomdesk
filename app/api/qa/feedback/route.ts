@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
           select: {
             userId: true,
             date: true,
+            status: true,
           },
         },
       },
@@ -63,6 +64,11 @@ export async function POST(request: NextRequest) {
 
     if (!entry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
+    }
+
+    // Check if the report is in SUBMITTED status
+    if (entry.report.status !== 'SUBMITTED') {
+      return NextResponse.json({ error: 'Only entries from submitted reports can receive feedback' }, { status: 400 });
     }
 
     // Create feedback

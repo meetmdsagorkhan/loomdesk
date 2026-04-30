@@ -22,6 +22,20 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const params = await context.params;
     const { id: reportId } = params;
 
+    // Check if report exists and is in SUBMITTED status
+    const existingReport = await prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true },
+    });
+
+    if (!existingReport) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+
+    if (existingReport.status !== 'SUBMITTED') {
+      return NextResponse.json({ error: 'Only submitted reports can be marked as reviewed' }, { status: 400 });
+    }
+
     // Update report status to REVIEWED
     const report = await prisma.report.update({
       where: { id: reportId },
