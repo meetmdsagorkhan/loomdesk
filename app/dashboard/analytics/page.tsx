@@ -161,7 +161,7 @@ function AnalyticsContent() {
   const isLoading = userLoading || !mounted || summaryLoading;
   const hasError = summaryError;
 
-  const analytics = summaryData ? {
+  const analytics: AnalyticsData | null = summaryData ? {
     ...summaryData,
     ticketRatios: dailyTickets && weeklyTickets && monthlyTickets ? {
       daily: dailyTickets,
