@@ -6,7 +6,14 @@
 
 import { Resend } from 'resend';
 import { format } from 'date-fns';
-import type { Booking } from '@prisma/client';
+import type { Booking, EventType, User } from '@prisma/client';
+
+// Custom type for booking with relations
+export type BookingWithDetails = Booking & {
+  eventType: EventType & {
+    user: User;
+  };
+};
 
 // Lazy initialization of Resend client
 function getResendClient() {
@@ -20,7 +27,7 @@ function getResendClient() {
  * Generate .ics calendar file content
  */
 export function generateICSFile(
-  booking: Booking,
+  booking: BookingWithDetails,
   organizerName: string,
   organizerEmail: string
 ): string {
@@ -58,11 +65,11 @@ export function generateICSFile(
  * Send booking confirmation email to both host and invitee
  */
 export async function sendBookingConfirmationEmail(
-  booking: any,
+  booking: BookingWithDetails,
   isReschedule = false
 ): Promise<void> {
   const hostName = booking.eventType?.user?.name || 'Host';
-  const hostEmail = booking.eventType?.user?.email;
+  const hostEmail = booking.eventType?.user?.email || '';
   const inviteeName = booking.name;
   const inviteeEmail = booking.email;
   const eventTitle = booking.eventType?.title || 'Meeting';
@@ -233,12 +240,12 @@ export async function sendBookingConfirmationEmail(
  * Send booking cancellation email to both host and invitee
  */
 export async function sendBookingCancellationEmail(
-  booking: any,
+  booking: BookingWithDetails,
   reason?: string,
   cancelledByHost = false
 ): Promise<void> {
   const hostName = booking.eventType?.user?.name || 'Host';
-  const hostEmail = booking.eventType?.user?.email;
+  const hostEmail = booking.eventType?.user?.email || '';
   const inviteeName = booking.name;
   const inviteeEmail = booking.email;
   const eventTitle = booking.eventType?.title || 'Meeting';
