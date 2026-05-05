@@ -140,6 +140,15 @@ export default function SchedulingPage() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingStatus, setBookingStatus] = useState<'CONFIRMED' | 'ALL'>('CONFIRMED');
 
+  // Availability State
+  const [availability, setAvailability] = useState<any[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [preferences, setPreferences] = useState<any>(null);
+  const [showAvailabilityForm, setShowAvailabilityForm] = useState(false);
+  const [availabilityDay, setAvailabilityDay] = useState('MONDAY');
+  const [availabilityStart, setAvailabilityStart] = useState('09:00');
+  const [availabilityEnd, setAvailabilityEnd] = useState('17:00');
+
   // Copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -202,7 +211,8 @@ export default function SchedulingPage() {
 
   useEffect(() => {
     if (tab === 'bookings') fetchBookings();
-  }, [tab, fetchBookings]);
+    if (tab === 'availability') fetchAvailability();
+  }, [tab, fetchBookings, fetchAvailability]);
 
   // Handle OAuth callback params
   useEffect(() => {
@@ -312,6 +322,50 @@ export default function SchedulingPage() {
       body: JSON.stringify({ status: 'CANCELLED' }),
     });
     fetchBookings();
+  };
+
+  const addAvailability = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/scheduling/availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayOfWeek: availabilityDay,
+          startTime: availabilityStart,
+          endTime: availabilityEnd,
+          isAvailable: true
+        }),
+      });
+      if (res.ok) {
+        setShowAvailabilityForm(false);
+        fetchAvailability();
+      }
+    } catch (error) {
+      console.error('Failed to add availability:', error);
+    }
+  };
+
+  const deleteAvailability = async (id: string) => {
+    if (!confirm('Delete this availability slot?')) return;
+    await fetch(`/api/scheduling/availability/${id}`, { method: 'DELETE' });
+    fetchAvailability();
+  };
+
+  const updatePreferences = async (updates: any) => {
+    try {
+      const res = await fetch('/api/scheduling/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPreferences(data);
+      }
+    } catch (error) {
+      console.error('Failed to update preferences:', error);
+    }
   };
 
   const copyLink = (slug: string) => {
@@ -450,7 +504,7 @@ export default function SchedulingPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/5 p-1 w-fit">
-        {(['events', 'bookings'] as const).map((t) => (
+        {(['events', 'bookings', 'availability'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -461,8 +515,8 @@ export default function SchedulingPage() {
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/8'
             )}
           >
-            {t === 'events' ? <Calendar size={14} /> : <CalendarCheck size={14} />}
-            {t === 'events' ? 'Event Types' : 'Bookings'}
+            {t === 'events' ? <Calendar size={14} /> : t === 'bookings' ? <CalendarCheck size={14} /> : <Clock size={14} />}
+            {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability'}
           </button>
         ))}
       </div>
@@ -813,6 +867,205 @@ export default function SchedulingPage() {
               </div>
             </GlassCard>
           )}
+        </div>
+      )}
+
+      {/* ── AVAILABILITY TAB ── */}
+      {tab === 'availability' && (
+        <div className="space-y-6">
+          {/* Scheduling Preferences */}
+          <GlassCard variant="panel" padding="none">
+            <div className="border-b border-white/10 px-6 py-4">
+              <h3 className="text-base font-semibold text-foreground">Scheduling Preferences</h3>
+            </div>
+            <div className="p-6 space-y-6">
+              {preferences ? (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Timezone</label>
+                    <select
+                      value={preferences.timezone}
+                      onChange={(e) => updatePreferences({ timezone: e.target.value })}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                      <option value="Europe/London">London</option>
+                      <option value="Europe/Paris">Paris</option>
+                      <option value="Asia/Tokyo">Tokyo</option>
+                      <option value="Asia/Shanghai">Shanghai</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Default Slot Duration (min)</label>
+                    <input
+                      type="number"
+                      value={preferences.slotDuration}
+                      onChange={(e) => updatePreferences({ slotDuration: parseInt(e.target.value) })}
+                      min="15"
+                      max="180"
+                      step="15"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer Before (min)</label>
+                    <input
+                      type="number"
+                      value={preferences.bufferBefore}
+                      onChange={(e) => updatePreferences({ bufferBefore: parseInt(e.target.value) })}
+                      min="0"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer After (min)</label>
+                    <input
+                      type="number"
+                      value={preferences.bufferAfter}
+                      onChange={(e) => updatePreferences({ bufferAfter: parseInt(e.target.value) })}
+                      min="0"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimum Notice (min)</label>
+                    <input
+                      type="number"
+                      value={preferences.minimumNotice}
+                      onChange={(e) => updatePreferences({ minimumNotice: parseInt(e.target.value) })}
+                      min="0"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Max Bookings Per Day</label>
+                    <input
+                      type="number"
+                      value={preferences.maxBookingsPerDay}
+                      onChange={(e) => updatePreferences({ maxBookingsPerDay: parseInt(e.target.value) })}
+                      min="1"
+                      max="50"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-20 items-center justify-center">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              )}
+            </div>
+          </GlassCard>
+
+          {/* Weekly Availability */}
+          <GlassCard variant="panel" padding="none">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <h3 className="text-base font-semibold text-foreground">Weekly Availability</h3>
+              <button
+                onClick={() => setShowAvailabilityForm(true)}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md"
+              >
+                <Plus size={15} />
+                Add Time Slot
+              </button>
+            </div>
+            
+            {showAvailabilityForm && (
+              <div className="border-b border-white/10 p-6 bg-white/[0.02]">
+                <form onSubmit={addAvailability} className="grid gap-4 sm:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Day</label>
+                    <select
+                      value={availabilityDay}
+                      onChange={(e) => setAvailabilityDay(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      <option value="MONDAY">Monday</option>
+                      <option value="TUESDAY">Tuesday</option>
+                      <option value="WEDNESDAY">Wednesday</option>
+                      <option value="THURSDAY">Thursday</option>
+                      <option value="FRIDAY">Friday</option>
+                      <option value="SATURDAY">Saturday</option>
+                      <option value="SUNDAY">Sunday</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Start Time</label>
+                    <input
+                      type="time"
+                      value={availabilityStart}
+                      onChange={(e) => setAvailabilityStart(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">End Time</label>
+                    <input
+                      type="time"
+                      value={availabilityEnd}
+                      onChange={(e) => setAvailabilityEnd(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="submit"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAvailabilityForm(false)}
+                      className="flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="p-6 space-y-3">
+              {availabilityLoading ? (
+                <div className="flex h-20 items-center justify-center">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : availability.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Clock size={40} className="text-muted-foreground/30" />
+                  <p className="text-sm font-semibold text-muted-foreground">No availability set</p>
+                  <p className="text-xs text-muted-foreground/60">Add time slots above to define when you're available for meetings.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availability.map((avail) => (
+                    <div
+                      key={avail.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-foreground w-24">{avail.dayOfWeek}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {avail.startTime} - {avail.endTime}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => deleteAvailability(avail.id)}
+                        className="flex items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 text-rose-400/60 hover:bg-rose-500/15 hover:text-rose-400 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </GlassCard>
         </div>
       )}
     </div>
