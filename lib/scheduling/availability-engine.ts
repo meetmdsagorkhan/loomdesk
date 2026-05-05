@@ -107,7 +107,7 @@ export async function getAvailableSlots(request: AvailabilityRequest): Promise<G
   const lastDay = endOfDay(endDate);
 
   while (isBefore(currentDay, lastDay) || isEqual(currentDay, lastDay)) {
-    const dayName = format(currentDay, 'EEEE').toUpperCase() as keyof typeof workingDays;
+    const dayName = format(currentDay, 'EEEE').toUpperCase();
     
     // Skip if this day is not a working day
     if (!workingDays.includes(dayName)) {
@@ -117,7 +117,7 @@ export async function getAvailableSlots(request: AvailabilityRequest): Promise<G
     }
 
     // Get availability for this day
-    const dayAvailability = availabilityMap.get(dayName as string) || [];
+    const dayAvailability = availabilityMap.get(dayName) || [];
     
     if (dayAvailability.length === 0) {
       // No availability set for this day, skip
