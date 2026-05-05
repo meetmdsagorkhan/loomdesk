@@ -9,13 +9,12 @@ import { notFound } from 'next/navigation';
 import { getUserPublicAvailability } from '@/lib/scheduling/availability-actions';
 
 interface PageProps {
-  params: {
-    username: string;
-  };
+  params: Promise<{ username: string }>;
 }
 
 export default async function PublicBookingPage({ params }: PageProps) {
-  const user = await getUserPublicAvailability(params.username);
+  const { username } = await params;
+  const user = await getUserPublicAvailability(username);
 
   if (!user) {
     notFound();
@@ -31,7 +30,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
               {user.image && (
                 <img
                   src={user.image}
-                  alt={user.name}
+                  alt={user.name || ''}
                   className="w-16 h-16 rounded-full object-cover"
                 />
               )}
@@ -48,14 +47,11 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
           {/* Event Types */}
           <div className="grid gap-4 mb-8">
-            {user.eventTypes.map((eventType) => (
-              <button
+            {user.eventTypes.map((eventType: { id: string; title: string; description?: string; duration: number; slug: string }) => (
+              <a
                 key={eventType.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-left hover:shadow-md hover:border-slate-300 transition-all duration-200 group"
-                onClick={() => {
-                  // Navigate to booking flow for this event type
-                  window.location.href = `/book/${params.username}/${eventType.slug}`;
-                }}
+                href={`/book/${username}/${eventType.slug}`}
+                className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-left hover:shadow-md hover:border-slate-300 transition-all duration-200 group block"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -78,7 +74,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
-              </button>
+              </a>
             ))}
           </div>
 
