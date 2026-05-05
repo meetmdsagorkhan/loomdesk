@@ -47,21 +47,36 @@ export async function getSchedulingPreferences() {
 
 /**
  * Update or create scheduling preferences
+ * Accepts partial data for PATCH updates
  */
-export async function updateSchedulingPreferences(data: z.infer<typeof schedulingPreferencesSchema>) {
+export async function updateSchedulingPreferences(data: Partial<z.infer<typeof schedulingPreferencesSchema>>) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const validatedData = schedulingPreferencesSchema.parse(data);
+  // Get existing preferences to merge with new data
+  const existing = await prisma.schedulingPreferences.findUnique({
+    where: { userId: session.user.id }
+  });
+
+  // Merge existing data with new partial data, using defaults for missing fields
+  const mergedData = {
+    timezone: data.timezone ?? existing?.timezone ?? 'UTC',
+    bufferBefore: data.bufferBefore ?? existing?.bufferBefore ?? 0,
+    bufferAfter: data.bufferAfter ?? existing?.bufferAfter ?? 0,
+    minimumNotice: data.minimumNotice ?? existing?.minimumNotice ?? 60,
+    slotDuration: data.slotDuration ?? existing?.slotDuration ?? 30,
+    maxBookingsPerDay: data.maxBookingsPerDay ?? existing?.maxBookingsPerDay ?? 10,
+    workingDays: data.workingDays ?? existing?.workingDays ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+  };
 
   const preferences = await prisma.schedulingPreferences.upsert({
     where: { userId: session.user.id },
-    update: validatedData,
+    update: mergedData,
     create: {
       userId: session.user.id,
-      ...validatedData
+      ...mergedData
     }
   });
 
