@@ -8,7 +8,13 @@ import { Resend } from 'resend';
 import { format } from 'date-fns';
 import type { Booking } from '@prisma/client';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization of Resend client
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 /**
  * Generate .ics calendar file content
@@ -74,6 +80,7 @@ export async function sendBookingConfirmationEmail(
 
   // Email to invitee
   try {
+    const resend = getResendClient();
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'noreply@loomdesk.com',
       to: inviteeEmail,
@@ -149,6 +156,7 @@ export async function sendBookingConfirmationEmail(
 
   // Email to host
   try {
+    const resend = getResendClient();
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'noreply@loomdesk.com',
       to: hostEmail,
@@ -238,6 +246,7 @@ export async function sendBookingCancellationEmail(
 
   // Email to invitee
   try {
+    const resend = getResendClient();
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'noreply@loomdesk.com',
       to: inviteeEmail,
@@ -303,6 +312,7 @@ export async function sendBookingCancellationEmail(
 
   // Email to host
   try {
+    const resend = getResendClient();
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'noreply@loomdesk.com',
       to: hostEmail,

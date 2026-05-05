@@ -68,7 +68,7 @@ export async function createBooking(data: z.infer<typeof createBookingSchema>) {
   }
 
   // Use transaction to prevent race conditions
-  const booking = await prisma.$transaction(async (tx) => {
+  const booking = await prisma.$transaction(async (tx: any) => {
     // Double-check availability within transaction
     const conflictingBooking = await tx.booking.findFirst({
       where: {
@@ -302,7 +302,7 @@ export async function rescheduleBooking(data: z.infer<typeof rescheduleBookingSc
   }
 
   // Use transaction to prevent race conditions
-  const updatedBooking = await prisma.$transaction(async (tx) => {
+  const updatedBooking = await prisma.$transaction(async (tx: any) => {
     // Double-check availability within transaction (excluding current booking)
     const conflictingBooking = await tx.booking.findFirst({
       where: {
