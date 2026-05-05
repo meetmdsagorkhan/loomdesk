@@ -10,20 +10,20 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  success: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-600 shadow-md hover:from-emerald-400 hover:to-green-400',
-  warning: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-600 shadow-md hover:from-amber-400 hover:to-yellow-400',
-  danger: 'bg-gradient-to-r from-red-500 to-rose-500 text-white border-red-600 shadow-md hover:from-red-400 hover:to-rose-400',
-  info: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-600 shadow-md hover:from-blue-400 hover:to-cyan-400',
-  default: 'bg-gradient-to-r from-slate-600 to-slate-700 text-white border-slate-800 shadow-md hover:from-slate-500 hover:to-slate-600',
-  purple: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white border-purple-600 shadow-md hover:from-purple-400 hover:to-violet-400',
-  pink: 'bg-gradient-to-r from-pink-500 to-fuchsia-500 text-white border-pink-600 shadow-md hover:from-pink-400 hover:to-fuchsia-400',
-  orange: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-600 shadow-md hover:from-orange-400 hover:to-amber-400',
-  teal: 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white border-teal-600 shadow-md hover:from-teal-400 hover:to-cyan-400',
+  success: 'bg-success/15 text-success border-success/30 backdrop-blur-sm shadow-sm',
+  warning: 'bg-warning/15 text-warning border-warning/30 backdrop-blur-sm shadow-sm',
+  danger: 'bg-destructive/15 text-destructive border-destructive/30 backdrop-blur-sm shadow-sm',
+  info: 'bg-info/15 text-info border-info/30 backdrop-blur-sm shadow-sm',
+  default: 'bg-muted/50 text-muted-foreground border-border/50 backdrop-blur-sm shadow-sm',
+  purple: 'bg-primary/15 text-primary border-primary/30 backdrop-blur-sm shadow-sm',
+  pink: 'bg-pink-500/15 text-pink-600 border-pink-500/30 backdrop-blur-sm shadow-sm dark:text-pink-400',
+  orange: 'bg-orange-500/15 text-orange-600 border-orange-500/30 backdrop-blur-sm shadow-sm dark:text-orange-400',
+  teal: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30 backdrop-blur-sm shadow-sm dark:text-emerald-400',
 };
 
 export default function Badge({ variant = 'default', label, className }: BadgeProps) {
   return (
-    <ShadcnBadge className={cn(variantStyles[variant], className)}>
+    <ShadcnBadge variant="outline" className={cn("rounded-full px-2.5 py-0.5 font-semibold", variantStyles[variant], className)}>
       {label}
     </ShadcnBadge>
   );

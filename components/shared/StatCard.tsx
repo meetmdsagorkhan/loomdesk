@@ -14,22 +14,22 @@ interface StatCardProps {
 export default function StatCard({ title, value, change, icon, color = 'primary' }: StatCardProps) {
   const trend = change === undefined ? 'none' : change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
   const toneMap: Record<string, string> = {
-    primary: 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg',
-    accent: 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg',
-    warning: 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg',
-    success: 'bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-lg',
+    primary: 'bg-primary text-primary-foreground shadow-lg',
+    accent: 'bg-accent text-accent-foreground shadow-lg',
+    warning: 'bg-warning text-warning-foreground shadow-lg',
+    success: 'bg-success text-success-foreground shadow-lg',
   };
 
   const cardGradientMap: Record<string, string> = {
-    primary: 'from-indigo-500/18 via-violet-500/10 to-transparent',
-    accent: 'from-cyan-500/18 via-sky-500/10 to-transparent',
-    warning: 'from-orange-500/18 via-amber-500/10 to-transparent',
-    success: 'from-emerald-500/18 via-green-500/10 to-transparent',
+    primary: 'from-primary/18 via-primary/10 to-transparent',
+    accent: 'from-accent/18 via-accent/10 to-transparent',
+    warning: 'from-warning/18 via-warning/10 to-transparent',
+    success: 'from-success/18 via-success/10 to-transparent',
   };
 
   const trendTone = {
-    up: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
-    down: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
+    up: 'bg-success/15 text-success dark:text-success',
+    down: 'bg-destructive/15 text-destructive dark:text-destructive',
     flat: 'bg-muted text-muted-foreground',
     none: '',
   };
