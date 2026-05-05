@@ -118,6 +118,38 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, reportId, entryId, severity, reason, adminNote } = scoreEventSchema.parse(body);
 
+    // If reportId is provided, check if the report is in SUBMITTED status
+    if (reportId) {
+      const report = await prisma.report.findUnique({
+        where: { id: reportId },
+        select: { status: true },
+      });
+
+      if (!report) {
+        return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+      }
+
+      if (report.status !== 'SUBMITTED') {
+        return NextResponse.json({ error: 'Only submitted reports can receive score deductions' }, { status: 400 });
+      }
+    }
+
+    // If entryId is provided, check if the associated report is in SUBMITTED status
+    if (entryId) {
+      const entry = await prisma.reportEntry.findUnique({
+        where: { id: entryId },
+        select: { report: { select: { status: true } } },
+      });
+
+      if (!entry) {
+        return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
+      }
+
+      if (entry.report.status !== 'SUBMITTED') {
+        return NextResponse.json({ error: 'Only entries from submitted reports can receive score deductions' }, { status: 400 });
+      }
+    }
+
     // Calculate deduction based on severity
     const deduction = severity === 'MINOR' ? 0.5 : 1.0;
 

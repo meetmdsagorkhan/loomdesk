@@ -47,15 +47,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
           {/* Event Types */}
           <div className="grid gap-4 mb-8">
-<<<<<<< HEAD
-<<<<<<< HEAD
             {user.eventTypes.map((eventType: { id: string; title: string; description: string | null; duration: number; slug: string }) => (
-=======
-            {user.eventTypes.map((eventType: { id: string; title: string; description?: string; duration: number; slug: string }) => (
->>>>>>> 0cc29fc (fix: Next.js 16 params type - await Promise in page component)
-=======
-            {user.eventTypes.map((eventType: { id: string; title: string; description: string | null; duration: number; slug: string }) => (
->>>>>>> a20440b (fix: Resolve merge conflicts in [username]/page.tsx)
               <a
                 key={eventType.id}
                 href={`/book/${username}/${eventType.slug}`}
