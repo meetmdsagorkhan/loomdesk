@@ -114,15 +114,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for overlap with existing approved leaves
-    const existingApprovedLeaves = await prisma.leaveRequest.findMany({
+    // Check for overlap with existing approved or pending leaves
+    const existingLeaves = await prisma.leaveRequest.findMany({
       where: {
         userId: session.user.id,
-        status: 'APPROVED',
+        status: { in: ['APPROVED', 'PENDING'] },
       },
     });
 
-    for (const leave of existingApprovedLeaves) {
+    for (const leave of existingLeaves) {
       const existingStart = new Date(leave.startDate);
       const existingEnd = new Date(leave.endDate);
 
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       if (start <= existingEnd && end >= existingStart) {
         return NextResponse.json(
           {
-            error: 'Leave dates overlap with an existing approved leave request',
+            error: 'Leave dates overlap with an existing approved or pending leave request',
             overlap: {
               startDate: leave.startDate,
               endDate: leave.endDate,

@@ -28,6 +28,9 @@ import {
   verifyTotpToken,
 } from "@/lib/two-factor"
 
+// In-memory cache to prevent thundering herd DB queries on parallel SWR fetches
+const globalSessionCache = new Map<string, { timestamp: number; user: any }>()
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: env.AUTH_SECRET,
   trustHost: true,
@@ -289,6 +292,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.twoFactorEnabled = user.twoFactorEnabled ?? false
         token.rememberMe = user.rememberMe ?? false
         token.sessionExpiresAt = createSessionExpiryTimestamp(Boolean(token.rememberMe))
+        token.lastDbCheck = Date.now()
         return token
       }
 
@@ -302,6 +306,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return null
       }
 
+      const now = Date.now()
+      const lastCheck = (token.lastDbCheck as number) || 0
+
+      // Only hit the DB once every 5 minutes to prevent connection pool exhaustion
+      if (now - lastCheck < 5 * 60 * 1000) {
+        return token
+      }
+
+      // Check in-memory cache to prevent concurrent SWR races
+      const cached = globalSessionCache.get(tokenUserId)
+      if (cached && now - cached.timestamp < 10000) {
+        if (!cached.user || !cached.user.isActive || cached.user.sessionVersion !== token.sessionVersion) {
+          return null
+        }
+        token.role = cached.user.role
+        token.sessionVersion = cached.user.sessionVersion
+        token.twoFactorEnabled = cached.user.twoFactorEnabled
+        token.lastDbCheck = now
+        return token
+      }
+
       const currentUser = await prisma.user.findUnique({
         where: { id: tokenUserId },
         select: {
@@ -311,6 +336,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           twoFactorEnabled: true,
         },
       })
+
+      globalSessionCache.set(tokenUserId, { timestamp: now, user: currentUser })
 
       if (!currentUser?.isActive) {
         return null
@@ -323,6 +350,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       token.role = currentUser.role
       token.sessionVersion = currentUser.sessionVersion
       token.twoFactorEnabled = currentUser.twoFactorEnabled
+      token.lastDbCheck = now
       return token
     },
     async session({ session, token }) {

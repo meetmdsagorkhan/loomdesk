@@ -7,6 +7,7 @@ import {
   BarChart2,
   CalendarDays,
   CalendarOff,
+  Calendar,
   CheckSquare,
   Clock,
   FileText,
@@ -56,6 +57,7 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   messages: MessageSquare,
   scoring: TrendingUp,
   submissions: Send,
+  scheduling: Calendar,
   settings: Settings,
   profile: User,
 };

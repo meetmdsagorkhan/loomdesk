@@ -9,6 +9,7 @@ export type NavIcon =
   | 'scoring'
   | 'submissions'
   | 'settings'
+  | 'scheduling'
   | 'profile';
 
 
@@ -96,6 +97,15 @@ export const navItems: NavItem[] = [
     icon: 'submissions',
     section: 'Admin',
     matches: ['/dashboard/submissions'],
+    roles: ['ADMIN'],
+  },
+  {
+    href: '/dashboard/scheduling',
+    label: 'Scheduling',
+    description: 'Create & manage meeting links',
+    icon: 'scheduling',
+    section: 'Admin',
+    matches: ['/dashboard/scheduling'],
     roles: ['ADMIN'],
   },
   {
@@ -245,6 +255,14 @@ const routeOverrides: Array<{
         title: 'Profile Settings',
         description: 'Manage your personal information and security preferences.',
         href: '/profile',
+      }),
+    },
+    {
+      test: (pathname) => pathname.startsWith('/dashboard/scheduling'),
+      meta: () => ({
+        title: 'Scheduling',
+        description: 'Create shareable meeting links and manage bookings powered by Google Meet.',
+        href: '/dashboard/scheduling',
       }),
     },
   ];

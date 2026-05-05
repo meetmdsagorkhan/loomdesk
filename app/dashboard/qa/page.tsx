@@ -44,6 +44,9 @@ export default function QAPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalReports, setTotalReports] = useState(0);
+  const limit = 10;
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -69,28 +72,35 @@ export default function QAPage() {
       if (selectedDate) params.append('date', selectedDate);
       if (selectedUserId) params.append('userId', selectedUserId);
       if (selectedStatus) params.append('status', selectedStatus);
+      params.append('limit', limit.toString());
+      params.append('offset', ((currentPage - 1) * limit).toString());
 
       const response = await fetch(`/api/qa/reports?${params}`);
       const data = await response.json();
       setReports(data.reports || []);
+      setTotalReports(data.total || 0);
     } catch (error) {
       // Silently fail - reports list will be empty
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, selectedUserId, selectedStatus]);
+  }, [selectedDate, selectedUserId, selectedStatus, currentPage, limit]);
 
   const handleApplyFilters = async () => {
     setIsFilterLoading(true);
+    setCurrentPage(1); // Reset to first page on filter apply
     try {
       const params = new URLSearchParams();
       if (selectedDate) params.append('date', selectedDate);
       if (selectedUserId) params.append('userId', selectedUserId);
       if (selectedStatus) params.append('status', selectedStatus);
+      params.append('limit', limit.toString());
+      params.append('offset', '0');
 
       const response = await fetch(`/api/qa/reports?${params}`);
       const data = await response.json();
       setReports(data.reports || []);
+      setTotalReports(data.total || 0);
     } catch (error) {
       // Silently fail - reports list will be empty
     } finally {
@@ -137,11 +147,14 @@ export default function QAPage() {
     {
       accessorKey: 'score',
       header: 'Score',
-      cell: ({ row }) => (
-        <span className={row.original.score < 90 ? 'text-destructive font-medium' : 'text-foreground'}>
-          {row.original.score}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const score = row.original.score;
+        return (
+          <span className={score < 90 ? 'text-destructive font-medium' : 'text-foreground'}>
+            {score === 100 ? 'No deductions' : `-${100 - score}`}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'actions',
@@ -302,6 +315,35 @@ export default function QAPage() {
               </tbody>
             </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalReports > limit && (
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * limit) + 1} to {Math.min(currentPage * limit, totalReports)} of {totalReports} reports
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-xl"
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={currentPage * limit >= totalReports}
+                    className="rounded-xl"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </GlassCard>

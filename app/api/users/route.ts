@@ -14,10 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins and team leads can access the users list
-    if (!isAdmin(session) && !isTeamLead(session)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // All authenticated users can fetch the basic user directory
 
     const users = await db.user.findMany({
       select: {

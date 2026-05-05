@@ -32,6 +32,8 @@ export function handleApiError(error: unknown, context: string, showToastError: 
 
   if (error instanceof Error) {
     errorMessage = error.message;
+  } else if (typeof error === 'string') {
+    errorMessage = error;
   } else if (typeof error === 'object' && error !== null) {
     const apiError = error as ApiError;
     errorMessage = apiError.message || apiError.error || errorMessage;

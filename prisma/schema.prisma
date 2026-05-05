@@ -13,6 +13,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  username      String?   @unique
   emailVerifiedAt DateTime?
   name          String
   password      String
@@ -43,6 +44,10 @@ model User {
   invitations   Invitation[] @relation("invitedBy")
   emailVerificationTokens EmailVerificationToken[]
   submissions  UserSubmission[]
+  eventTypes   EventType[]
+  googleCalendarToken GoogleCalendarToken?
+  schedulingPreferences SchedulingPreferences?
+  availability  Availability[]
 }
 
 model EmailVerificationToken {
@@ -117,6 +122,7 @@ model Report {
   updatedAt   DateTime      @updatedAt
   entries     ReportEntry[]
   @@unique([userId, date])
+  @@index([status, date])
 }
 
 model ReportEntry {
@@ -131,6 +137,7 @@ model ReportEntry {
   createdAt      DateTime    @default(now())
   feedback       Feedback[]
   @@unique([reportId, referenceId])
+  @@index([reportId, type])
 }
 
 model ScoreEvent {
@@ -145,6 +152,9 @@ model ScoreEvent {
   adminNote   String?
   createdById String
   createdAt   DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([reportId])
 }
 
 model Feedback {
@@ -185,6 +195,8 @@ model LeaveRequest {
   reviewedBy  String?
   reviewedAt  DateTime?
   createdAt   DateTime      @default(now())
+
+  @@index([userId, status, startDate])
 }
 
 model Shift {
@@ -207,6 +219,8 @@ model ShiftAssignment {
   startDate DateTime @db.Date
   endDate   DateTime? @db.Date
   createdAt DateTime @default(now())
+
+  @@index([userId, startDate])
 }
 
 model ShiftException {
@@ -231,6 +245,8 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
 }
 
 model Message {
@@ -319,4 +335,93 @@ enum SubmissionPriority {
   LOW
   MEDIUM
   HIGH
+}
+
+model EventType {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String?
+  duration    Int
+  meetLink    String?
+  active      Boolean   @default(true)
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, slug])
+}
+
+model Booking {
+  id          String    @id @default(cuid())
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  name        String
+  email       String
+  startTime   DateTime
+  endTime     DateTime
+  status      BookingStatus @default(CONFIRMED)
+  meetLink               String?   // unique Google Meet link generated via Calendar API
+  googleCalendarEventId  String?   // to allow cancelling from Google Calendar
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([eventTypeId, startTime])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model GoogleCalendarToken {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+model SchedulingPreferences {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone        String   @default("UTC")
+  bufferBefore    Int      @default(0) // minutes
+  bufferAfter     Int      @default(0) // minutes
+  minimumNotice   Int      @default(60) // minutes in advance
+  slotDuration    Int      @default(30) // default slot duration in minutes
+  maxBookingsPerDay Int    @default(10)
+  workingDays     String[] @default(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Availability {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek   DayOfWeek
+  startTime   String // format: "09:00"
+  endTime     String // format: "17:00"
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, dayOfWeek, startTime, endTime])
+  @@index([userId, dayOfWeek])
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }

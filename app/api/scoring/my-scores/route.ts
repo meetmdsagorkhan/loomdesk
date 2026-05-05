@@ -165,8 +165,25 @@ export async function GET() {
     const rank =
       rankedUsers.findIndex((entry) => entry.userId === session.user.id) + 1 || rankedUsers.length;
 
+    const currentMonthStart = new Date();
+    currentMonthStart.setDate(1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+
+    const monthlyDeductions = await prisma.scoreEvent.aggregate({
+      where: {
+        userId: session.user.id,
+        createdAt: { gte: currentMonthStart }
+      },
+      _sum: {
+        deduction: true
+      }
+    });
+
+    const monthlyScore = Math.max(0, 100 - (monthlyDeductions._sum.deduction || 0));
+
     return NextResponse.json({
       currentScore,
+      monthlyScore,
       totalReports: reportsWithScores.length,
       averageScore,
       rank,

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
-import { User, Mail, Loader2, ShieldCheck, KeyRound, ChevronRight, Camera, Briefcase, Building2, Calendar, Lock, Copy, Smartphone, ScanQrCode } from 'lucide-react';
+import { User, Mail, Loader2, ShieldCheck, KeyRound, ChevronRight, Camera, Briefcase, Building2, Calendar, Lock, Copy, Smartphone, ScanQrCode, Link2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ export default function ProfilePage() {
     department: '',
     company: '',
     joiningDate: '',
+    username: '',
     image: '' 
   });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -67,6 +68,7 @@ export default function ProfilePage() {
         position: data.user?.position || '',
         department: data.user?.department || '',
         company: data.user?.company || '',
+        username: data.user?.username || '',
         joiningDate: data.user?.joiningDate ? new Date(data.user.joiningDate).toISOString().split('T')[0] : '',
         image: data.user?.image || '',
       }));
@@ -118,6 +120,7 @@ export default function ProfilePage() {
           department: profileData.department || null,
           company: profileData.company || null,
           joiningDate: profileData.joiningDate || null,
+          username: profileData.username || null,
           image: profileData.image || null,
         }),
       });
@@ -476,6 +479,18 @@ export default function ProfilePage() {
                           <Label className="text-sm font-semibold ml-1 flex items-center gap-2"><Calendar size={14} className="text-primary" /> Joining Date</Label>
                           <Input type="date" value={profileData.joiningDate} onChange={(e) => setProfileData({ ...profileData, joiningDate: e.target.value })} className="form-input" />
                         </div>
+                        {user?.role === 'ADMIN' && (
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold ml-1 flex items-center gap-2"><Link2 size={14} className="text-primary" /> Username <span className="text-xs text-muted-foreground font-normal ml-1">(for scheduling links)</span></Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">@</span>
+                              <Input type="text" value={profileData.username} onChange={(e) => setProfileData({ ...profileData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })} placeholder="your-username" className="form-input pl-7 font-mono" />
+                            </div>
+                            {profileData.username && (
+                              <p className="text-[11px] text-muted-foreground font-mono">{typeof window !== 'undefined' ? window.location.origin : ''}/book/{profileData.username}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-4 flex justify-end">
