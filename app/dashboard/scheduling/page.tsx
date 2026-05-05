@@ -65,7 +65,7 @@ type GoogleCalStatus = {
   connectedAt?: string | null;
 };
 
-type Tab = 'events' | 'bookings';
+type Tab = 'events' | 'bookings' | 'availability';
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
 
@@ -180,6 +180,20 @@ export default function SchedulingPage() {
       setBookingsLoading(false);
     }
   }, [bookingStatus]);
+
+  const fetchAvailability = useCallback(async () => {
+    setAvailabilityLoading(true);
+    try {
+      const res = await fetch('/api/scheduling/availability');
+      if (res.ok) {
+        const data = await res.json();
+        setAvailability(data.availability || []);
+        setPreferences(data.preferences || null);
+      }
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  }, []);
 
   const fetchGcalStatus = useCallback(async () => {
     setGcalLoading(true);

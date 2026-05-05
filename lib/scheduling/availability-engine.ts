@@ -91,7 +91,7 @@ export async function getAvailableSlots(request: AvailabilityRequest): Promise<G
 
   // Create a map of day of week to availability ranges
   const availabilityMap = new Map<string, Array<{ start: string; end: string }>>();
-  availabilities.forEach(avail => {
+  availabilities.forEach((avail: any) => {
     if (!availabilityMap.has(avail.dayOfWeek)) {
       availabilityMap.set(avail.dayOfWeek, []);
     }
@@ -117,7 +117,7 @@ export async function getAvailableSlots(request: AvailabilityRequest): Promise<G
     }
 
     // Get availability for this day
-    const dayAvailability = availabilityMap.get(dayName) || [];
+    const dayAvailability = availabilityMap.get(dayName as string) || [];
     
     if (dayAvailability.length === 0) {
       // No availability set for this day, skip
@@ -289,7 +289,7 @@ export async function getAvailableDates(
 
   // Get all days that have availability set
   const daysWithAvailability = new Set(
-    availabilities.map(a => a.dayOfWeek)
+    availabilities.map((a: any) => a.dayOfWeek)
   );
 
   const availableDates: Date[] = [];
