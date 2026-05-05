@@ -6,14 +6,14 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const preferencesSchema = z.object({
-  timezone: z.string().optional(),
-  bufferBefore: z.number().int().min(0).optional(),
-  bufferAfter: z.number().int().min(0).optional(),
-  minimumNotice: z.number().int().min(0).optional(),
-  slotDuration: z.number().int().min(5).max(180).optional(),
-  maxBookingsPerDay: z.number().int().min(1).max(50).optional(),
-  workingDays: z.array(z.enum(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'])).optional(),
-});
+  timezone: z.string().default('UTC'),
+  bufferBefore: z.number().int().min(0).default(0),
+  bufferAfter: z.number().int().min(0).default(0),
+  minimumNotice: z.number().int().min(0).default(60),
+  slotDuration: z.number().int().min(5).max(180).default(30),
+  maxBookingsPerDay: z.number().int().min(1).max(50).default(10),
+  workingDays: z.array(z.enum(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'])).default(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']),
+}).partial();
 
 export async function PATCH(request: NextRequest) {
   try {
