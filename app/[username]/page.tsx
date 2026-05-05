@@ -47,7 +47,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
           {/* Event Types */}
           <div className="grid gap-4 mb-8">
-            {user.eventTypes.map((eventType: { id: string; title: string; description?: string; duration: number; slug: string }) => (
+            {user.eventTypes.map((eventType: { id: string; title: string; description: string | null; duration: number; slug: string }) => (
               <a
                 key={eventType.id}
                 href={`/book/${username}/${eventType.slug}`}
