@@ -260,6 +260,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          username: user.username,
           role: user.role,
           sessionVersion: user.sessionVersion,
           twoFactorEnabled: user.twoFactorEnabled,
@@ -288,6 +289,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.username = (user as any).username ?? null
         token.sessionVersion = user.sessionVersion ?? 0
         token.twoFactorEnabled = user.twoFactorEnabled ?? false
         token.rememberMe = user.rememberMe ?? false
@@ -332,6 +334,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         select: {
           isActive: true,
           role: true,
+          username: true,
           sessionVersion: true,
           twoFactorEnabled: true,
         },
@@ -348,6 +351,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       token.role = currentUser.role
+      token.username = currentUser.username
       token.sessionVersion = currentUser.sessionVersion
       token.twoFactorEnabled = currentUser.twoFactorEnabled
       token.lastDbCheck = now
@@ -358,6 +362,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const u = session.user as any
         u.id = token.id as string
         u.role = token.role as string
+        u.username = token.username as string | null
         u.rememberMe = !!token.rememberMe
         u.sessionVersion = +(token.sessionVersion ?? 0)
         u.twoFactorEnabled = !!token.twoFactorEnabled
