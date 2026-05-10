@@ -110,11 +110,16 @@ export default async function proxy(req: NextRequest) {
   if (isAsset) {
     targetPathname = pathname;
   } else if (cleanHostname === 'api.loomdesk.online') {
-    targetPathname = `/api${pathname}`;
+    targetPathname = pathname.startsWith('/api') ? pathname : `/api${pathname}`;
   } else if (cleanHostname === 'meet.loomdesk.online') {
     targetPathname = pathname.startsWith('/book') ? pathname : `/book${pathname === '/' ? '' : pathname}`;
   } else if (cleanHostname === 'admin.loomdesk.online' || cleanHostname === 'dashboard.loomdesk.online') {
-    targetPathname = `/dashboard${pathname === '/' ? '' : pathname}`;
+    // Don't prefix if it's an API call or already has the dashboard prefix
+    if (pathname.startsWith('/api') || pathname.startsWith('/dashboard')) {
+      targetPathname = pathname;
+    } else {
+      targetPathname = `/dashboard${pathname === '/' ? '' : pathname}`;
+    }
   } else if (cleanHostname === 'www.loomdesk.online' || cleanHostname === 'loomdesk.online' || cleanHostname === 'localhost' || cleanHostname.startsWith('192.168.')) {
     // If on marketing domain and authenticated, redirect to dashboard (unless it's a specific marketing subpage)
     if (isAuthenticated && pathname === '/') {
