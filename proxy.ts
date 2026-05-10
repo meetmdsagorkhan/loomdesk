@@ -116,6 +116,19 @@ export default async function proxy(req: NextRequest) {
   } else if (cleanHostname === 'admin.loomdesk.online' || cleanHostname === 'dashboard.loomdesk.online') {
     targetPathname = `/dashboard${pathname === '/' ? '' : pathname}`;
   } else if (cleanHostname === 'www.loomdesk.online' || cleanHostname === 'loomdesk.online' || cleanHostname === 'localhost' || cleanHostname.startsWith('192.168.')) {
+    // If on marketing domain and authenticated, redirect to dashboard (unless it's a specific marketing subpage)
+    if (isAuthenticated && pathname === '/') {
+      const targetDomain = (userRole === 'ADMIN' || userRole === 'TEAM_LEAD') 
+          ? 'admin.loomdesk.online' 
+          : 'dashboard.loomdesk.online';
+      
+      // On localhost, we can just redirect to /dashboard to avoid host issues
+      if (cleanHostname === 'localhost' || cleanHostname.startsWith('192.168.')) {
+        return finalizeResponse(NextResponse.redirect(new URL('/dashboard', req.url)));
+      }
+      return finalizeResponse(NextResponse.redirect(new URL('/', getBaseUrl(targetDomain))));
+    }
+
     // Only rewrite to marketing if it's NOT an app route (to allow login/signup/api to work on localhost)
     if (!isAppRoute) {
       targetPathname = `/home${pathname === '/' ? '' : pathname}`;
