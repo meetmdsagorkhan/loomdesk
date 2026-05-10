@@ -67,7 +67,7 @@ type GoogleCalStatus = {
 
 type Tab = 'events' | 'bookings' | 'availability';
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
+const DURATION_OPTIONS = [10, 15, 30, 45, 60, 90, 120];
 
 function slugify(str: string) {
   return str
@@ -641,8 +641,9 @@ export default function SchedulingPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      Google Meet Link
+                    <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      <span>Fallback Meet Link</span>
+                      <span className="text-[10px] text-muted-foreground/60 font-normal normal-case">Optional</span>
                     </label>
                     <input
                       type="url"
@@ -651,6 +652,11 @@ export default function SchedulingPage() {
                       placeholder="https://meet.google.com/xxx-yyyy-zzz"
                       className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
+                    {gcalStatus?.connected ? (
+                      <p className="text-[11px] text-emerald-400/80 mt-1">Unique links are generated automatically.</p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground/70 mt-1">Connect Google Calendar to generate automatically.</p>
+                    )}
                   </div>
                 </div>
 
