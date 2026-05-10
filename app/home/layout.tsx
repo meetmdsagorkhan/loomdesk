@@ -1,7 +1,4 @@
-import { Inter } from 'next/font/google';
 import Link from 'next/link';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export default function MarketingLayout({
   children,
@@ -9,16 +6,13 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${inter.variable} font-sans min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground`}>
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
-
+    <div className="min-h-screen relative">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12 backdrop-blur-md border-b border-white/5 bg-background/50">
+      <nav className="glass-nav fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="LoomDesk" className="h-8 w-auto" />
         </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground font-sans">
           <Link href="#features" className="hover:text-foreground transition-colors">Features</Link>
           <Link href="#solutions" className="hover:text-foreground transition-colors">Solutions</Link>
           <a href="https://meet.loomdesk.online" className="hover:text-foreground transition-colors">Scheduling</a>
@@ -26,13 +20,13 @@ export default function MarketingLayout({
         <div className="flex items-center gap-4">
           <a 
             href="https://app.loomdesk.online/login" 
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors font-sans"
           >
             Log in
           </a>
           <a 
             href="https://app.loomdesk.online/signup" 
-            className="hidden md:inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:scale-105 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+            className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-all font-sans"
           >
             Get Started
           </a>
@@ -40,16 +34,16 @@ export default function MarketingLayout({
       </nav>
 
       {/* Main Content */}
-      <main className="pt-24 pb-16 min-h-screen">
+      <main className="pt-24 pb-16">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-background/80 py-12 px-6 md:px-12 text-center text-sm text-muted-foreground">
+      <footer className="glass-panel py-12 px-6 md:px-12 text-center text-sm text-muted-foreground mt-20">
         <div className="flex items-center justify-center gap-2 mb-4">
            <img src="/logo.png" alt="LoomDesk" className="h-6 w-auto opacity-50 grayscale" />
         </div>
-        <p>© {new Date().getFullYear()} LoomDesk. All rights reserved.</p>
+        <p className="font-sans">© {new Date().getFullYear()} LoomDesk. All rights reserved.</p>
       </footer>
     </div>
   );

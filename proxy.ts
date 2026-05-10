@@ -67,6 +67,12 @@ export default async function proxy(req: NextRequest) {
   const isAuthenticated = !!session;
   const userRole = session?.user?.role || 'MEMBER';
 
+  const isPublicRoute = matchesPrefix(pathname, PUBLIC_ROUTES);
+  const isProtectedPage = matchesPrefix(pathname, PROTECTED_PAGE_PREFIXES);
+  const isApiRoute = pathname.startsWith('/api');
+  const isAsset = pathname.includes('.');
+  const isAppRoute = isPublicRoute || isProtectedPage || isApiRoute;
+
   const finalizeResponse = (response: NextResponse) =>
     attachRequestId(response, requestId);
 
@@ -101,24 +107,25 @@ export default async function proxy(req: NextRequest) {
   // --- REWRITES ---
   let targetPathname = pathname;
   
-  if (cleanHostname === 'api.loomdesk.online') {
+  if (isAsset) {
+    targetPathname = pathname;
+  } else if (cleanHostname === 'api.loomdesk.online') {
     targetPathname = `/api${pathname}`;
   } else if (cleanHostname === 'meet.loomdesk.online') {
     targetPathname = pathname.startsWith('/book') ? pathname : `/book${pathname === '/' ? '' : pathname}`;
   } else if (cleanHostname === 'admin.loomdesk.online' || cleanHostname === 'dashboard.loomdesk.online') {
     targetPathname = `/dashboard${pathname === '/' ? '' : pathname}`;
   } else if (cleanHostname === 'www.loomdesk.online' || cleanHostname === 'loomdesk.online' || cleanHostname === 'localhost' || cleanHostname.startsWith('192.168.')) {
-    // Only rewrite to marketing if it's the root or a known marketing page, to avoid breaking other assets
-    // Actually, everything on www goes to marketing.
-    if (!pathname.startsWith('/api')) {
+    // Only rewrite to marketing if it's NOT an app route (to allow login/signup/api to work on localhost)
+    if (!isAppRoute) {
       targetPathname = `/home${pathname === '/' ? '' : pathname}`;
     }
   }
 
-  const isApiRoute = targetPathname.startsWith('/api');
+  const isTargetApiRoute = targetPathname.startsWith('/api');
 
   // 1. API Route Logic
-  if (isApiRoute) {
+  if (isTargetApiRoute) {
     const origin = req.headers.get('origin');
     const allowedCorsOrigins = getAllowedCorsOrigins();
     const isAllowedOrigin = !origin || allowedCorsOrigins.includes(origin);
@@ -160,10 +167,11 @@ export default async function proxy(req: NextRequest) {
   }
 
   // 2. Page Route Logic (for non-subdomain paths if they hit app.loomdesk.online directly)
-  const isPublicRoute = matchesPrefix(targetPathname, PUBLIC_ROUTES);
-  const isProtectedPage = matchesPrefix(targetPathname, PROTECTED_PAGE_PREFIXES);
+  // Use the targetPathname here to check if the REWRITTEN route is protected
+  const isTargetPublicRoute = matchesPrefix(targetPathname, PUBLIC_ROUTES);
+  const isTargetProtectedPage = matchesPrefix(targetPathname, PROTECTED_PAGE_PREFIXES);
 
-  if (isPublicRoute && cleanHostname === 'app.loomdesk.online') {
+  if (isTargetPublicRoute && cleanHostname === 'app.loomdesk.online') {
     if (isAuthenticated) {
       // If they go to app.loomdesk.online/login while logged in, redirect them to their dashboard
       const targetDomain = (userRole === 'ADMIN' || userRole === 'TEAM_LEAD') 
@@ -173,14 +181,14 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  if (isProtectedPage && !isAuthenticated) {
+  if (isTargetProtectedPage && !isAuthenticated) {
     const loginUrl = new URL('/login', getBaseUrl('app.loomdesk.online'));
     loginUrl.searchParams.set('redirectTo', pathname);
     return finalizeResponse(NextResponse.redirect(loginUrl));
   }
 
   // 3. RBAC Logic
-  if (isAuthenticated && isProtectedPage && cleanHostname === 'app.loomdesk.online') {
+  if (isAuthenticated && isTargetProtectedPage && cleanHostname === 'app.loomdesk.online') {
     // If they bypass domains and use relative /dashboard somehow
     if (!canAccessRoute(userRole, targetPathname)) {
       const fallback = targetPathname.startsWith('/dashboard') ? '/dashboard' : '/dashboard';
