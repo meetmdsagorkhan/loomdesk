@@ -20,7 +20,8 @@ import GlassCard from '@/components/shared/GlassCard';
 import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -130,11 +131,12 @@ export default function DashboardPage() {
           ? "Here's what's happening with your team today." 
           : "Here's your personal performance snapshot for today."}
         actions={
-          <Button variant="gradient" size="sm" asChild className="cursor-pointer">
-            <Link href="/reports">
-              {isAdminView ? 'Manage Reports' : 'View My Reports'} <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <Link 
+            href="/reports" 
+            className={cn(buttonVariants({ variant: "gradient", size: "sm" }), "cursor-pointer")}
+          >
+            {isAdminView ? 'Manage Reports' : 'View My Reports'} <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
         }
       />
 
@@ -278,18 +280,18 @@ export default function DashboardPage() {
               Quick Tasks
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="text-[10px] h-8 justify-start cursor-pointer px-2" asChild>
-                <Link href="/reports">New Report</Link>
-              </Button>
-              <Button variant="outline" size="sm" className="text-[10px] h-8 justify-start cursor-pointer px-2" asChild>
-                <Link href="/leave">Apply Leave</Link>
-              </Button>
-              <Button variant="outline" size="sm" className="text-[10px] h-8 justify-start cursor-pointer px-2" asChild>
-                <Link href="/settings">Settings</Link>
-              </Button>
-              <Button variant="outline" size="sm" className="text-[10px] h-8 justify-start cursor-pointer px-2" asChild>
-                <Link href="/qa">QA Review</Link>
-              </Button>
+              <Link href="/reports" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-[10px] h-8 justify-start cursor-pointer px-2")}>
+                New Report
+              </Link>
+              <Link href="/leave" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-[10px] h-8 justify-start cursor-pointer px-2")}>
+                Apply Leave
+              </Link>
+              <Link href="/settings" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-[10px] h-8 justify-start cursor-pointer px-2")}>
+                Settings
+              </Link>
+              <Link href="/qa" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-[10px] h-8 justify-start cursor-pointer px-2")}>
+                QA Review
+              </Link>
             </div>
           </div>
         </BentoCard>
