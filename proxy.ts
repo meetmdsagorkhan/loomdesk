@@ -59,20 +59,70 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse) {
 export default async function proxy(req: NextRequest) {
   const session = await auth();
   const { pathname } = req.nextUrl;
-  const isApiRoute = pathname.startsWith('/api');
+  const hostname = req.headers.get('host') || '';
+  const cleanHostname = hostname.split(':')[0];
+  const url = req.nextUrl.clone();
+  const requestId = getRequestId(req);
+
   const isAuthenticated = !!session;
   const userRole = session?.user?.role || 'MEMBER';
-  const requestId = getRequestId(req);
 
   const finalizeResponse = (response: NextResponse) =>
     attachRequestId(response, requestId);
+
+  const getBaseUrl = (domain: string) => `http${hostname.includes('localhost') ? '' : 's'}://${domain}${hostname.includes(':') ? `:${hostname.split(':')[1]}` : ''}`;
+
+  // --- SUBDOMAIN ROUTING & AUTH ENFORCEMENT ---
+
+  // 1. App Domain (Auth & Main Entry)
+  if (cleanHostname === 'app.loomdesk.online') {
+    if (pathname === '/') {
+      if (isAuthenticated) {
+        const targetDomain = (userRole === 'ADMIN' || userRole === 'TEAM_LEAD') 
+          ? 'admin.loomdesk.online' 
+          : 'dashboard.loomdesk.online';
+        return finalizeResponse(NextResponse.redirect(new URL('/', getBaseUrl(targetDomain))));
+      }
+      return finalizeResponse(NextResponse.redirect(new URL('/login', req.url)));
+    }
+  }
+
+  // 2. Admin Domain Enforcements
+  if (cleanHostname === 'admin.loomdesk.online') {
+    if (!isAuthenticated) return finalizeResponse(NextResponse.redirect(new URL('/login', getBaseUrl('app.loomdesk.online'))));
+    if (userRole === 'MEMBER') return finalizeResponse(NextResponse.redirect(new URL('/', getBaseUrl('dashboard.loomdesk.online'))));
+  }
+
+  // 3. Member Domain Enforcements
+  if (cleanHostname === 'dashboard.loomdesk.online') {
+    if (!isAuthenticated) return finalizeResponse(NextResponse.redirect(new URL('/login', getBaseUrl('app.loomdesk.online'))));
+  }
+
+  // --- REWRITES ---
+  let targetPathname = pathname;
+  
+  if (cleanHostname === 'api.loomdesk.online') {
+    targetPathname = `/api${pathname}`;
+  } else if (cleanHostname === 'meet.loomdesk.online') {
+    targetPathname = pathname.startsWith('/book') ? pathname : `/book${pathname === '/' ? '' : pathname}`;
+  } else if (cleanHostname === 'admin.loomdesk.online' || cleanHostname === 'dashboard.loomdesk.online') {
+    targetPathname = `/dashboard${pathname === '/' ? '' : pathname}`;
+  } else if (cleanHostname === 'www.loomdesk.online' || cleanHostname === 'loomdesk.online' || cleanHostname === 'localhost' || cleanHostname.startsWith('192.168.')) {
+    // Only rewrite to marketing if it's the root or a known marketing page, to avoid breaking other assets
+    // Actually, everything on www goes to marketing.
+    if (!pathname.startsWith('/api')) {
+      targetPathname = `/home${pathname === '/' ? '' : pathname}`;
+    }
+  }
+
+  const isApiRoute = targetPathname.startsWith('/api');
 
   // 1. API Route Logic
   if (isApiRoute) {
     const origin = req.headers.get('origin');
     const allowedCorsOrigins = getAllowedCorsOrigins();
     const isAllowedOrigin = !origin || allowedCorsOrigins.includes(origin);
-    const isPublicApiRoute = matchesPrefix(pathname, PUBLIC_API_ROUTES);
+    const isPublicApiRoute = matchesPrefix(targetPathname, PUBLIC_API_ROUTES);
 
     if (req.method === 'OPTIONS') {
       const response = new NextResponse(null, {
@@ -99,50 +149,52 @@ export default async function proxy(req: NextRequest) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-request-id', requestId);
 
+    if (targetPathname !== pathname) {
+      url.pathname = targetPathname;
+      return finalizeResponse(applyCorsHeaders(req, NextResponse.rewrite(url, { request: { headers: requestHeaders } })));
+    }
+    
     return finalizeResponse(
-      applyCorsHeaders(
-        req,
-        NextResponse.next({
-          request: {
-            headers: requestHeaders,
-          },
-        })
-      )
+      applyCorsHeaders(req, NextResponse.next({ request: { headers: requestHeaders } }))
     );
   }
 
-  // 2. Page Route Logic
-  const isPublicRoute = matchesPrefix(pathname, PUBLIC_ROUTES);
-  const isProtectedPage = matchesPrefix(pathname, PROTECTED_PAGE_PREFIXES);
+  // 2. Page Route Logic (for non-subdomain paths if they hit app.loomdesk.online directly)
+  const isPublicRoute = matchesPrefix(targetPathname, PUBLIC_ROUTES);
+  const isProtectedPage = matchesPrefix(targetPathname, PROTECTED_PAGE_PREFIXES);
 
-  if (isPublicRoute) {
+  if (isPublicRoute && cleanHostname === 'app.loomdesk.online') {
     if (isAuthenticated) {
-      return finalizeResponse(NextResponse.redirect(new URL('/dashboard', req.url)));
+      // If they go to app.loomdesk.online/login while logged in, redirect them to their dashboard
+      const targetDomain = (userRole === 'ADMIN' || userRole === 'TEAM_LEAD') 
+          ? 'admin.loomdesk.online' 
+          : 'dashboard.loomdesk.online';
+      return finalizeResponse(NextResponse.redirect(new URL('/', getBaseUrl(targetDomain))));
     }
   }
 
   if (isProtectedPage && !isAuthenticated) {
-    const loginUrl = new URL('/login', req.url);
+    const loginUrl = new URL('/login', getBaseUrl('app.loomdesk.online'));
     loginUrl.searchParams.set('redirectTo', pathname);
-
     return finalizeResponse(NextResponse.redirect(loginUrl));
   }
 
   // 3. RBAC Logic
-  if (isAuthenticated && isProtectedPage) {
-    // Determine the root of the module (e.g. /dashboard or /reports)
-    // Actually, canAccessRoute handles the path.
-    if (!canAccessRoute(userRole, pathname)) {
-      // If no access, redirect to dashboard or a safe fallback
-      const fallback = pathname.startsWith('/dashboard') ? '/dashboard' : '/dashboard';
-      // If they are on a subpage they shouldn't be, send them to the module root if they have access to it?
-      // For now, redirect to main dashboard as a safe baseline.
+  if (isAuthenticated && isProtectedPage && cleanHostname === 'app.loomdesk.online') {
+    // If they bypass domains and use relative /dashboard somehow
+    if (!canAccessRoute(userRole, targetPathname)) {
+      const fallback = targetPathname.startsWith('/dashboard') ? '/dashboard' : '/dashboard';
       return finalizeResponse(NextResponse.redirect(new URL(fallback, req.url)));
     }
   }
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-request-id', requestId);
+
+  if (targetPathname !== pathname) {
+    url.pathname = targetPathname;
+    return finalizeResponse(NextResponse.rewrite(url, { request: { headers: requestHeaders } }));
+  }
 
   return finalizeResponse(
     NextResponse.next({

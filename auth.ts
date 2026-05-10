@@ -280,6 +280,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
+        domain: '.loomdesk.online',
         secure: process.env.NODE_ENV === 'production',
       },
     },

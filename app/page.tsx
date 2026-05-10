@@ -5,8 +5,13 @@ export default async function Home() {
   const session = await auth();
   
   if (!session?.user) {
-    redirect('/login');
+    redirect('https://app.loomdesk.online/login');
   }
   
-  redirect('/dashboard');
+  const role = session.user.role;
+  const targetDomain = (role === 'ADMIN' || role === 'TEAM_LEAD') 
+    ? 'admin.loomdesk.online' 
+    : 'dashboard.loomdesk.online';
+
+  redirect(`https://${targetDomain}/`);
 }

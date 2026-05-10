@@ -66,8 +66,8 @@ function LoginForm() {
       return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
+    // Middleware will catch the root redirect and send user to admin or dashboard domain
+    window.location.href = '/';
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
