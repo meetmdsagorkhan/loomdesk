@@ -1,3 +1,5 @@
+import { API_URL } from './api-config';
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -20,8 +22,13 @@ export async function fetchWithError<T>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  const fullUrl = url.startsWith('/api') && !url.startsWith('http') 
+    ? `${API_URL}${url}` 
+    : url;
+
   try {
-    const response = await fetch(url, {
+    const response = await fetch(fullUrl, {
+      credentials: 'include',
       ...options,
       headers: {
         'Content-Type': 'application/json',

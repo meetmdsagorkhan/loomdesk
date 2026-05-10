@@ -82,10 +82,21 @@ export const env = new Proxy({} as z.infer<typeof envSchema>, {
 });
 
 export function getAllowedCorsOrigins() {
+  const defaults = [
+    'https://loomdesk.online',
+    'https://www.loomdesk.online',
+    'https://app.loomdesk.online',
+    'https://admin.loomdesk.online',
+    'https://dashboard.loomdesk.online',
+    'https://meet.loomdesk.online',
+    'http://localhost:3000',
+  ];
+
   return Array.from(
     new Set(
       [
         env.NEXTAUTH_URL,
+        ...defaults,
         ...(env.CORS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()) ?? []),
       ].filter(Boolean)
     )
