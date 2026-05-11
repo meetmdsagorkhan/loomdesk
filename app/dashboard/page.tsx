@@ -71,42 +71,40 @@ export default function DashboardPage() {
     fetchAnalytics();
   }, []);
 
-  const metricCards = analytics?.kpi
-    ? [
-        {
-          title: isAdminView ? 'Reports' : 'My Reports',
-          value: analytics.kpi.totalReports || 0,
-          icon: <FileText size={18} />,
-          color: 'primary',
-          change: 12,
-          href: '/reports',
-        },
-        {
-          title: isAdminView ? 'Avg Score' : 'My Score',
-          value: analytics.kpi.avgScore || 0,
-          icon: <TrendingUp size={18} />,
-          color: 'warning',
-          change: 3,
-          href: '/scoring',
-        },
-        {
-          title: isAdminView ? 'Deductions' : 'Pending Leaves',
-          value: isAdminView ? (analytics.kpi.totalDeductions || 0) : (analytics.kpi.pendingLeaves || 0),
-          icon: isAdminView ? <CheckCircle size={18} /> : <CalendarDays size={18} />,
-          color: 'accent',
-          change: 0,
-          href: isAdminView ? '/qa' : '/leave',
-        },
-        {
-          title: isAdminView ? 'Active Team' : 'Shifts',
-          value: isAdminView ? (analytics.kpi.activeMembers || 0) : 1,
-          icon: isAdminView ? <Users size={18} /> : <Clock size={18} />,
-          color: 'success',
-          change: 5,
-          href: isAdminView ? '/settings' : '/shifts',
-        },
-      ]
-    : [];
+  const metricCards = [
+    {
+      title: isAdminView ? 'Reports' : 'My Reports',
+      value: analytics?.kpi?.totalReports || 0,
+      icon: <FileText size={18} />,
+      color: 'primary',
+      change: 12,
+      href: '/reports',
+    },
+    {
+      title: isAdminView ? 'Avg Score' : 'My Score',
+      value: analytics?.kpi?.avgScore || 0,
+      icon: <TrendingUp size={18} />,
+      color: 'warning',
+      change: 3,
+      href: '/scoring',
+    },
+    {
+      title: isAdminView ? 'Deductions' : 'Pending Leaves',
+      value: isAdminView ? (analytics?.kpi?.totalDeductions || 0) : (analytics?.kpi?.pendingLeaves || 0),
+      icon: isAdminView ? <CheckCircle size={18} /> : <CalendarDays size={18} />,
+      color: 'accent',
+      change: 0,
+      href: isAdminView ? '/qa' : '/leave',
+    },
+    {
+      title: isAdminView ? 'Active Team' : 'Shifts',
+      value: isAdminView ? (analytics?.kpi?.activeMembers || 0) : 1,
+      icon: isAdminView ? <Users size={18} /> : <Clock size={18} />,
+      color: 'success',
+      change: 5,
+      href: isAdminView ? '/settings' : '/shifts',
+    },
+  ];
 
   const reportData = analytics?.leaderboard
     ? analytics.leaderboard.slice(0, 5).map((item) => ({
