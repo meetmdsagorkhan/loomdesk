@@ -57,7 +57,7 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse) {
   return response;
 }
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const session = await auth();
   const { pathname } = req.nextUrl;
   const hostname = req.headers.get('host') || '';
