@@ -18,7 +18,15 @@ const optionalString = <Schema extends z.ZodTypeAny>(schema: Schema) =>
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters long'),
-  NEXTAUTH_URL: z.string().url('NEXTAUTH_URL must be a valid URL'),
+  NEXTAUTH_URL: z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    let trimmed = value.trim();
+    if (trimmed.length === 0) return undefined;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = `https://${trimmed}`;
+    }
+    return trimmed;
+  }, z.string().url('NEXTAUTH_URL must be a valid URL').optional()),
   NEXT_PUBLIC_SUPABASE_URL: optionalString(
     z.string().url('NEXT_PUBLIC_SUPABASE_URL must be a valid URL')
   ),
