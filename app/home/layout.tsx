@@ -1,10 +1,14 @@
 import Link from 'next/link';
+import { auth } from '@/auth';
 
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  const isAuthenticated = !!session;
+
   return (
     <div className="min-h-screen relative">
       {/* Navigation */}
@@ -18,18 +22,29 @@ export default function MarketingLayout({
           <a href="https://meet.loomdesk.online" className="hover:text-foreground transition-colors">Scheduling</a>
         </div>
         <div className="flex items-center gap-4">
-          <a 
-            href="https://app.loomdesk.online/login" 
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors font-sans"
-          >
-            Log in
-          </a>
-          <a 
-            href="https://app.loomdesk.online/signup" 
-            className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-all font-sans"
-          >
-            Get Started
-          </a>
+          {isAuthenticated ? (
+            <a 
+              href="https://app.loomdesk.online" 
+              className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-all font-sans"
+            >
+              Dashboard
+            </a>
+          ) : (
+            <>
+              <a 
+                href="https://app.loomdesk.online/login" 
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors font-sans"
+              >
+                Log in
+              </a>
+              <a 
+                href="https://app.loomdesk.online/signup" 
+                className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-all font-sans"
+              >
+                Get Started
+              </a>
+            </>
+          )}
         </div>
       </nav>
 
