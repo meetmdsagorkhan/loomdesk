@@ -147,7 +147,7 @@ export default function DashboardPage() {
         {metricCards.map((metric, idx) => (
           <BentoCard 
             key={metric.title} 
-            className="p-0 border-none bg-transparent hover:bg-transparent shadow-none"
+            className="glass-card overflow-hidden p-0"
           >
             <Link href={metric.href} className="block transition-transform duration-200 hover:scale-[1.02] cursor-pointer h-full">
               <StatCard
