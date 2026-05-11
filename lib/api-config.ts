@@ -1,7 +1,11 @@
 export const getApiBaseUrl = () => {
   if (typeof window === 'undefined') {
     // Server-side: use the internal URL or NEXTAUTH_URL
-    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    let url = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    if (!url.startsWith('http')) {
+      url = `https://${url}`;
+    }
+    return url;
   }
 
   const hostname = window.location.hostname;

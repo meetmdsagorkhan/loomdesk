@@ -31,6 +31,14 @@ import {
 // In-memory cache to prevent thundering herd DB queries on parallel SWR fetches
 const globalSessionCache = new Map<string, { timestamp: number; user: any }>()
 
+// Ensure NEXTAUTH_URL has a protocol before NextAuth initializes
+if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.startsWith("http")) {
+  process.env.NEXTAUTH_URL = `https://${process.env.NEXTAUTH_URL}`
+}
+if (process.env.AUTH_URL && !process.env.AUTH_URL.startsWith("http")) {
+  process.env.AUTH_URL = `https://${process.env.AUTH_URL}`
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: env.AUTH_SECRET,
   trustHost: true,
