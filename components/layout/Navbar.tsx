@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Menu, Bell, Sun, Moon, Loader2, X, Check } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ interface Notification {
 
 export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
   const { user } = useCurrentUser();
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -115,19 +117,19 @@ export default function Navbar({ onMobileMenuToggle }: NavbarProps) {
     // Navigate based on notification type
     if (notification.type === 'NEW_MESSAGE') {
       // Navigate to messages page
-      window.location.href = '/dashboard/messages';
+      router.push('/dashboard/messages');
     } else if (notification.type === 'SCORE_DEDUCTION' || notification.type === 'NEW_FEEDBACK') {
       // Navigate to scoring page
-      window.location.href = '/dashboard/scoring';
+      router.push('/dashboard/scoring');
     } else if (notification.type === 'LEAVE_UPDATE') {
       // Navigate to leave page
-      window.location.href = '/dashboard/leave';
+      router.push('/dashboard/leave');
     } else if (notification.type === 'SHIFT_ASSIGNMENT') {
       // Navigate to shifts page
-      window.location.href = '/dashboard/shifts/my-schedule';
+      router.push('/dashboard/shifts/my-schedule');
     } else if (notification.type === 'NEW_REPORT') {
       // Navigate to QA page
-      window.location.href = '/dashboard/qa';
+      router.push('/dashboard/qa');
     }
     
     setIsOpen(false);

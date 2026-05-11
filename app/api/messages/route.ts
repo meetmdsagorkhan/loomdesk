@@ -187,7 +187,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Broadcast the message via Supabase for real-time delivery
+    // Broadcast the message via Supabase and Create Notification concurrently
+    const asyncTasks = [];
+
     if (supabase) {
       const roomId = channel 
         ? `channel:${channel}`
@@ -206,22 +208,20 @@ export async function POST(request: NextRequest) {
         readAt: message.readAt,
       };
 
-      try {
-        await supabase.channel(`chat:${roomId}`).send({
+      asyncTasks.push(
+        supabase.channel(`chat:${roomId}`).send({
           type: 'broadcast',
           event: 'new_message',
           payload: broadcastPayload,
-        });
-      } catch (broadcastError) {
-        logger.error('Failed to broadcast message', { error: broadcastError });
-        // Don't fail the request if broadcast fails
-      }
+        }).catch(broadcastError => {
+          logger.error('Failed to broadcast message', { error: broadcastError });
+        })
+      );
     }
 
-    // Create notification for direct messages
     if (receiverId && !channel) {
-      try {
-        await prisma.notification.create({
+      asyncTasks.push(
+        prisma.notification.create({
           data: {
             userId: receiverId,
             type: 'NEW_MESSAGE',
@@ -229,11 +229,14 @@ export async function POST(request: NextRequest) {
             message: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
             read: false,
           },
-        });
-      } catch (notificationError) {
-        logger.error('Failed to create notification', { error: notificationError });
-        // Don't fail the request if notification creation fails
-      }
+        }).catch(notificationError => {
+          logger.error('Failed to create notification', { error: notificationError });
+        })
+      );
+    }
+
+    if (asyncTasks.length > 0) {
+      await Promise.allSettled(asyncTasks);
     }
 
     return NextResponse.json({

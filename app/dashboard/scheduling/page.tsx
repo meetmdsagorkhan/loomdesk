@@ -29,6 +29,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
+import { showToast } from '@/components/shared/Toast';
 
 export const dynamic = 'force-dynamic';
 
@@ -190,7 +191,14 @@ export default function SchedulingPage() {
       if (res.ok) {
         const data = await res.json();
         setAvailability(data.availability || []);
-        setPreferences(data.preferences || null);
+        setPreferences(data.preferences || {
+          timezone: 'UTC',
+          slotDuration: 30,
+          minimumNotice: 120,
+          bufferBefore: 0,
+          bufferAfter: 0,
+          maxBookingsPerDay: 5
+        });
       }
     } finally {
       setAvailabilityLoading(false);
@@ -356,8 +364,13 @@ export default function SchedulingPage() {
       if (res.ok) {
         setShowAvailabilityForm(false);
         fetchAvailability();
+        showToast('Time slot saved successfully', 'success');
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to save time slot', 'error');
       }
     } catch (error) {
+      showToast('Failed to add availability', 'error');
       console.error('Failed to add availability:', error);
     }
   };
@@ -378,8 +391,12 @@ export default function SchedulingPage() {
       if (res.ok) {
         const data = await res.json();
         setPreferences(data);
+        showToast('Preferences updated', 'success');
+      } else {
+        showToast('Failed to update preferences', 'error');
       }
     } catch (error) {
+      showToast('Failed to update preferences', 'error');
       console.error('Failed to update preferences:', error);
     }
   };
@@ -916,7 +933,7 @@ export default function SchedulingPage() {
                       <select
                         value={availabilityDay}
                         onChange={(e) => setAvailabilityDay(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       >
                         <option value="MONDAY">Monday</option>
                         <option value="TUESDAY">Tuesday</option>
@@ -933,7 +950,7 @@ export default function SchedulingPage() {
                         type="time"
                         value={availabilityStart}
                         onChange={(e) => setAvailabilityStart(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -942,7 +959,7 @@ export default function SchedulingPage() {
                         type="time"
                         value={availabilityEnd}
                         onChange={(e) => setAvailabilityEnd(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                     </div>
                     <div className="sm:col-span-2 pt-2">
@@ -1017,7 +1034,7 @@ export default function SchedulingPage() {
                     <select
                       value={preferences.timezone}
                       onChange={(e) => updatePreferences({ timezone: e.target.value })}
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern Time</option>
@@ -1037,7 +1054,7 @@ export default function SchedulingPage() {
                       value={preferences.slotDuration}
                       onChange={(e) => updatePreferences({ slotDuration: parseInt(e.target.value) })}
                       min="15" max="180" step="15"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1047,7 +1064,7 @@ export default function SchedulingPage() {
                       value={preferences.minimumNotice}
                       onChange={(e) => updatePreferences({ minimumNotice: parseInt(e.target.value) })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1057,7 +1074,7 @@ export default function SchedulingPage() {
                       value={preferences.bufferBefore}
                       onChange={(e) => updatePreferences({ bufferBefore: parseInt(e.target.value) })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1067,7 +1084,7 @@ export default function SchedulingPage() {
                       value={preferences.bufferAfter}
                       onChange={(e) => updatePreferences({ bufferAfter: parseInt(e.target.value) })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
@@ -1077,7 +1094,7 @@ export default function SchedulingPage() {
                       value={preferences.maxBookingsPerDay}
                       onChange={(e) => updatePreferences({ maxBookingsPerDay: parseInt(e.target.value) })}
                       min="1" max="50"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-background px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                 </div>

@@ -28,6 +28,7 @@ import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { handleApiError } from '@/lib/error-handler';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,7 @@ type ShiftAssignment = {
     id: string;
     name: string;
     email: string;
+    image?: string | null;
   };
   shift: Shift;
 };
@@ -805,9 +807,12 @@ export default function ShiftsPage() {
                   <TableRow key={assignment.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs border border-primary/20">
-                          {assignment.user.name.charAt(0)}
-                        </div>
+                        <Avatar className="h-8 w-8 border border-primary/20">
+                          {assignment.user.image && <AvatarImage src={assignment.user.image} />}
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                            {assignment.user.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <p className="font-medium text-sm text-foreground">{assignment.user.name}</p>
                           <p className="text-xs text-muted-foreground">{assignment.user.email}</p>

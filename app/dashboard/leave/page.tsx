@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ComponentProps } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ type GoogleCalendarEvent = {
 };
 
 export default function LeavePage() {
+  const router = useRouter();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,8 +140,13 @@ export default function LeavePage() {
       return;
     }
 
+    if (user.role === 'ADMIN' || user.role === 'TEAM_LEAD') {
+      router.push('/dashboard/leave/admin');
+      return;
+    }
+
     fetchLeaveRequests();
-  }, [user, userLoading, mounted]);
+  }, [user, userLoading, mounted, router]);
 
   const fetchLeaveRequests = async () => {
     setIsLoading(true);

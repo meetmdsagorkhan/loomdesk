@@ -99,6 +99,11 @@ const nextConfig: NextConfig = {
         destination: '/settings',
         permanent: false,
       },
+      {
+        source: '/dashboard/profile',
+        destination: '/profile',
+        permanent: false,
+      },
     ];
   },
 };

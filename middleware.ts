@@ -26,6 +26,7 @@ const PROTECTED_PAGE_PREFIXES = [
   '/messages',
   '/scoring',
   '/calendar',
+  '/profile',
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
@@ -56,7 +57,7 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse) {
   return response;
 }
 
-export default async function proxy(req: NextRequest) {
+export default async function middleware(req: NextRequest) {
   const session = await auth();
   const { pathname } = req.nextUrl;
   const hostname = req.headers.get('host') || '';

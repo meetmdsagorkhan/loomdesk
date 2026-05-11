@@ -203,13 +203,21 @@ export default function SubmissionsPage() {
       </div>
 
       {/* Submissions List */}
-      <div className="space-y-4">
+      <div className="space-y-8">
         {submissions.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             No submissions found
           </div>
         ) : (
-          submissions.map((submission) => (
+          <>
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold mb-4 text-foreground">Open Requests</h2>
+              {submissions.filter(s => s.status === 'OPEN' || s.status === 'IN_PROGRESS').length === 0 ? (
+                <p className="text-sm text-muted-foreground">No open requests.</p>
+              ) : (
+                submissions
+                  .filter(s => s.status === 'OPEN' || s.status === 'IN_PROGRESS')
+                  .map((submission) => (
             <div key={submission.id} className="glass-panel rounded-2xl p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
@@ -296,7 +304,43 @@ export default function SubmissionsPage() {
             </div>
           ))
         )}
+            </div>
+          </>
+        )}
       </div>
+
+      {submissions.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-white/10 mt-8">
+          <h2 className="text-xl font-semibold mb-4 text-foreground/70">Resolved & Closed</h2>
+          <div className="grid gap-4 opacity-75">
+            {submissions.filter(s => s.status === 'RESOLVED' || s.status === 'CLOSED').length === 0 ? (
+              <p className="text-sm text-muted-foreground">No resolved requests.</p>
+            ) : (
+              submissions
+                .filter(s => s.status === 'RESOLVED' || s.status === 'CLOSED')
+                .map((submission) => (
+                  <div key={submission.id} className="glass-panel rounded-2xl p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getTypeIcon(submission.type)}
+                          <h3 className="font-semibold line-through text-muted-foreground">{submission.title}</h3>
+                          <Badge className={getStatusColor(submission.status)}>{submission.status}</Badge>
+                          <Badge className={getPriorityColor(submission.priority)}>{submission.priority}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{submission.description}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>From: {submission.user.name}</span>
+                          <span>{formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
