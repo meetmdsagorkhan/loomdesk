@@ -47,36 +47,7 @@ type ConfirmedBooking = {
   };
 };
 
-// Generate time slots for a day
-function generateSlots(duration: number, bookedSlots: BookedSlot[], date: Date): Date[] {
-  const slots: Date[] = [];
-  const start = new Date(date);
-  start.setHours(9, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(18, 0, 0, 0);
 
-  const now = new Date();
-
-  for (let t = new Date(start); t < end; t = new Date(t.getTime() + duration * 60000)) {
-    // Skip past slots
-    if (t <= now) continue;
-
-    const slotEnd = new Date(t.getTime() + duration * 60000);
-
-    // Check for conflicts with booked slots
-    const isBooked = bookedSlots.some((b) => {
-      const bs = new Date(b.startTime);
-      const be = new Date(b.endTime);
-      return t < be && slotEnd > bs;
-    });
-
-    if (!isBooked) {
-      slots.push(new Date(t));
-    }
-  }
-
-  return slots;
-}
 
 function formatTime(date: Date) {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -95,6 +66,7 @@ export default function BookSlotPage() {
 
   const [host, setHost] = useState<Host | null>(null);
   const [eventType, setEventType] = useState<EventType | null>(null);
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -129,12 +101,15 @@ export default function BookSlotPage() {
         if (!data) return;
         setEventType(data.eventType);
         setHost(data.host);
+        setAvailableDays(data.availableDays || []);
         setLoading(false);
       })
       .catch(() => { setNotFound(true); setLoading(false); });
   }, [username, slug]);
 
-  // Fetch booked slots when date selected
+  // Fetch available slots when date selected
+  const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
+
   useEffect(() => {
     if (!selectedDate || !eventType || !username || !slug) return;
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
@@ -142,16 +117,15 @@ export default function BookSlotPage() {
     fetch(`/api/public/users/${username}/${slug}?date=${dateStr}`)
       .then((r) => r.json())
       .then((data) => {
-        setBookedSlots(data.bookedSlots || []);
+        if (data.availableSlots) {
+          setAvailableSlots(data.availableSlots.map((s: any) => new Date(s.startTime)));
+        } else {
+          setAvailableSlots([]);
+        }
         setSlotsLoading(false);
       })
       .catch(() => setSlotsLoading(false));
   }, [selectedDate, eventType, username, slug]);
-
-  const availableSlots = useMemo(() => {
-    if (!selectedDate || !eventType) return [];
-    return generateSlots(eventType.duration, bookedSlots, selectedDate);
-  }, [selectedDate, bookedSlots, eventType]);
 
   // Calendar helpers
   const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay();
@@ -170,7 +144,8 @@ export default function BookSlotPage() {
   const isDateDisabled = (day: number) => {
     const d = new Date(calYear, calMonth, day);
     d.setHours(0,0,0,0);
-    return d < today || d.getDay() === 0 || d.getDay() === 6;
+    if (d < today) return true;
+    return !availableDays.includes(d.getDay());
   };
 
   const handleDayClick = (day: number) => {

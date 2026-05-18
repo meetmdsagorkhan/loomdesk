@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAvailableSlots } from "@/lib/scheduling/availability-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -38,23 +39,34 @@ export async function GET(
       return NextResponse.json({ error: "Event type not found" }, { status: 404 });
     }
 
-    // If a date is provided, return booked slots for that day
-    let bookedSlots: { startTime: Date; endTime: Date }[] = [];
+    const availabilities = await prisma.availability.findMany({
+      where: { eventTypeId: eventType.id, isAvailable: true },
+      select: { dayOfWeek: true }
+    });
+
+    const dayMap: Record<string, number> = {
+      SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6
+    };
+    const availableDays = [...new Set(availabilities.map(a => dayMap[a.dayOfWeek]))];
+
+    // If a date is provided, return available slots for that day using the engine
+    let availableSlots: { startTime: string; endTime: string; displayTime: string }[] = [];
+    let bookedSlots: { startTime: Date; endTime: Date }[] = []; // kept for backwards compatibility if needed, though we probably don't need it
+
     if (dateStr) {
       const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
       const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
 
-      bookedSlots = await prisma.booking.findMany({
-        where: {
-          eventTypeId: eventType.id,
-          status: "CONFIRMED",
-          startTime: { gte: dayStart, lte: dayEnd },
-        },
-        select: { startTime: true, endTime: true },
+      availableSlots = await getAvailableSlots({
+        userId: user.id,
+        eventTypeId: eventType.id,
+        startDate: dayStart,
+        endDate: dayEnd,
+        timezone: "UTC" // The engine will format to the user's timezone implicitly via preferences
       });
     }
 
-    return NextResponse.json({ eventType, host: user, bookedSlots });
+    return NextResponse.json({ eventType, host: user, availableDays, availableSlots, bookedSlots });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch event type" }, { status: 500 });
   }
