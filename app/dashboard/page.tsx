@@ -34,7 +34,6 @@ type DashboardAnalytics = {
   }>;
 };
 
-import { API_URL } from '@/lib/api-config';
 
 export default function DashboardPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
@@ -46,15 +45,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/analytics/summary`, { credentials: 'include' });
+        const response = await fetch(`/api/analytics/summary`, { credentials: 'include' });
 
         if (response.ok) {
           const data = await response.json();
           if (data) {
             setAnalytics(data);
           }
+        } else {
+          console.error('API Error:', response.status, await response.text());
         }
       } catch (error) {
+        console.error('Failed to fetch analytics:', error);
         // Silently fail - analytics are optional
       } finally {
         setIsLoading(false);
