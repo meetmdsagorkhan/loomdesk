@@ -218,20 +218,20 @@ export default function BookSlotPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
       </div>
     );
   }
 
   if (notFound || !eventType || !host) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
-        <div className="text-center space-y-4 glass-card p-10 max-w-md w-full relative z-10">
-          <AlertCircle size={48} className="mx-auto text-destructive" />
-          <h1 className="text-2xl font-bold font-heading">Event not found</h1>
-          <p className="text-muted-foreground font-sans">This scheduling link may be inactive or removed.</p>
-          <Link href={`/book/${username}`} className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <AlertCircle size={48} className="mx-auto text-rose-400/60" />
+          <h1 className="text-2xl font-bold text-white">Event not found</h1>
+          <p className="text-slate-400">This scheduling link may be inactive or removed.</p>
+          <Link href={`/book/${username}`} className="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300">
             <ChevronLeft size={14} /> Back to {username}'s page
           </Link>
         </div>
@@ -242,41 +242,35 @@ export default function BookSlotPage() {
   // ─── Confirmation Screen ────────────────────────────────────────────────────
   if (step === 'confirmed' && confirmedBooking) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-6">
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-success/10 blur-[120px]" />
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-emerald-600/10 blur-[120px]" />
+          <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-indigo-600/10 blur-[120px]" />
         </div>
-        <div className="relative w-full max-w-md text-center space-y-6 z-10">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[2rem] bg-success/20 border border-success/30 shadow-2xl backdrop-blur-md">
-            <Check size={40} className="text-success" />
+        <div className="relative w-full max-w-md text-center space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.2)]">
+            <Check size={32} className="text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold font-heading mb-2">You're booked!</h1>
-            <p className="text-muted-foreground">A confirmation has been sent to <span className="font-medium text-foreground">{confirmedBooking.email}</span></p>
+            <h1 className="text-3xl font-bold text-white">You're booked!</h1>
+            <p className="mt-2 text-slate-400">A confirmation has been sent to {confirmedBooking.email}</p>
           </div>
 
-          <div className="glass-card p-8 text-left space-y-5">
-            <h2 className="font-bold font-heading text-xl">{confirmedBooking.eventType.title}</h2>
-            <div className="space-y-4 text-sm text-muted-foreground font-medium">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <Calendar size={16} />
-                </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm text-left space-y-4">
+            <h2 className="font-semibold text-white">{confirmedBooking.eventType.title}</h2>
+            <div className="space-y-3 text-sm text-slate-400">
+              <div className="flex items-center gap-2.5">
+                <Calendar size={15} className="text-indigo-400 shrink-0" />
                 <span>{new Date(confirmedBooking.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <Clock size={16} />
-                </div>
+              <div className="flex items-center gap-2.5">
+                <Clock size={15} className="text-indigo-400 shrink-0" />
                 <span>
                   {formatTime(new Date(confirmedBooking.startTime))} – {formatTime(new Date(confirmedBooking.endTime))} ({confirmedBooking.eventType.duration} min)
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <User size={16} />
-                </div>
+              <div className="flex items-center gap-2.5">
+                <User size={15} className="text-indigo-400 shrink-0" />
                 <span>with {confirmedBooking.eventType.user.name}</span>
               </div>
             </div>
@@ -286,19 +280,19 @@ export default function BookSlotPage() {
                 href={(confirmedBooking.meetLink || confirmedBooking.eventType.meetLink)!}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-success/15 border border-success/30 py-3.5 text-sm font-semibold text-success hover:bg-success/25 transition-all"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 py-3 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-all"
               >
-                <Video size={18} />
+                <Video size={16} />
                 Join Google Meet
                 {confirmedBooking.meetLink && (
-                  <span className="ml-1 rounded bg-success/20 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">Unique Link</span>
+                  <span className="ml-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold">Unique Link</span>
                 )}
               </a>
             )}
           </div>
 
-          <Link href={`/book/${username}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
-            <ChevronLeft size={16} /> Schedule another meeting
+          <Link href={`/book/${username}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+            <ChevronLeft size={14} /> Schedule another meeting
           </Link>
         </div>
       </div>
@@ -306,61 +300,61 @@ export default function BookSlotPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/10 blur-[120px]" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-600/15 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-violet-600/15 blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16 z-10">
+      <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
         {/* Back link */}
-        <Link href={`/book/${username}`} className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-          <ChevronLeft size={16} /> Back
+        <Link href={`/book/${username}`} className="mb-8 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-300 transition-colors">
+          <ChevronLeft size={14} /> Back
         </Link>
 
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           {/* ── Left: Event Info ── */}
-          <div className="glass-panel p-6 space-y-6 h-fit">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br from-primary/80 to-accent/80 text-lg font-bold text-white overflow-hidden shadow-xl ring-2 ring-white/10">
+          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 space-y-5 h-fit">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white overflow-hidden shadow-[0_4px_16px_rgba(99,102,241,0.3)]">
                 {host.image ? <img src={host.image} alt={host.name} className="w-full h-full object-cover" /> : getInitials(host.name)}
               </div>
               <div className="min-w-0">
-                <p className="font-bold font-heading text-lg truncate">{host.name}</p>
+                <p className="font-semibold text-white truncate">{host.name}</p>
                 {(host.position || host.company) && (
-                  <p className="text-xs text-muted-foreground font-medium truncate">{[host.position, host.company].filter(Boolean).join(' · ')}</p>
+                  <p className="text-xs text-slate-400 truncate">{[host.position, host.company].filter(Boolean).join(' · ')}</p>
                 )}
               </div>
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold font-heading">{eventType.title}</h1>
+              <h1 className="text-xl font-bold text-white">{eventType.title}</h1>
               {eventType.description && (
-                <p className="mt-2 text-sm text-muted-foreground">{eventType.description}</p>
+                <p className="mt-1 text-sm text-slate-400">{eventType.description}</p>
               )}
             </div>
 
-            <div className="space-y-3 text-sm text-muted-foreground font-medium">
-              <div className="flex items-center gap-3">
-                <Clock size={16} className="text-primary shrink-0" />
+            <div className="space-y-2.5 text-sm text-slate-400">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-indigo-400 shrink-0" />
                 <span>{eventType.duration} minutes</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Video size={16} className="text-success shrink-0" />
-                <span className="text-success">Google Meet</span>
+              <div className="flex items-center gap-2">
+                <Video size={14} className="text-emerald-400 shrink-0" />
+                <span className="text-emerald-400">Google Meet</span>
               </div>
               {selectedDate && step === 'form' && selectedSlot && (
                 <>
-                  <div className="h-px bg-white/10 my-3" />
-                  <div className="flex items-center gap-3">
-                    <Calendar size={16} className="text-primary shrink-0" />
-                    <span className="text-foreground">
+                  <div className="h-px bg-white/10 my-1" />
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-indigo-400 shrink-0" />
+                    <span className="text-slate-200">
                       {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Clock size={16} className="text-primary shrink-0" />
-                    <span className="text-foreground">{formatTime(selectedSlot)}</span>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-indigo-400 shrink-0" />
+                    <span className="text-slate-200">{formatTime(selectedSlot)}</span>
                   </div>
                 </>
               )}
@@ -368,40 +362,40 @@ export default function BookSlotPage() {
           </div>
 
           {/* ── Right: Calendar or Form ── */}
-          <div className="glass-panel p-6 sm:p-8">
+          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
             {step === 'calendar' && (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Calendar */}
                 <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold font-heading">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-base font-semibold text-white">
                       {MONTHS[calMonth]} {calYear}
                     </h2>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <button
                         onClick={prevMonth}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-all"
                       >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft size={15} />
                       </button>
                       <button
                         onClick={nextMonth}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-all"
                       >
-                        <ChevronRight size={16} />
+                        <ChevronRight size={15} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-7 gap-1 mb-3">
+                  <div className="grid grid-cols-7 gap-1 mb-2">
                     {DAYS.map((d) => (
-                      <div key={d} className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground py-1">
+                      <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-600 py-1">
                         {d}
                       </div>
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1">
                     {/* Empty cells */}
                     {Array.from({ length: firstDayOfMonth }).map((_, i) => (
                       <div key={`empty-${i}`} />
@@ -419,11 +413,11 @@ export default function BookSlotPage() {
                           onClick={() => handleDayClick(day)}
                           disabled={isDisabled}
                           className={`
-                            relative flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200
-                            ${isDisabled ? 'text-muted-foreground/30 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/20 hover:text-primary'}
-                            ${isSelected ? 'bg-primary text-primary-foreground shadow-lg hover:bg-primary hover:text-primary-foreground' : ''}
-                            ${isToday && !isSelected ? 'text-primary border border-primary/30' : ''}
-                            ${!isDisabled && !isSelected ? 'text-foreground/80' : ''}
+                            relative flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-all duration-150
+                            ${isDisabled ? 'text-slate-700 cursor-not-allowed' : 'cursor-pointer hover:bg-indigo-500/20 hover:text-indigo-200'}
+                            ${isSelected ? 'bg-indigo-500 text-white shadow-[0_2px_12px_rgba(99,102,241,0.4)] hover:bg-indigo-500 hover:text-white' : ''}
+                            ${isToday && !isSelected ? 'text-indigo-400 border border-indigo-500/30' : ''}
+                            ${!isDisabled && !isSelected ? 'text-slate-300' : ''}
                           `}
                         >
                           {day}
@@ -435,26 +429,26 @@ export default function BookSlotPage() {
 
                 {/* Time Slots */}
                 {selectedDate && (
-                  <div className="pt-2">
-                    <h3 className="text-base font-bold font-heading mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-3">
                       {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h3>
                     {slotsLoading ? (
-                      <div className="flex h-24 items-center justify-center">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <div className="flex h-20 items-center justify-center">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
                       </div>
                     ) : availableSlots.length === 0 ? (
-                      <div className="rounded-xl border border-white/5 bg-white/5 p-8 text-center">
-                        <p className="text-sm font-medium text-muted-foreground">No available slots on this day.</p>
-                        <p className="text-xs text-muted-foreground/60 mt-2">Try selecting a different date.</p>
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+                        <p className="text-sm text-slate-400">No available slots on this day.</p>
+                        <p className="text-xs text-slate-600 mt-1">Try selecting a different date.</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {availableSlots.map((slot) => (
                           <button
                             key={slot.toISOString()}
                             onClick={() => handleSlotClick(slot)}
-                            className="rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-foreground/80 hover:border-primary/40 hover:bg-primary/10 hover:text-primary transition-all duration-200"
+                            className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-slate-300 hover:border-indigo-500/40 hover:bg-indigo-500/10 hover:text-indigo-200 transition-all duration-150"
                           >
                             {formatTime(slot)}
                           </button>
@@ -465,36 +459,36 @@ export default function BookSlotPage() {
                 )}
 
                 {!selectedDate && (
-                  <div className="flex h-32 items-center justify-center border-t border-white/5 mt-4">
-                    <p className="text-sm font-medium text-muted-foreground">Select a date to see available times</p>
+                  <div className="flex h-24 items-center justify-center">
+                    <p className="text-sm text-slate-600">Select a date to see available times</p>
                   </div>
                 )}
               </div>
             )}
 
             {step === 'form' && selectedSlot && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center gap-4">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => setStep('calendar')}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-all"
                   >
-                    <ChevronLeft size={16} />
+                    <ChevronLeft size={15} />
                   </button>
-                  <h2 className="text-xl font-bold font-heading">Your Details</h2>
+                  <h2 className="text-base font-semibold text-white">Your Details</h2>
                 </div>
 
                 {formError && (
-                  <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
-                    <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
+                    <AlertCircle size={15} className="mt-0.5 shrink-0" />
                     {formError}
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <User size={14} /> Your Name *
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      <User size={12} /> Your Name *
                     </label>
                     <input
                       type="text"
@@ -502,13 +496,13 @@ export default function BookSlotPage() {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="John Smith"
                       required
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      <Mail size={14} /> Email Address *
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      <Mail size={12} /> Email Address *
                     </label>
                     <input
                       type="email"
@@ -516,32 +510,32 @@ export default function BookSlotPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       required
-                      className="w-full rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                     />
                   </div>
 
-                  <div className="rounded-xl border border-white/5 bg-white/5 px-5 py-4 text-sm text-muted-foreground space-y-2.5">
-                    <div className="flex items-center gap-3">
-                      <Calendar size={15} className="text-primary" />
-                      <span className="font-medium text-foreground">{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                  <div className="rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-sm text-slate-400 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={13} className="text-indigo-400" />
+                      <span>{selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Clock size={15} className="text-primary" />
-                      <span className="font-medium text-foreground">{formatTime(selectedSlot)} · {eventType.duration} min</span>
+                    <div className="flex items-center gap-2">
+                      <Clock size={13} className="text-indigo-400" />
+                      <span>{formatTime(selectedSlot)} · {eventType.duration} min</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Video size={15} className="text-success" />
-                      <span className="text-success font-medium">Google Meet link will be provided</span>
+                    <div className="flex items-center gap-2">
+                      <Video size={13} className="text-emerald-400" />
+                      <span className="text-emerald-400">Google Meet link will be provided</span>
                     </div>
                   </div>
 
                   <button
                     type="submit"
                     disabled={submitting || !name || !email}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl btn-primary py-4 text-sm font-bold shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(99,102,241,0.35)] transition-all hover:bg-indigo-500 hover:shadow-[0_4px_24px_rgba(99,102,241,0.5)] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {submitting && (
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     )}
                     Confirm Booking
                   </button>
@@ -551,8 +545,8 @@ export default function BookSlotPage() {
           </div>
         </div>
 
-        <p className="mt-16 text-center text-xs text-muted-foreground/60 font-medium tracking-wide uppercase">
-          Powered by Loomdesk
+        <p className="mt-10 text-center text-xs text-slate-700">
+          Powered by Loomdesk Scheduling
         </p>
       </div>
     </div>

@@ -22,11 +22,9 @@ import {
   Plug,
   Unplug,
   Sparkles,
-  Settings
 } from 'lucide-react';
 import GlassCard from '@/components/shared/GlassCard';
 import PageHeader from '@/components/shared/PageHeader';
-import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 import { showToast } from '@/components/shared/Toast';
@@ -243,13 +241,13 @@ export default function SchedulingPage() {
     const connected = searchParams.get('connected');
     const error = searchParams.get('error');
     if (connected === 'true') {
-      setGcalBanner({ type: 'success', msg: '✓ Google Calendar connected! Bookings will now generate unique Meet links.' });
+      setGcalBanner({ type: 'success', msg: 'Γ£ô Google Calendar connected! Bookings will now generate unique Meet links.' });
       fetchGcalStatus();
       router.replace('/dashboard/scheduling');
     } else if (error) {
       const msgs: Record<string, string> = {
         access_denied: 'You denied Google Calendar access.',
-        no_refresh_token: 'No refresh token received. Please try again — make sure to grant all permissions.',
+        no_refresh_token: 'No refresh token received. Please try again ΓÇö make sure to grant all permissions.',
         callback_failed: 'OAuth callback failed. Check your Google Cloud credentials.',
       };
       setGcalBanner({ type: 'error', msg: msgs[error] ?? `OAuth error: ${error}` });
@@ -429,7 +427,7 @@ export default function SchedulingPage() {
       <PageHeader
         badge="Admin Only"
         title="Scheduling"
-        subtitle="Create shareable meeting links and manage bookings — powered by Google Meet."
+        subtitle="Create shareable meeting links and manage bookings ΓÇö powered by Google Meet."
       />
 
       {/* Google Calendar Banner */}
@@ -451,51 +449,63 @@ export default function SchedulingPage() {
       )}
 
       {/* Google Calendar Connect Card */}
-      {!gcalLoading && gcalStatus && !gcalStatus.connected && (
-        <BentoCard className="p-5 border-primary/20 bg-primary/5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {!gcalLoading && gcalStatus && (
+        <GlassCard variant="panel" padding="none">
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-                <Calendar size={20} />
+              <div className={cn(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+                gcalStatus.connected
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                  : 'border-white/15 bg-white/5 text-muted-foreground'
+              )}>
+                {gcalStatus.connected ? <Plug size={18} /> : <Unplug size={18} />}
               </div>
               <div>
-                <h3 className="text-base font-semibold font-heading text-foreground">Connect Google Calendar</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Automatically generate Google Meet links and sync events to your calendar.
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Google Calendar</p>
+                  {gcalStatus.connected && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                      <Check size={9} /> Connected
+                    </span>
+                  )}
+                  {!gcalStatus.configured && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {gcalStatus.connected
+                    ? 'Each booking creates a unique Google Meet link automatically.'
+                    : gcalStatus.configured
+                      ? 'Connect to generate unique Meet links for every booking.'
+                      : 'Add GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI to your .env file.'}
                 </p>
               </div>
             </div>
-            <a
-              href="/api/auth/google-calendar"
-              className="flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-light px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:opacity-90 transition-all"
-            >
-              <Sparkles size={14} />
-              Connect Calendar
-            </a>
-          </div>
-        </BentoCard>
-      )}
-
-      {/* Google Calendar Connected State */}
-      {!gcalLoading && gcalStatus?.connected && (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-              <Check size={18} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Google Calendar Connected</p>
-              <p className="text-xs text-muted-foreground">Generating Meet links for all new bookings.</p>
+            <div className="shrink-0">
+              {gcalStatus.connected ? (
+                <button
+                  onClick={handleGcalDisconnect}
+                  disabled={gcalDisconnecting}
+                  className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-sm font-semibold text-rose-400/80 hover:bg-rose-500/15 hover:text-rose-400 transition-all disabled:opacity-50"
+                >
+                  <Unplug size={13} />
+                  {gcalDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                </button>
+              ) : gcalStatus.configured ? (
+                <a
+                  href="/api/auth/google-calendar"
+                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 transition-all"
+                >
+                  <Sparkles size={13} />
+                  Connect Google Calendar
+                </a>
+              ) : null}
             </div>
           </div>
-          <button
-            onClick={handleGcalDisconnect}
-            disabled={gcalDisconnecting}
-            className="text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors disabled:opacity-50"
-          >
-            {gcalDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-          </button>
-        </div>
+        </GlassCard>
       )}
 
       {/* Username warning */}
@@ -524,25 +534,25 @@ export default function SchedulingPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 rounded-2xl border border-white/10 bg-black/20 p-1.5 w-fit overflow-x-auto">
+      <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/5 p-1 w-fit">
         {(['events', 'bookings', 'availability'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+              'flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200',
               tab === t
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/8'
             )}
           >
-            {t === 'events' ? <Calendar size={16} /> : t === 'bookings' ? <CalendarCheck size={16} /> : <Clock size={16} />}
-            {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability & Time'}
+            {t === 'events' ? <Calendar size={14} /> : t === 'bookings' ? <CalendarCheck size={14} /> : <Clock size={14} />}
+            {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability'}
           </button>
         ))}
       </div>
 
-      {/* ── EVENT TYPES TAB ── */}
+      {/* ΓöÇΓöÇ EVENT TYPES TAB ΓöÇΓöÇ */}
       {tab === 'events' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -648,9 +658,8 @@ export default function SchedulingPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      <span>Fallback Meet Link</span>
-                      <span className="text-[10px] text-muted-foreground/60 font-normal normal-case">Optional</span>
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Google Meet Link
                     </label>
                     <input
                       type="url"
@@ -659,11 +668,6 @@ export default function SchedulingPage() {
                       placeholder="https://meet.google.com/xxx-yyyy-zzz"
                       className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                    {gcalStatus?.connected ? (
-                      <p className="text-[11px] text-emerald-400/80 mt-1">Unique links are generated automatically.</p>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground/70 mt-1">Connect Google Calendar to generate automatically.</p>
-                    )}
                   </div>
                 </div>
 
@@ -808,7 +812,7 @@ export default function SchedulingPage() {
         </div>
       )}
 
-      {/* ── BOOKINGS TAB ── */}
+      {/* ΓöÇΓöÇ BOOKINGS TAB ΓöÇΓöÇ */}
       {tab === 'bookings' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -854,12 +858,12 @@ export default function SchedulingPage() {
                       <p className="text-xs text-muted-foreground">{booking.email}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span className="font-medium text-foreground/70">{booking.eventType.title}</span>
-                        <span>·</span>
+                        <span>┬╖</span>
                         <span className="flex items-center gap-1">
                           <Clock size={10} />
                           {formatDateTime(booking.startTime)}
                         </span>
-                        <span>·</span>
+                        <span>┬╖</span>
                         <span>{booking.eventType.duration} min</span>
                       </div>
                     </div>
@@ -897,144 +901,23 @@ export default function SchedulingPage() {
         </div>
       )}
 
-      {/* ── AVAILABILITY TAB ── */}
+      {/* ΓöÇΓöÇ AVAILABILITY TAB ΓöÇΓöÇ */}
       {tab === 'availability' && (
-        <div className="space-y-6 fade-in">
-          <div className="grid gap-6 xl:grid-cols-2">
-            {/* Left: Weekly Availability (Set Date and Time) */}
-            <BentoCard className="flex flex-col p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
-                  <h3 className="text-lg font-semibold font-heading text-foreground flex items-center gap-2">
-                    <Calendar size={18} className="text-primary" />
-                    Set Dates & Times
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">Define your weekly available hours.</p>
-                </div>
-                <button
-                  onClick={() => setShowAvailabilityForm(!showAvailabilityForm)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow transition-all",
-                    showAvailabilityForm 
-                      ? "bg-white/10 text-foreground hover:bg-white/15" 
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  )}
-                >
-                  <Plus size={15} className={showAvailabilityForm ? "rotate-45 transition-transform" : "transition-transform"} />
-                  {showAvailabilityForm ? "Close" : "Add Time"}
-                </button>
-              </div>
-              
-              {showAvailabilityForm && (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-4">
-                  <form onSubmit={addAvailability} className="grid gap-5 sm:grid-cols-2">
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Day of Week</label>
-                      <select
-                        value={availabilityDay}
-                        onChange={(e) => setAvailabilityDay(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                      >
-                        <option value="MONDAY">Monday</option>
-                        <option value="TUESDAY">Tuesday</option>
-                        <option value="WEDNESDAY">Wednesday</option>
-                        <option value="THURSDAY">Thursday</option>
-                        <option value="FRIDAY">Friday</option>
-                        <option value="SATURDAY">Saturday</option>
-                        <option value="SUNDAY">Sunday</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Start Time</label>
-                      <input
-                        type="time"
-                        value={availabilityStart}
-                        onChange={(e) => setAvailabilityStart(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">End Time</label>
-                      <input
-                        type="time"
-                        value={availabilityEnd}
-                        onChange={(e) => setAvailabilityEnd(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                    </div>
-                    <div className="sm:col-span-2 pt-2">
-                      <button type="submit" className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90">
-                        <Check size={16} /> Save Time Slot
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {availabilityLoading ? (
-                <div className="flex h-32 items-center justify-center">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              ) : availability.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-2xl border border-dashed border-white/10 bg-black/20">
-                  <Clock size={40} className="text-muted-foreground/30" />
-                  <p className="text-sm font-semibold text-muted-foreground">No times configured</p>
-                  <p className="text-xs text-muted-foreground/60 text-center max-w-[200px]">Click 'Add Time' to set when people can book meetings with you.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((day) => {
-                    const dayAvail = availability.filter(a => a.dayOfWeek === day);
-                    if (dayAvail.length === 0) return null;
-                    return (
-                      <div key={day} className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-                        <div className="bg-white/5 px-4 py-2 border-b border-white/10">
-                          <span className="text-xs font-bold tracking-wider text-foreground">{day}</span>
-                        </div>
-                        <div className="divide-y divide-white/5">
-                          {dayAvail.map((avail) => (
-                            <div key={avail.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <Clock size={14} className="text-primary" />
-                                <span className="text-sm font-medium text-foreground">
-                                  {avail.startTime} - {avail.endTime}
-                                </span>
-                              </div>
-                              <button
-                                onClick={() => deleteAvailability(avail.id)}
-                                className="flex items-center justify-center rounded-lg bg-rose-500/10 p-2 text-rose-400 hover:bg-rose-500/20 transition-all"
-                                title="Remove time slot"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </BentoCard>
-
-            {/* Right: Preferences */}
-            <BentoCard className="flex flex-col p-6 space-y-6">
-              <div className="border-b border-white/10 pb-4">
-                <h3 className="text-lg font-semibold font-heading text-foreground flex items-center gap-2">
-                  <Settings size={18} className="text-primary" />
-                  Meeting Rules
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">Global preferences for your bookings.</p>
-              </div>
-              
+        <div className="space-y-6">
+          {/* Scheduling Preferences */}
+          <GlassCard variant="panel" padding="none">
+            <div className="border-b border-white/10 px-6 py-4">
+              <h3 className="text-base font-semibold text-foreground">Scheduling Preferences</h3>
+            </div>
+            <div className="p-6 space-y-6">
               {preferences ? (
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <div className="space-y-1.5 sm:col-span-2">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Timezone</label>
                     <select
                       value={preferences.timezone}
                       onChange={(e) => updatePreferences({ timezone: e.target.value })}
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern Time</option>
@@ -1047,64 +930,173 @@ export default function SchedulingPage() {
                       <option value="Asia/Shanghai">Shanghai</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" title="Default duration when creating events">Slot Duration (m)</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Default Slot Duration (min)</label>
                     <input
                       type="number"
                       value={preferences.slotDuration}
                       onChange={(e) => updatePreferences({ slotDuration: parseInt(e.target.value) })}
-                      min="15" max="180" step="15"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      min="15"
+                      max="180"
+                      step="15"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimum Notice (m)</label>
-                    <input
-                      type="number"
-                      value={preferences.minimumNotice}
-                      onChange={(e) => updatePreferences({ minimumNotice: parseInt(e.target.value) })}
-                      min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer Before (m)</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer Before (min)</label>
                     <input
                       type="number"
                       value={preferences.bufferBefore}
                       onChange={(e) => updatePreferences({ bufferBefore: parseInt(e.target.value) })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer After (m)</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Buffer After (min)</label>
                     <input
                       type="number"
                       value={preferences.bufferAfter}
                       onChange={(e) => updatePreferences({ bufferAfter: parseInt(e.target.value) })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Max Bookings / Day</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Minimum Notice (min)</label>
+                    <input
+                      type="number"
+                      value={preferences.minimumNotice}
+                      onChange={(e) => updatePreferences({ minimumNotice: parseInt(e.target.value) })}
+                      min="0"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Max Bookings Per Day</label>
                     <input
                       type="number"
                       value={preferences.maxBookingsPerDay}
                       onChange={(e) => updatePreferences({ maxBookingsPerDay: parseInt(e.target.value) })}
-                      min="1" max="50"
-                      className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      min="1"
+                      max="50"
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                 </div>
               ) : (
-                <div className="flex h-32 items-center justify-center">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <div className="flex h-20 items-center justify-center">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
               )}
-            </BentoCard>
-          </div>
+            </div>
+          </GlassCard>
+
+          {/* Weekly Availability */}
+          <GlassCard variant="panel" padding="none">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <h3 className="text-base font-semibold text-foreground">Weekly Availability</h3>
+              <button
+                onClick={() => setShowAvailabilityForm(true)}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md"
+              >
+                <Plus size={15} />
+                Add Time Slot
+              </button>
+            </div>
+            
+            {showAvailabilityForm && (
+              <div className="border-b border-white/10 p-6 bg-white/[0.02]">
+                <form onSubmit={addAvailability} className="grid gap-4 sm:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Day</label>
+                    <select
+                      value={availabilityDay}
+                      onChange={(e) => setAvailabilityDay(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      <option value="MONDAY">Monday</option>
+                      <option value="TUESDAY">Tuesday</option>
+                      <option value="WEDNESDAY">Wednesday</option>
+                      <option value="THURSDAY">Thursday</option>
+                      <option value="FRIDAY">Friday</option>
+                      <option value="SATURDAY">Saturday</option>
+                      <option value="SUNDAY">Sunday</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Start Time</label>
+                    <input
+                      type="time"
+                      value={availabilityStart}
+                      onChange={(e) => setAvailabilityStart(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">End Time</label>
+                    <input
+                      type="time"
+                      value={availabilityEnd}
+                      onChange={(e) => setAvailabilityEnd(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="submit"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAvailabilityForm(false)}
+                      className="flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="p-6 space-y-3">
+              {availabilityLoading ? (
+                <div className="flex h-20 items-center justify-center">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : availability.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <Clock size={40} className="text-muted-foreground/30" />
+                  <p className="text-sm font-semibold text-muted-foreground">No availability set</p>
+                  <p className="text-xs text-muted-foreground/60">Add time slots above to define when you're available for meetings.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availability.map((avail) => (
+                    <div
+                      key={avail.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-foreground w-24">{avail.dayOfWeek}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {avail.startTime} - {avail.endTime}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => deleteAvailability(avail.id)}
+                        className="flex items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 text-rose-400/60 hover:bg-rose-500/15 hover:text-rose-400 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </GlassCard>
         </div>
       )}
     </div>
