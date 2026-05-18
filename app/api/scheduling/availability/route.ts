@@ -6,22 +6,30 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const availabilitySchema = z.object({
+  eventTypeId: z.string(),
   dayOfWeek: z.enum(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']),
   startTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
   endTime: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
   isAvailable: z.boolean().default(true),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const eventTypeId = searchParams.get('eventTypeId');
+
+    if (!eventTypeId) {
+      return NextResponse.json({ error: 'eventTypeId is required' }, { status: 400 });
+    }
+
     const [availability, preferences] = await Promise.all([
-      getAvailability(),
-      getSchedulingPreferences()
+      getAvailability(eventTypeId),
+      getSchedulingPreferences(eventTypeId)
     ]);
 
     return NextResponse.json({ availability, preferences });

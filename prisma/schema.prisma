@@ -46,7 +46,7 @@ model User {
   submissions  UserSubmission[]
   eventTypes   EventType[]
   googleCalendarToken GoogleCalendarToken?
-  schedulingPreferences SchedulingPreferences?
+  schedulingPreferences SchedulingPreferences[]
   availability  Availability[]
 }
 
@@ -348,6 +348,8 @@ model EventType {
   meetLink    String?
   active      Boolean   @default(true)
   bookings    Booking[]
+  availabilities        Availability[]
+  schedulingPreferences SchedulingPreferences?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -388,8 +390,10 @@ model GoogleCalendarToken {
 
 model SchedulingPreferences {
   id              String   @id @default(cuid())
-  userId          String   @unique
+  userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId     String   @unique
+  eventType       EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
   timezone        String   @default("UTC")
   bufferBefore    Int      @default(0) // minutes
   bufferAfter     Int      @default(0) // minutes
@@ -405,6 +409,8 @@ model Availability {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
   dayOfWeek   DayOfWeek
   startTime   String // format: "09:00"
   endTime     String // format: "17:00"
@@ -412,8 +418,8 @@ model Availability {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([userId, dayOfWeek, startTime, endTime])
-  @@index([userId, dayOfWeek])
+  @@unique([eventTypeId, dayOfWeek, startTime, endTime])
+  @@index([eventTypeId, dayOfWeek])
 }
 
 enum DayOfWeek {

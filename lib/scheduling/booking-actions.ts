@@ -139,13 +139,22 @@ export async function createBooking(data: z.infer<typeof createBookingSchema>) {
       );
 
       // Update booking with calendar event details
-      await prisma.booking.update({
+      const updatedBooking = await prisma.booking.update({
         where: { id: booking.id },
         data: {
           googleCalendarEventId: calendarEvent.id,
           meetLink: calendarEvent.hangoutLink
+        },
+        include: {
+          eventType: {
+            include: {
+              user: true
+            }
+          }
         }
       });
+      // Replace the initial booking with the updated one
+      Object.assign(booking, updatedBooking);
     }
   } catch (error) {
     console.error('Failed to create Google Calendar event:', error);

@@ -2,7 +2,7 @@
  * Availability Engine
  * 
  * Core logic for generating available time slots based on:
- * - User's availability settings
+ * - Event's availability settings
  * - Existing bookings
  * - Timezone differences
  * - Buffer times
@@ -56,16 +56,15 @@ export interface GeneratedSlot {
 export async function getAvailableSlots(request: AvailabilityRequest): Promise<GeneratedSlot[]> {
   const { userId, eventTypeId, startDate, endDate, timezone = 'UTC' } = request;
 
-  // Fetch user's scheduling preferences and availability
+  // Fetch event's scheduling preferences and availability
   const [preferences, availabilities, eventType, existingBookings] = await Promise.all([
-    prisma.schedulingPreferences.findUnique({ where: { userId } }),
+    prisma.schedulingPreferences.findUnique({ where: { eventTypeId } }),
     prisma.availability.findMany({ 
-      where: { userId, isAvailable: true },
+      where: { eventTypeId, isAvailable: true },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
     }),
     prisma.eventType.findUnique({ 
-      where: { id: eventTypeId },
-      include: { user: { select: { schedulingPreferences: true } } }
+      where: { id: eventTypeId }
     }),
     prisma.booking.findMany({
       where: {
@@ -159,157 +158,7 @@ export async function getAvailableSlots(request: AvailabilityRequest): Promise<G
 }
 
 /**
- * Generate slots within a specific time range
- */
-function generateSlotsInRange(params: {
-  rangeStart: Date;
-  rangeEnd: Date;
-  slotDuration: number;
-  bufferBefore: number;
-  bufferAfter: number;
-  minimumNotice: number;
-  existingBookings: Booking[];
-  maxBookingsPerDay: number;
-  timezone: string;
-  eventTypeDate: Date;
-}): GeneratedSlot[] {
-  const {
-    rangeStart,
-    rangeEnd,
-    slotDuration,
-    bufferBefore,
-    bufferAfter,
-    minimumNotice,
-    existingBookings,
-    maxBookingsPerDay,
-    timezone,
-    eventTypeDate
-  } = params;
-
-  const slots: GeneratedSlot[] = [];
-  const now = new Date();
-  const minBookingTime = add(now, { minutes: minimumNotice });
-
-  // Count bookings for this day
-  const dayBookings = existingBookings.filter(booking => 
-    isSameDay(booking.startTime, eventTypeDate)
-  );
-
-  if (dayBookings.length >= maxBookingsPerDay) {
-    return []; // Max bookings reached for this day
-  }
-
-  // Generate potential slots
-  let currentSlotStart = rangeStart;
-  
-  while (isBefore(currentSlotStart, rangeEnd)) {
-    const currentSlotEnd = add(currentSlotStart, { minutes: slotDuration });
-
-    // Check if slot end is beyond range end
-    if (isAfter(currentSlotEnd, rangeEnd)) {
-      break;
-    }
-
-    // Check minimum notice requirement
-    if (isBefore(currentSlotStart, minBookingTime)) {
-      currentSlotStart = add(currentSlotStart, { minutes: slotDuration });
-      continue;
-    }
-
-    // Check for conflicts with existing bookings
-    const hasConflict = checkBookingConflict(
-      currentSlotStart,
-      currentSlotEnd,
-      existingBookings,
-      bufferBefore,
-      bufferAfter
-    );
-
-    if (!hasConflict) {
-      slots.push({
-        startTime: currentSlotStart.toISOString(),
-        endTime: currentSlotEnd.toISOString(),
-        displayTime: format(currentSlotStart, 'h:mm a', { in: tz(timezone) })
-      });
-    }
-
-    // Move to next slot
-    currentSlotStart = add(currentSlotStart, { minutes: slotDuration });
-  }
-
-  return slots;
-}
-
-/**
- * Check if a time slot conflicts with existing bookings
- */
-function checkBookingConflict(
-  slotStart: Date,
-  slotEnd: Date,
-  bookings: Booking[],
-  bufferBefore: number,
-  bufferAfter: number
-): boolean {
-  for (const booking of bookings) {
-    const bookingStart = booking.startTime;
-    const bookingEnd = booking.endTime;
-
-    // Add buffer times to booking
-    const bookingStartWithBuffer = sub(bookingStart, { minutes: bufferBefore });
-    const bookingEndWithBuffer = add(bookingEnd, { minutes: bufferAfter });
-
-    // Check for overlap
-    if (
-      isBefore(slotStart, bookingEndWithBuffer) && 
-      isAfter(slotEnd, bookingStartWithBuffer)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
- * Get available dates for a given month
- */
-export async function getAvailableDates(
-  userId: string,
-  year: number,
-  month: number
-): Promise<Date[]> {
-  const preferences = await prisma.schedulingPreferences.findUnique({
-    where: { userId }
-  });
-
-  const workingDays = preferences?.workingDays || ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-  const availabilities = await prisma.availability.findMany({
-    where: { userId, isAvailable: true }
-  });
-
-  // Get all days that have availability set
-  const daysWithAvailability = new Set(
-    availabilities.map((a: any) => a.dayOfWeek)
-  );
-
-  const availableDates: Date[] = [];
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
-
-  for (let day = 1; day <= endDate.getDate(); day++) {
-    const date = new Date(year, month - 1, day);
-    const dayName = format(date, 'EEEE').toUpperCase();
-
-    if (workingDays.includes(dayName) && daysWithAvailability.has(dayName)) {
-      availableDates.push(date);
-    }
-  }
-
-  return availableDates;
-}
-
-/**
- * Validate a booking slot before creation
+ * Validate a specific booking slot
  */
 export async function validateBookingSlot(
   userId: string,
@@ -317,8 +166,31 @@ export async function validateBookingSlot(
   startTime: Date,
   endTime: Date
 ): Promise<{ valid: boolean; reason?: string }> {
-  // Check if the slot is still available
-  const existingBooking = await prisma.booking.findFirst({
+  // Get all slots for that day to check if this slot exists
+  const dayStart = startOfDay(startTime);
+  const dayEnd = endOfDay(startTime);
+
+  const availableSlots = await getAvailableSlots({
+    userId,
+    eventTypeId,
+    startDate: dayStart,
+    endDate: dayEnd
+  });
+
+  const startTimeIso = startTime.toISOString();
+  const endTimeIso = endTime.toISOString();
+
+  // Find exact matching slot
+  const slotExists = availableSlots.some(
+    slot => slot.startTime === startTimeIso && slot.endTime === endTimeIso
+  );
+
+  if (!slotExists) {
+    return { valid: false, reason: 'This time slot is no longer available or invalid.' };
+  }
+
+  // Check for any conflicting bookings that might have sneaked in
+  const conflict = await prisma.booking.findFirst({
     where: {
       eventTypeId,
       status: 'CONFIRMED',
@@ -345,24 +217,102 @@ export async function validateBookingSlot(
     }
   });
 
-  if (existingBooking) {
-    return { valid: false, reason: 'This time slot is already booked' };
-  }
-
-  // Check minimum notice
-  const preferences = await prisma.schedulingPreferences.findUnique({
-    where: { userId }
-  });
-
-  if (preferences) {
-    const minBookingTime = add(new Date(), { minutes: preferences.minimumNotice });
-    if (isBefore(startTime, minBookingTime)) {
-      return { 
-        valid: false, 
-        reason: `Booking must be made at least ${preferences.minimumNotice} minutes in advance` 
-      };
-    }
+  if (conflict) {
+    return { valid: false, reason: 'This time slot was just booked.' };
   }
 
   return { valid: true };
+}
+
+/**
+ * Helper to generate time slots within a specific time range
+ */
+function generateSlotsInRange({
+  rangeStart,
+  rangeEnd,
+  slotDuration,
+  bufferBefore,
+  bufferAfter,
+  minimumNotice,
+  existingBookings,
+  maxBookingsPerDay,
+  timezone,
+  eventTypeDate
+}: {
+  rangeStart: Date;
+  rangeEnd: Date;
+  slotDuration: number;
+  bufferBefore: number;
+  bufferAfter: number;
+  minimumNotice: number;
+  existingBookings: Booking[];
+  maxBookingsPerDay: number;
+  timezone: string;
+  eventTypeDate: Date;
+}): GeneratedSlot[] {
+  const slots: GeneratedSlot[] = [];
+  const now = new Date();
+  
+  // Calculate earliest possible booking time based on minimum notice
+  const earliestBookingTime = add(now, { minutes: minimumNotice });
+
+  // Count bookings for this day
+  const bookingsForDay = existingBookings.filter(b => 
+    isSameDay(b.startTime, eventTypeDate)
+  ).length;
+
+  // If max bookings per day reached, return empty
+  if (bookingsForDay >= maxBookingsPerDay) {
+    return slots;
+  }
+
+  // Start with the range start time
+  let currentSlotStart = rangeStart;
+
+  while (isBefore(currentSlotStart, rangeEnd)) {
+    const currentSlotEnd = add(currentSlotStart, { minutes: slotDuration });
+    
+    // Stop if the end of this slot goes past the end of the range
+    if (isAfter(currentSlotEnd, rangeEnd)) {
+      break;
+    }
+
+    // Include buffers for availability checking
+    const slotStartWithBuffer = sub(currentSlotStart, { minutes: bufferBefore });
+    const slotEndWithBuffer = add(currentSlotEnd, { minutes: bufferAfter });
+
+    // Check if slot is in the past or violates minimum notice
+    if (isBefore(currentSlotStart, earliestBookingTime)) {
+      currentSlotStart = add(currentSlotStart, { minutes: slotDuration });
+      continue;
+    }
+
+    // Check for conflicts with existing bookings
+    const hasConflict = existingBookings.some(booking => {
+      // Check if the buffered slot overlaps with the booking
+      // A booking conflicts if it overlaps with [slotStartWithBuffer, slotEndWithBuffer]
+      return (
+        (isAfter(booking.startTime, slotStartWithBuffer) && isBefore(booking.startTime, slotEndWithBuffer)) || // booking starts during slot
+        (isAfter(booking.endTime, slotStartWithBuffer) && isBefore(booking.endTime, slotEndWithBuffer)) ||     // booking ends during slot
+        (isBefore(booking.startTime, slotStartWithBuffer) && isAfter(booking.endTime, slotEndWithBuffer)) ||   // booking completely covers slot
+        isEqual(booking.startTime, slotStartWithBuffer) ||                                                     // exact match start
+        isEqual(booking.endTime, slotEndWithBuffer)                                                            // exact match end
+      );
+    });
+
+    if (!hasConflict) {
+      slots.push({
+        startTime: currentSlotStart.toISOString(),
+        endTime: currentSlotEnd.toISOString(),
+        displayTime: format(currentSlotStart, 'h:mm a')
+      });
+    }
+
+    // Move to next potential slot start time
+    // For simplicity, we advance by the slot duration. 
+    // For more complex scheduling, this might advance by a smaller interval (e.g. 15 mins)
+    currentSlotStart = add(currentSlotStart, { minutes: slotDuration });
+  }
+
+  return slots;
 }

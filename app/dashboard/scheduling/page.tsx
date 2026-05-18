@@ -77,7 +77,7 @@ type GoogleCalStatus = {
   connectedAt?: string | null;
 };
 
-type Tab = 'events' | 'bookings' | 'availability';
+type Tab = 'events' | 'bookings';
 
 const DURATION_OPTIONS = [10, 15, 30, 45, 60, 90, 120];
 
@@ -121,16 +121,12 @@ function BookingStatusBadge({ status }: { status: Booking['status'] }) {
 
 export default function SchedulingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, isLoading: userLoading } = useCurrentUser();
   const [tab, setTab] = useState<Tab>('events');
+  const [editingAvailabilityEvent, setEditingAvailabilityEvent] = useState<EventType | null>(null);
 
   // Google Calendar state
-  const [gcalStatus, setGcalStatus] = useState<GoogleCalStatus | null>(null);
-  const [gcalLoading, setGcalLoading] = useState(true);
-  const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
-  const [gcalBanner, setGcalBanner] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
+      
   // Event Types State
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -199,10 +195,11 @@ export default function SchedulingPage() {
     }
   }, [bookingStatus]);
 
-  const fetchAvailability = useCallback(async () => {
+  const fetchAvailability = useCallback(async (eventId?: string) => {
+    if (!eventId) return;
     setAvailabilityLoading(true);
     try {
-      const res = await fetch('/api/scheduling/availability');
+      const res = await fetch(`/api/scheduling/availability?eventTypeId=${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setAvailability(data.availability || []);
@@ -220,57 +217,18 @@ export default function SchedulingPage() {
     }
   }, []);
 
-  const fetchGcalStatus = useCallback(async () => {
-    setGcalLoading(true);
-    try {
-      const res = await fetch('/api/auth/google-calendar/status');
-      if (res.ok) setGcalStatus(await res.json());
-    } finally {
-      setGcalLoading(false);
-    }
-  }, []);
-
-  const handleGcalDisconnect = async () => {
-    if (!confirm('Disconnect Google Calendar? New bookings will use the static Meet link fallback.')) return;
-    setGcalDisconnecting(true);
-    const res = await fetch('/api/auth/google-calendar/disconnect', { method: 'DELETE' });
-    setGcalDisconnecting(false);
-    if (res.ok) {
-      setGcalBanner({ type: 'success', msg: 'Google Calendar disconnected.' });
-      fetchGcalStatus();
-    } else {
-      setGcalBanner({ type: 'error', msg: 'Failed to disconnect. Try again.' });
-    }
-  };
-
+  
+  
   useEffect(() => {
     fetchEventTypes();
-    fetchGcalStatus();
-  }, [fetchEventTypes, fetchGcalStatus]);
+      }, [fetchEventTypes]);
 
   useEffect(() => {
     if (tab === 'bookings') fetchBookings();
-    if (tab === 'availability') fetchAvailability();
-  }, [tab, fetchBookings, fetchAvailability]);
+    if (tab === 'events' && editingAvailabilityEvent) fetchAvailability(editingAvailabilityEvent.id);
+  }, [tab, fetchBookings, fetchAvailability, editingAvailabilityEvent]);
 
-  // Handle OAuth callback params
-  useEffect(() => {
-    const connected = searchParams.get('connected');
-    const error = searchParams.get('error');
-    if (connected === 'true') {
-      setGcalBanner({ type: 'success', msg: 'Γ£ô Google Calendar connected! Bookings will now generate unique Meet links.' });
-      fetchGcalStatus();
-      router.replace('/dashboard/scheduling');
-    } else if (error) {
-      const msgs: Record<string, string> = {
-        access_denied: 'You denied Google Calendar access.',
-        no_refresh_token: 'No refresh token received. Please try again ΓÇö make sure to grant all permissions.',
-        callback_failed: 'OAuth callback failed. Check your Google Cloud credentials.',
-      };
-      setGcalBanner({ type: 'error', msg: msgs[error] ?? `OAuth error: ${error}` });
-      router.replace('/dashboard/scheduling');
-    }
-  }, [searchParams, router, fetchGcalStatus]);
+
 
   const openCreateForm = () => {
     setEditingEvent(null);
@@ -366,19 +324,20 @@ export default function SchedulingPage() {
   const addAvailability = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/scheduling/availability', {
+      const res = await fetch(`/api/scheduling/availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dayOfWeek: availabilityDay,
           startTime: availabilityStart,
           endTime: availabilityEnd,
-          isAvailable: true
+          isAvailable: true,
+          eventTypeId: editingAvailabilityEvent?.id
         }),
       });
       if (res.ok) {
         setShowAvailabilityForm(false);
-        fetchAvailability();
+        fetchAvailability(editingAvailabilityEvent?.id);
         showToast('Time slot saved successfully', 'success');
       } else {
         const data = await res.json();
@@ -393,7 +352,7 @@ export default function SchedulingPage() {
   const deleteAvailability = async (id: string) => {
     if (!confirm('Delete this availability slot?')) return;
     await fetch(`/api/scheduling/availability/${id}`, { method: 'DELETE' });
-    fetchAvailability();
+    fetchAvailability(editingAvailabilityEvent?.id);
   };
 
   const updatePreferenceLocal = (updates: any) => {
@@ -404,6 +363,7 @@ export default function SchedulingPage() {
     setPreferencesSaving(true);
     try {
       const payload = {
+        eventTypeId: editingAvailabilityEvent?.id,
         timezone: preferences.timezone,
         slotDuration: Number(preferences.slotDuration) || 30,
         bufferBefore: Number(preferences.bufferBefore) || 0,
@@ -465,85 +425,9 @@ export default function SchedulingPage() {
         />
       </motion.div>
 
-      {/* Google Calendar Banner */}
-      {gcalBanner && (
-        <motion.div variants={fadeUp} className={cn(
-          'flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg',
-          gcalBanner.type === 'success'
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-emerald-500/10'
-            : 'border-rose-500/30 bg-rose-500/10 text-rose-300 shadow-rose-500/10'
-        )}>
-          {gcalBanner.type === 'success'
-            ? <Check size={15} className="mt-0.5 shrink-0" />
-            : <AlertCircle size={15} className="mt-0.5 shrink-0" />}
-          <p className="text-sm flex-1 font-medium">{gcalBanner.msg}</p>
-          <button onClick={() => setGcalBanner(null)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
-            <X size={14} />
-          </button>
-        </motion.div>
-      )}
 
-      {/* Google Calendar Connect Card */}
-      {!gcalLoading && gcalStatus && (
-        <motion.div variants={fadeUp}>
-          <GlassCard variant="panel" padding="none">
-            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-lg',
-                  gcalStatus.connected
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-emerald-500/20'
-                    : 'border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 text-muted-foreground shadow-black/20'
-                )}>
-                  {gcalStatus.connected ? <Plug size={20} /> : <Unplug size={20} />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">Google Calendar</p>
-                    {gcalStatus.connected && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                        <Check size={9} /> Connected
-                      </span>
-                    )}
-                    {!gcalStatus.configured && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
-                        Not Configured
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {gcalStatus.connected
-                      ? 'Each booking creates a unique Google Meet link automatically.'
-                      : gcalStatus.configured
-                        ? 'Connect to generate unique Meet links for every booking.'
-                        : 'Add GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI to your .env file.'}
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 mt-2 sm:mt-0">
-                {gcalStatus.connected ? (
-                  <button
-                    onClick={handleGcalDisconnect}
-                    disabled={gcalDisconnecting}
-                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-400/90 hover:bg-rose-500/20 hover:text-rose-300 transition-all disabled:opacity-50 shadow-[0_4px_16px_rgba(244,63,94,0.1)]"
-                  >
-                    <Unplug size={14} />
-                    {gcalDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                  </button>
-                ) : gcalStatus.configured ? (
-                  <a
-                    href="/api/auth/google-calendar"
-                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_32px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5 transition-all"
-                  >
-                    <Sparkles size={14} />
-                    Connect Google Calendar
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          </GlassCard>
-        </motion.div>
-      )}
+
+
 
       {/* Username warning */}
       {!username && (
@@ -572,7 +456,7 @@ export default function SchedulingPage() {
 
       {/* Tabs */}
       <motion.div variants={fadeUp} className="flex gap-1 rounded-[1.25rem] border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 p-1.5 w-fit backdrop-blur-md shadow-inner">
-        {(['events', 'bookings', 'availability'] as const).map((t) => (
+        {(['events', 'bookings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -591,15 +475,15 @@ export default function SchedulingPage() {
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              {t === 'events' ? <Calendar size={15} /> : t === 'bookings' ? <CalendarCheck size={15} /> : <Clock size={15} />}
-              {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability'}
+              {t === 'events' ? <Calendar size={15} /> : <CalendarCheck size={15} />}
+              {t === 'events' ? 'Event Types' : 'Bookings'}
             </span>
           </button>
         ))}
       </motion.div>
 
       {/* ΓöÇΓöÇ EVENT TYPES TAB ΓöÇΓöÇ */}
-      {tab === 'events' && (
+      {tab === 'events' && !editingAvailabilityEvent && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
@@ -827,6 +711,13 @@ export default function SchedulingPage() {
                         </a>
                       )}
                       <button
+                        onClick={() => { setEditingAvailabilityEvent(event); fetchAvailability(event.id); }}
+                        className="flex items-center justify-center rounded-lg border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+                        title="Availability Settings"
+                      >
+                        <Clock size={12} />
+                      </button>
+                      <button
                         onClick={() => openEditForm(event)}
                         className="flex items-center justify-center rounded-lg border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                         title="Edit"
@@ -949,10 +840,21 @@ export default function SchedulingPage() {
         </div>
       )}
 
-      {/* ΓöÇΓöÇ AVAILABILITY TAB ΓöÇΓöÇ */}
-      {tab === 'availability' && (
-        <div className="space-y-6">
+      
+      {/* ΓöÇΓöÇ AVAILABILITY VIEW ΓöÇΓöÇ */}
+      {tab === 'events' && editingAvailabilityEvent && (
+        <div className="space-y-6 fade-in">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { setEditingAvailabilityEvent(null); setPreferences(null); setAvailability([]); }}
+              className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+            >
+              Back to Events
+            </button>
+            <h2 className="text-xl font-bold text-foreground">Availability for {editingAvailabilityEvent.title}</h2>
+          </div>
           {/* Scheduling Preferences */}
+
           <GlassCard variant="panel" padding="none">
             <div className="border-b border-white/10 px-6 py-4">
               <h3 className="text-base font-semibold text-foreground">Scheduling Preferences</h3>
