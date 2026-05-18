@@ -817,7 +817,7 @@ export default function SchedulingPage() {
                       )}
                       {username && (
                         <a
-                          href={`/book/${username}/${event.slug}`}
+                          href={getBookingLink(username || '', event.slug)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-center rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"

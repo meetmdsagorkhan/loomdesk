@@ -113,7 +113,11 @@ export default async function proxy(req: NextRequest) {
   } else if (cleanHostname === 'api.loomdesk.online') {
     targetPathname = pathname.startsWith('/api') ? pathname : `/api${pathname}`;
   } else if (cleanHostname === 'meet.loomdesk.online') {
-    targetPathname = pathname.startsWith('/book') ? pathname : `/book${pathname === '/' ? '' : pathname}`;
+    if (pathname.startsWith('/api')) {
+      targetPathname = pathname;
+    } else {
+      targetPathname = pathname.startsWith('/book') ? pathname : `/book${pathname === '/' ? '' : pathname}`;
+    }
   } else if (cleanHostname === 'admin.loomdesk.online' || cleanHostname === 'dashboard.loomdesk.online') {
     // Don't prefix if it's an API call or already has the dashboard prefix
     if (pathname.startsWith('/api') || pathname.startsWith('/dashboard')) {
