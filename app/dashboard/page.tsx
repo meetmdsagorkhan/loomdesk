@@ -9,6 +9,7 @@ import {
   TrendingUp,
   CheckCircle,
   CalendarDays,
+  Users,
 } from 'lucide-react';
 import StatCard from '@/components/shared/StatCard';
 import PageHeader from '@/components/shared/PageHeader';
@@ -82,12 +83,20 @@ export default function DashboardPage() {
           href: '/scoring',
         },
         {
-          title: isAdminView ? 'Deductions' : 'Pending Leaves',
-          value: isAdminView ? (analytics.kpi.totalDeductions || 0) : (analytics.kpi.pendingLeaves || 0),
-          icon: isAdminView ? <CheckCircle size={18} /> : <CalendarDays size={18} />,
+          title: isAdminView ? 'Pending Leaves' : 'Pending Leaves',
+          value: analytics.kpi.pendingLeaves || 0,
+          icon: <CalendarDays size={18} />,
           color: 'accent',
           change: 0,
-          href: isAdminView ? '/qa' : '/leave',
+          href: '/leave',
+        },
+        {
+          title: isAdminView ? 'Active Team' : 'Team Members',
+          value: analytics.kpi.activeMembers || 0,
+          icon: <Users size={18} />,
+          color: 'success',
+          change: 5,
+          href: '/team',
         },
       ]
     : [];
@@ -128,7 +137,7 @@ export default function DashboardPage() {
               Monthly Snapshot
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 md:p-6">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4 md:p-6">
             {metricCards.map((metric) => (
               <Link href={metric.href} key={metric.title} className="block transition-transform duration-200 hover:scale-[1.02] cursor-pointer">
                 <StatCard
