@@ -28,8 +28,19 @@ import PageHeader from '@/components/shared/PageHeader';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 import { showToast } from '@/components/shared/Toast';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 export const dynamic = 'force-dynamic';
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } }
+};
 
 type EventType = {
   id: string;
@@ -149,12 +160,18 @@ export default function SchedulingPage() {
   const [availabilityDay, setAvailabilityDay] = useState('MONDAY');
   const [availabilityStart, setAvailabilityStart] = useState('09:00');
   const [availabilityEnd, setAvailabilityEnd] = useState('17:00');
+  const [preferencesSaving, setPreferencesSaving] = useState(false);
 
   // Copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const username = (user as any)?.username;
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const isLocalhost = origin.includes('localhost') || origin.includes('192.168.');
+  const getBookingLink = (userStr: string, slugStr: string) => {
+    if (isLocalhost) return `${origin}/book/${userStr}/${slugStr}`;
+    return `https://meet.loomdesk.online/${userStr}/${slugStr}`;
+  };
 
   const fetchEventTypes = useCallback(async () => {
     setEventsLoading(true);
@@ -379,28 +396,44 @@ export default function SchedulingPage() {
     fetchAvailability();
   };
 
-  const updatePreferences = async (updates: any) => {
+  const updatePreferenceLocal = (updates: any) => {
+    setPreferences((prev: any) => ({ ...prev, ...updates }));
+  };
+
+  const savePreferences = async () => {
+    setPreferencesSaving(true);
     try {
+      const payload = {
+        timezone: preferences.timezone,
+        slotDuration: Number(preferences.slotDuration) || 30,
+        bufferBefore: Number(preferences.bufferBefore) || 0,
+        bufferAfter: Number(preferences.bufferAfter) || 0,
+        minimumNotice: Number(preferences.minimumNotice) || 0,
+        maxBookingsPerDay: Number(preferences.maxBookingsPerDay) || 10
+      };
+      
       const res = await fetch('/api/scheduling/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         const data = await res.json();
         setPreferences(data);
         showToast('Preferences updated', 'success');
       } else {
-        showToast('Failed to update preferences', 'error');
+        showToast('Failed to save preferences', 'error');
       }
     } catch (error) {
-      showToast('Failed to update preferences', 'error');
-      console.error('Failed to update preferences:', error);
+      showToast('Error saving preferences', 'error');
+      console.error(error);
+    } finally {
+      setPreferencesSaving(false);
     }
   };
 
   const copyLink = (slug: string) => {
-    const link = `${origin}/book/${username}/${slug}`;
+    const link = getBookingLink(username, slug);
     navigator.clipboard.writeText(link);
     setCopiedId(slug);
     setTimeout(() => setCopiedId(null), 2000);
@@ -423,89 +456,93 @@ export default function SchedulingPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        badge="Admin Only"
-        title="Scheduling"
-        subtitle="Create shareable meeting links and manage bookings ΓÇö powered by Google Meet."
-      />
+    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
+      <motion.div variants={fadeUp}>
+        <PageHeader
+          badge="Admin Only"
+          title="Scheduling"
+          subtitle="Create shareable meeting links and manage bookings ΓÇö powered by Google Meet."
+        />
+      </motion.div>
 
       {/* Google Calendar Banner */}
       {gcalBanner && (
-        <div className={cn(
-          'flex items-start gap-3 rounded-2xl border px-4 py-3',
+        <motion.div variants={fadeUp} className={cn(
+          'flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg',
           gcalBanner.type === 'success'
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-            : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-emerald-500/10'
+            : 'border-rose-500/30 bg-rose-500/10 text-rose-300 shadow-rose-500/10'
         )}>
           {gcalBanner.type === 'success'
             ? <Check size={15} className="mt-0.5 shrink-0" />
             : <AlertCircle size={15} className="mt-0.5 shrink-0" />}
-          <p className="text-sm flex-1">{gcalBanner.msg}</p>
-          <button onClick={() => setGcalBanner(null)} className="shrink-0 opacity-60 hover:opacity-100">
+          <p className="text-sm flex-1 font-medium">{gcalBanner.msg}</p>
+          <button onClick={() => setGcalBanner(null)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
             <X size={14} />
           </button>
-        </div>
+        </motion.div>
       )}
 
       {/* Google Calendar Connect Card */}
       {!gcalLoading && gcalStatus && (
-        <GlassCard variant="panel" padding="none">
-          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
-                gcalStatus.connected
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                  : 'border-white/15 bg-white/5 text-muted-foreground'
-              )}>
-                {gcalStatus.connected ? <Plug size={18} /> : <Unplug size={18} />}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Google Calendar</p>
-                  {gcalStatus.connected && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                      <Check size={9} /> Connected
-                    </span>
-                  )}
-                  {!gcalStatus.configured && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
-                      Not Configured
-                    </span>
-                  )}
+        <motion.div variants={fadeUp}>
+          <GlassCard variant="panel" padding="none">
+            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-lg',
+                  gcalStatus.connected
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-emerald-500/20'
+                    : 'border-white/15 bg-white/40 dark:bg-white/5 text-muted-foreground shadow-black/20'
+                )}>
+                  {gcalStatus.connected ? <Plug size={20} /> : <Unplug size={20} />}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {gcalStatus.connected
-                    ? 'Each booking creates a unique Google Meet link automatically.'
-                    : gcalStatus.configured
-                      ? 'Connect to generate unique Meet links for every booking.'
-                      : 'Add GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI to your .env file.'}
-                </p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">Google Calendar</p>
+                    {gcalStatus.connected && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                        <Check size={9} /> Connected
+                      </span>
+                    )}
+                    {!gcalStatus.configured && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                        Not Configured
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {gcalStatus.connected
+                      ? 'Each booking creates a unique Google Meet link automatically.'
+                      : gcalStatus.configured
+                        ? 'Connect to generate unique Meet links for every booking.'
+                        : 'Add GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI to your .env file.'}
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 mt-2 sm:mt-0">
+                {gcalStatus.connected ? (
+                  <button
+                    onClick={handleGcalDisconnect}
+                    disabled={gcalDisconnecting}
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-400/90 hover:bg-rose-500/20 hover:text-rose-300 transition-all disabled:opacity-50 shadow-[0_4px_16px_rgba(244,63,94,0.1)]"
+                  >
+                    <Unplug size={14} />
+                    {gcalDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                ) : gcalStatus.configured ? (
+                  <a
+                    href="/api/auth/google-calendar"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_32px_rgba(99,102,241,0.25)] hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5 transition-all"
+                  >
+                    <Sparkles size={14} />
+                    Connect Google Calendar
+                  </a>
+                ) : null}
               </div>
             </div>
-            <div className="shrink-0">
-              {gcalStatus.connected ? (
-                <button
-                  onClick={handleGcalDisconnect}
-                  disabled={gcalDisconnecting}
-                  className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2 text-sm font-semibold text-rose-400/80 hover:bg-rose-500/15 hover:text-rose-400 transition-all disabled:opacity-50"
-                >
-                  <Unplug size={13} />
-                  {gcalDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                </button>
-              ) : gcalStatus.configured ? (
-                <a
-                  href="/api/auth/google-calendar"
-                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 transition-all"
-                >
-                  <Sparkles size={13} />
-                  Connect Google Calendar
-                </a>
-              ) : null}
-            </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
+        </motion.div>
       )}
 
       {/* Username warning */}
@@ -525,7 +562,7 @@ export default function SchedulingPage() {
                 </button>{' '}
                 before creating event types. Your booking link will be{' '}
                 <span className="font-mono">
-                  {origin}/book/YOUR_USERNAME/slug
+                  {getBookingLink('YOUR_USERNAME', 'slug')}
                 </span>
               </p>
             </div>
@@ -534,23 +571,32 @@ export default function SchedulingPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/5 p-1 w-fit">
+      <motion.div variants={fadeUp} className="flex gap-1 rounded-[1.25rem] border border-white/10 bg-white/40 dark:bg-black/20 p-1.5 w-fit backdrop-blur-md shadow-inner">
         {(['events', 'bookings', 'availability'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200',
+              'relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               tab === t
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/8'
+                ? 'text-white'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/10'
             )}
           >
-            {t === 'events' ? <Calendar size={14} /> : t === 'bookings' ? <CalendarCheck size={14} /> : <Clock size={14} />}
-            {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability'}
+            {tab === t && (
+              <motion.div
+                layoutId="activeSchedulingTab"
+                className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              {t === 'events' ? <Calendar size={15} /> : t === 'bookings' ? <CalendarCheck size={15} /> : <Clock size={15} />}
+              {t === 'events' ? 'Event Types' : t === 'bookings' ? 'Bookings' : 'Availability'}
+            </span>
           </button>
         ))}
-      </div>
+      </motion.div>
 
       {/* ΓöÇΓöÇ EVENT TYPES TAB ΓöÇΓöÇ */}
       {tab === 'events' && (
@@ -561,7 +607,7 @@ export default function SchedulingPage() {
             </p>
             <button
               onClick={openCreateForm}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90 hover:shadow-md"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.25)] transition-all hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5"
             >
               <Plus size={15} />
               New Event Type
@@ -595,7 +641,7 @@ export default function SchedulingPage() {
                       onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="e.g. 30 Min Intro Call"
                       required
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
 
@@ -610,11 +656,11 @@ export default function SchedulingPage() {
                       placeholder="e.g. intro-call"
                       required
                       disabled={!!editingEvent}
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-inner"
                     />
                     {username && formSlug && (
                       <p className="text-[11px] text-muted-foreground font-mono truncate">
-                        {origin}/book/{username}/{formSlug}
+                        {getBookingLink(username || 'username', formSlug || 'slug')}
                       </p>
                     )}
                   </div>
@@ -629,7 +675,7 @@ export default function SchedulingPage() {
                     onChange={(e) => setFormDesc(e.target.value)}
                     placeholder="A brief description of this meeting type..."
                     rows={2}
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                    className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all resize-none shadow-inner"
                   />
                 </div>
 
@@ -647,8 +693,8 @@ export default function SchedulingPage() {
                           className={cn(
                             'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150',
                             formDuration === d
-                              ? 'bg-primary text-primary-foreground'
-                              : 'border border-white/15 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground'
+                              ? 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md'
+                              : 'border border-white/15 bg-white/40 dark:bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground hover:shadow-sm'
                           )}
                         >
                           {d}m
@@ -666,7 +712,7 @@ export default function SchedulingPage() {
                       value={formMeetLink}
                       onChange={(e) => setFormMeetLink(e.target.value)}
                       placeholder="https://meet.google.com/xxx-yyyy-zzz"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -682,7 +728,7 @@ export default function SchedulingPage() {
                   <button
                     type="submit"
                     disabled={formSubmitting}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90 disabled:opacity-60"
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.25)] transition-all hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
                   >
                     {formSubmitting && (
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -706,9 +752,10 @@ export default function SchedulingPage() {
               <p className="text-xs text-muted-foreground/60">Create your first scheduling link above.</p>
             </GlassCard>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {eventTypes.map((event) => (
-                <GlassCard key={event.id} variant="panel" padding="none" className={cn(!event.active && 'opacity-60')}>
+                <motion.div key={event.id} variants={fadeUp}>
+                  <GlassCard hover variant="panel" padding="none" className={cn(!event.active && 'opacity-60')}>
                   <div className="p-5 space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3">
@@ -759,7 +806,7 @@ export default function SchedulingPage() {
                       {username && (
                         <button
                           onClick={() => copyLink(event.slug)}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                         >
                           {copiedId === event.slug ? (
                             <><Check size={12} className="text-emerald-400" /> Copied!</>
@@ -773,7 +820,7 @@ export default function SchedulingPage() {
                           href={`/book/${username}/${event.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center rounded-lg border border-white/15 bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                          className="flex items-center justify-center rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                           title="Preview"
                         >
                           <ExternalLink size={12} />
@@ -781,7 +828,7 @@ export default function SchedulingPage() {
                       )}
                       <button
                         onClick={() => openEditForm(event)}
-                        className="flex items-center justify-center rounded-lg border border-white/15 bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                        className="flex items-center justify-center rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                         title="Edit"
                       >
                         <Edit2 size={12} />
@@ -805,9 +852,10 @@ export default function SchedulingPage() {
                       </div>
                     )}
                   </div>
-                </GlassCard>
+                  </GlassCard>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </div>
       )}
@@ -816,16 +864,16 @@ export default function SchedulingPage() {
       {tab === 'bookings' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1 w-fit">
+            <div className="flex gap-1 rounded-[1rem] border border-white/10 bg-white/40 dark:bg-black/20 p-1 w-fit shadow-inner">
               {(['CONFIRMED', 'ALL'] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setBookingStatus(s)}
                   className={cn(
-                    'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150',
+                    'rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-200',
                     bookingStatus === s
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'bg-gradient-to-br from-indigo-500/20 to-violet-500/20 text-indigo-300 shadow-[0_2px_8px_rgba(99,102,241,0.2)]'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/10'
                   )}
                 >
                   {s === 'CONFIRMED' ? 'Upcoming' : 'All'}
@@ -846,10 +894,10 @@ export default function SchedulingPage() {
               <p className="text-xs text-muted-foreground/60">Share your event links to receive bookings.</p>
             </GlassCard>
           ) : (
-            <GlassCard variant="panel" padding="none">
-              <div className="divide-y divide-white/10">
-                {bookings.map((booking) => (
-                  <div key={booking.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+              {bookings.map((booking) => (
+                <motion.div key={booking.id} variants={fadeUp}>
+                  <div className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/40 dark:bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between shadow-inner hover:bg-white/50 dark:hover:bg-white/10 hover:border-white/20 transition-all duration-300">
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-foreground text-sm">{booking.name}</span>
@@ -894,9 +942,9 @@ export default function SchedulingPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </GlassCard>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
         </div>
       )}
@@ -916,8 +964,8 @@ export default function SchedulingPage() {
                     <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Timezone</label>
                     <select
                       value={preferences.timezone}
-                      onChange={(e) => updatePreferences({ timezone: e.target.value })}
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      onChange={(e) => updatePreferenceLocal({ timezone: e.target.value })}
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern Time</option>
@@ -935,11 +983,11 @@ export default function SchedulingPage() {
                     <input
                       type="number"
                       value={preferences.slotDuration}
-                      onChange={(e) => updatePreferences({ slotDuration: parseInt(e.target.value) })}
+                      onChange={(e) => updatePreferenceLocal({ slotDuration: e.target.value })}
                       min="15"
                       max="180"
                       step="15"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -947,9 +995,9 @@ export default function SchedulingPage() {
                     <input
                       type="number"
                       value={preferences.bufferBefore}
-                      onChange={(e) => updatePreferences({ bufferBefore: parseInt(e.target.value) })}
+                      onChange={(e) => updatePreferenceLocal({ bufferBefore: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -957,9 +1005,9 @@ export default function SchedulingPage() {
                     <input
                       type="number"
                       value={preferences.bufferAfter}
-                      onChange={(e) => updatePreferences({ bufferAfter: parseInt(e.target.value) })}
+                      onChange={(e) => updatePreferenceLocal({ bufferAfter: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -967,9 +1015,9 @@ export default function SchedulingPage() {
                     <input
                       type="number"
                       value={preferences.minimumNotice}
-                      onChange={(e) => updatePreferences({ minimumNotice: parseInt(e.target.value) })}
+                      onChange={(e) => updatePreferenceLocal({ minimumNotice: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -977,11 +1025,25 @@ export default function SchedulingPage() {
                     <input
                       type="number"
                       value={preferences.maxBookingsPerDay}
-                      onChange={(e) => updatePreferences({ maxBookingsPerDay: parseInt(e.target.value) })}
+                      onChange={(e) => updatePreferenceLocal({ maxBookingsPerDay: e.target.value })}
                       min="1"
                       max="50"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
+                  </div>
+                  <div className="sm:col-span-2 mt-4 flex justify-end">
+                    <button
+                      onClick={savePreferences}
+                      disabled={preferencesSaving}
+                      className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.25)] transition-all hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {preferencesSaving ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      ) : (
+                        <Check size={16} />
+                      )}
+                      Save Preferences
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1013,7 +1075,7 @@ export default function SchedulingPage() {
                     <select
                       value={availabilityDay}
                       onChange={(e) => setAvailabilityDay(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     >
                       <option value="MONDAY">Monday</option>
                       <option value="TUESDAY">Tuesday</option>
@@ -1030,7 +1092,7 @@ export default function SchedulingPage() {
                       type="time"
                       value={availabilityStart}
                       onChange={(e) => setAvailabilityStart(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1039,20 +1101,20 @@ export default function SchedulingPage() {
                       type="time"
                       value={availabilityEnd}
                       onChange={(e) => setAvailabilityEnd(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="flex items-end gap-2">
                     <button
                       type="submit"
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow transition-all hover:bg-primary/90"
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(99,102,241,0.25)] transition-all hover:shadow-[0_8px_32px_rgba(99,102,241,0.4)] hover:-translate-y-0.5"
                     >
                       Add
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowAvailabilityForm(false)}
-                      className="flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                      className="flex items-center justify-center rounded-xl border border-white/15 bg-white/40 dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
                     >
                       Cancel
                     </button>
@@ -1073,32 +1135,33 @@ export default function SchedulingPage() {
                   <p className="text-xs text-muted-foreground/60">Add time slots above to define when you're available for meetings.</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-2">
                   {availability.map((avail) => (
-                    <div
-                      key={avail.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-foreground w-24">{avail.dayOfWeek}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {avail.startTime} - {avail.endTime}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => deleteAvailability(avail.id)}
-                        className="flex items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 text-rose-400/60 hover:bg-rose-500/15 hover:text-rose-400 transition-all"
+                    <motion.div variants={fadeUp} key={avail.id}>
+                      <div
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/40 dark:bg-black/20 px-4 py-3 hover:bg-white/50 dark:hover:bg-white/10 hover:border-white/20 transition-all shadow-inner"
                       >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium text-foreground w-24">{avail.dayOfWeek}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {avail.startTime} - {avail.endTime}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => deleteAvailability(avail.id)}
+                          className="flex items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/5 p-1.5 text-rose-400/60 hover:bg-rose-500/15 hover:text-rose-400 transition-all"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               )}
             </div>
           </GlassCard>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
