@@ -493,7 +493,7 @@ export default function SchedulingPage() {
                   'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-lg',
                   gcalStatus.connected
                     ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-emerald-500/20'
-                    : 'border-white/15 bg-white/40 dark:bg-white/5 text-muted-foreground shadow-black/20'
+                    : 'border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 text-muted-foreground shadow-black/20'
                 )}>
                   {gcalStatus.connected ? <Plug size={20} /> : <Unplug size={20} />}
                 </div>
@@ -571,7 +571,7 @@ export default function SchedulingPage() {
       )}
 
       {/* Tabs */}
-      <motion.div variants={fadeUp} className="flex gap-1 rounded-[1.25rem] border border-white/10 bg-white/40 dark:bg-black/20 p-1.5 w-fit backdrop-blur-md shadow-inner">
+      <motion.div variants={fadeUp} className="flex gap-1 rounded-[1.25rem] border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 p-1.5 w-fit backdrop-blur-md shadow-inner">
         {(['events', 'bookings', 'availability'] as const).map((t) => (
           <button
             key={t}
@@ -580,7 +580,7 @@ export default function SchedulingPage() {
               'relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               tab === t
                 ? 'text-white'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-black/10 dark:hover:bg-white/10'
             )}
           >
             {tab === t && (
@@ -641,7 +641,7 @@ export default function SchedulingPage() {
                       onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="e.g. 30 Min Intro Call"
                       required
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
 
@@ -656,7 +656,7 @@ export default function SchedulingPage() {
                       placeholder="e.g. intro-call"
                       required
                       disabled={!!editingEvent}
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-inner"
                     />
                     {username && formSlug && (
                       <p className="text-[11px] text-muted-foreground font-mono truncate">
@@ -675,7 +675,7 @@ export default function SchedulingPage() {
                     onChange={(e) => setFormDesc(e.target.value)}
                     placeholder="A brief description of this meeting type..."
                     rows={2}
-                    className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all resize-none shadow-inner"
+                    className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all resize-none shadow-inner"
                   />
                 </div>
 
@@ -694,7 +694,7 @@ export default function SchedulingPage() {
                             'rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150',
                             formDuration === d
                               ? 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md'
-                              : 'border border-white/15 bg-white/40 dark:bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground hover:shadow-sm'
+                              : 'border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10 hover:text-foreground hover:shadow-sm'
                           )}
                         >
                           {d}m
@@ -712,7 +712,7 @@ export default function SchedulingPage() {
                       value={formMeetLink}
                       onChange={(e) => setFormMeetLink(e.target.value)}
                       placeholder="https://meet.google.com/xxx-yyyy-zzz"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -806,7 +806,7 @@ export default function SchedulingPage() {
                       {username && (
                         <button
                           onClick={() => copyLink(event.slug)}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                         >
                           {copiedId === event.slug ? (
                             <><Check size={12} className="text-emerald-400" /> Copied!</>
@@ -820,7 +820,7 @@ export default function SchedulingPage() {
                           href={getBookingLink(username || '', event.slug)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                          className="flex items-center justify-center rounded-lg border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                           title="Preview"
                         >
                           <ExternalLink size={12} />
@@ -828,7 +828,7 @@ export default function SchedulingPage() {
                       )}
                       <button
                         onClick={() => openEditForm(event)}
-                        className="flex items-center justify-center rounded-lg border border-white/15 bg-white/40 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                        className="flex items-center justify-center rounded-lg border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 p-1.5 text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                         title="Edit"
                       >
                         <Edit2 size={12} />
@@ -864,7 +864,7 @@ export default function SchedulingPage() {
       {tab === 'bookings' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex gap-1 rounded-[1rem] border border-white/10 bg-white/40 dark:bg-black/20 p-1 w-fit shadow-inner">
+            <div className="flex gap-1 rounded-[1rem] border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 p-1 w-fit shadow-inner">
               {(['CONFIRMED', 'ALL'] as const).map((s) => (
                 <button
                   key={s}
@@ -873,7 +873,7 @@ export default function SchedulingPage() {
                     'rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-200',
                     bookingStatus === s
                       ? 'bg-gradient-to-br from-indigo-500/20 to-violet-500/20 text-indigo-300 shadow-[0_2px_8px_rgba(99,102,241,0.2)]'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-white/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-black/10 dark:hover:bg-white/10'
                   )}
                 >
                   {s === 'CONFIRMED' ? 'Upcoming' : 'All'}
@@ -897,7 +897,7 @@ export default function SchedulingPage() {
             <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
               {bookings.map((booking) => (
                 <motion.div key={booking.id} variants={fadeUp}>
-                  <div className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/40 dark:bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between shadow-inner hover:bg-white/50 dark:hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                  <div className="group flex flex-col gap-3 rounded-2xl border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between shadow-inner hover:bg-black/10 dark:hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all duration-300">
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-foreground text-sm">{booking.name}</span>
@@ -965,7 +965,7 @@ export default function SchedulingPage() {
                     <select
                       value={preferences.timezone}
                       onChange={(e) => updatePreferenceLocal({ timezone: e.target.value })}
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern Time</option>
@@ -987,7 +987,7 @@ export default function SchedulingPage() {
                       min="15"
                       max="180"
                       step="15"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -997,7 +997,7 @@ export default function SchedulingPage() {
                       value={preferences.bufferBefore}
                       onChange={(e) => updatePreferenceLocal({ bufferBefore: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1007,7 +1007,7 @@ export default function SchedulingPage() {
                       value={preferences.bufferAfter}
                       onChange={(e) => updatePreferenceLocal({ bufferAfter: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1017,7 +1017,7 @@ export default function SchedulingPage() {
                       value={preferences.minimumNotice}
                       onChange={(e) => updatePreferenceLocal({ minimumNotice: e.target.value })}
                       min="0"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1028,7 +1028,7 @@ export default function SchedulingPage() {
                       onChange={(e) => updatePreferenceLocal({ maxBookingsPerDay: e.target.value })}
                       min="1"
                       max="50"
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="sm:col-span-2 mt-4 flex justify-end">
@@ -1075,7 +1075,7 @@ export default function SchedulingPage() {
                     <select
                       value={availabilityDay}
                       onChange={(e) => setAvailabilityDay(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     >
                       <option value="MONDAY">Monday</option>
                       <option value="TUESDAY">Tuesday</option>
@@ -1092,7 +1092,7 @@ export default function SchedulingPage() {
                       type="time"
                       value={availabilityStart}
                       onChange={(e) => setAvailabilityStart(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1101,7 +1101,7 @@ export default function SchedulingPage() {
                       type="time"
                       value={availabilityEnd}
                       onChange={(e) => setAvailabilityEnd(e.target.value)}
-                      className="w-full rounded-xl border border-white/15 bg-white/40 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
+                      className="w-full rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-black/20 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:bg-white/50 dark:focus:bg-white/5 focus:outline-none focus:ring-4 focus:ring-primary/20 backdrop-blur-sm transition-all shadow-inner"
                     />
                   </div>
                   <div className="flex items-end gap-2">
@@ -1114,7 +1114,7 @@ export default function SchedulingPage() {
                     <button
                       type="button"
                       onClick={() => setShowAvailabilityForm(false)}
-                      className="flex items-center justify-center rounded-xl border border-white/15 bg-white/40 dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+                      className="flex items-center justify-center rounded-xl border border-black/10 bg-black/5 dark:border-white/15 dark:bg-white/5 px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-all"
                     >
                       Cancel
                     </button>
@@ -1139,7 +1139,7 @@ export default function SchedulingPage() {
                   {availability.map((avail) => (
                     <motion.div variants={fadeUp} key={avail.id}>
                       <div
-                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/40 dark:bg-black/20 px-4 py-3 hover:bg-white/50 dark:hover:bg-white/10 hover:border-white/20 transition-all shadow-inner"
+                        className="flex items-center justify-between rounded-xl border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 px-4 py-3 hover:bg-black/10 dark:hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 transition-all shadow-inner"
                       >
                         <div className="flex items-center gap-4">
                           <span className="text-sm font-medium text-foreground w-24">{avail.dayOfWeek}</span>
