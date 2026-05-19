@@ -117,7 +117,7 @@ export const navItems: NavItem[] = [
     icon: 'time-tracking',
     section: 'Operations',
     matches: ['/dashboard/time-tracking'],
-    roles: ['MEMBER', 'TEAM_LEAD'],
+    roles: [], // temporarily hidden from everyone
   },
   {
     href: '/dashboard/admin/time-tracking',
@@ -126,7 +126,7 @@ export const navItems: NavItem[] = [
     icon: 'time-tracking',
     section: 'Admin',
     matches: ['/dashboard/admin/time-tracking'],
-    roles: ['ADMIN'],
+    roles: [], // temporarily hidden from everyone
   },
   {
     href: '/dashboard/admin/monitoring',
@@ -135,7 +135,7 @@ export const navItems: NavItem[] = [
     icon: 'monitoring',
     section: 'Admin',
     matches: ['/dashboard/admin/monitoring'],
-    roles: ['ADMIN'],
+    roles: [], // temporarily hidden from everyone
   },
   {
     href: '/settings',

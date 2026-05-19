@@ -1,7 +1,6 @@
 'use client';
 
 import AppShell from '@/components/layout/AppShell';
-import { TimeTrackerWidget } from '@/components/time-tracking/TimeTrackerWidget';
 
 export default function DashboardLayout({
   children,
@@ -11,7 +10,6 @@ export default function DashboardLayout({
   return (
     <AppShell>
       {children}
-      <TimeTrackerWidget />
     </AppShell>
   );
 }
