@@ -227,8 +227,8 @@ export default function LeaveAdminPage() {
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="flex-1">
                     <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                      <h3 className="font-medium text-foreground">{leave.user.name}</h3>
-                      <span className="text-sm text-muted-foreground">{leave.user.email}</span>
+                      <h3 className="font-medium text-foreground">{leave.user?.name || "Unknown User"}</h3>
+                      <span className="text-sm text-muted-foreground">{leave.user?.email || "No email"}</span>
                     </div>
                     <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
                       <div>
@@ -321,7 +321,7 @@ export default function LeaveAdminPage() {
                   <tbody>
                     {leaveRequests.map((leave) => (
                       <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30 backdrop-blur-sm">
-                        <td className="px-6 py-4 text-sm text-foreground">{leave.user.name}</td>
+                        <td className="px-6 py-4 text-sm text-foreground">{leave.user?.name || "Unknown User"}</td>
                         <td className="px-6 py-4 text-sm text-foreground">
                           {format(new Date(leave.startDate), 'MMM d, yyyy')}
                         </td>
@@ -364,8 +364,8 @@ export default function LeaveAdminPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{leave.user.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{leave.user.email}</p>
+                      <p className="text-sm font-semibold text-foreground">{leave.user?.name || "Unknown User"}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{leave.user?.email || "No email"}</p>
                     </div>
                     <Badge
                       variant={

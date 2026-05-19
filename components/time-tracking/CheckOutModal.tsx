@@ -43,14 +43,14 @@ export function CheckOutModal({ isOpen, onClose, onConfirm }: CheckOutModalProps
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full max-w-lg bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-lg glass-panel card-elevation-md rounded-3xl overflow-hidden relative z-50"
           >
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white tracking-tight">Complete Check Out</h2>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight">Complete Check Out</h2>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isSubmitting}
                 >
                   <X className="w-6 h-6" />
@@ -58,7 +58,7 @@ export function CheckOutModal({ isOpen, onClose, onConfirm }: CheckOutModalProps
               </div>
 
               <div className="mb-6 space-y-2">
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                   Please summarize what you accomplished during this session. This note is mandatory for checking out.
                 </p>
               </div>
@@ -72,11 +72,11 @@ export function CheckOutModal({ isOpen, onClose, onConfirm }: CheckOutModalProps
                       if (e.target.value.trim()) setError("");
                     }}
                     placeholder="E.g., Resolved 5 support tickets, attended weekly sync..."
-                    className="w-full h-32 px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none transition-all"
+                    className="w-full h-32 px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none transition-all"
                     disabled={isSubmitting}
                   />
                   {error && (
-                    <div className="mt-2 flex items-center text-red-400 text-sm">
+                    <div className="mt-2 flex items-center text-destructive text-sm">
                       <AlertCircle className="w-4 h-4 mr-1.5" />
                       {error}
                     </div>
@@ -88,14 +88,14 @@ export function CheckOutModal({ isOpen, onClose, onConfirm }: CheckOutModalProps
                     type="button"
                     onClick={onClose}
                     disabled={isSubmitting}
-                    className="px-5 py-2.5 rounded-xl font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                    className="px-5 py-2.5 rounded-xl font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || !note.trim()}
-                    className="flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>

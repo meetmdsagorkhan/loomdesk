@@ -299,7 +299,7 @@ const routeOverrides: Array<{
       meta: (role) => ({
         title: role === 'ADMIN' ? 'Team Time Tracking' : 'My Time Tracking',
         description: role === 'ADMIN' ? 'Monitor team check-ins, hours, and notes.' : 'Track your work hours and schedule adherence.',
-        href: pathname,
+        href: role === 'ADMIN' ? '/dashboard/admin/time-tracking' : '/dashboard/time-tracking',
       }),
     },
     {

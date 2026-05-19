@@ -38,37 +38,37 @@ export default function MonitoringPage() {
     <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <Monitor className="w-8 h-8 text-indigo-500" />
             Activity Monitoring
           </h1>
-          <p className="text-gray-400">View automated screen captures of active sessions.</p>
+          <p className="text-muted-foreground">View automated screen captures of active sessions.</p>
         </div>
-        <div className="flex items-center gap-4 bg-black/40 p-2 rounded-2xl border border-white/10 backdrop-blur-xl">
+        <div className="flex items-center gap-4 bg-background/40 p-2 rounded-2xl border border-border backdrop-blur-xl">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Filter member..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white/5 border-transparent rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="pl-9 pr-4 py-2 bg-transparent border-transparent rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
-          <div className="w-px h-8 bg-white/10"></div>
+          <div className="w-px h-8 bg-border"></div>
           <input
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 bg-white/5 border-transparent rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 [color-scheme:dark]"
+            className="px-4 py-2 bg-transparent border-transparent rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 [color-scheme:dark] dark:[color-scheme:dark] light:[color-scheme:light]"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredScreenshots.map((screenshot) => (
-          <Card key={screenshot.id} className="bg-black/40 border-white/10 backdrop-blur-xl overflow-hidden group">
-            <div className="relative aspect-video bg-black/60 border-b border-white/10">
+          <Card key={screenshot.id} className="glass-card card-elevation-md overflow-hidden group">
+            <div className="relative aspect-video bg-black/60 border-b border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={screenshot.imageUrl} 
@@ -83,25 +83,25 @@ export default function MonitoringPage() {
             </div>
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-1">
-                <div className="font-medium text-white truncate pr-2">{screenshot.user?.name}</div>
-                <div className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                <div className="font-medium text-foreground truncate pr-2">{screenshot.user?.name}</div>
+                <div className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">
                   {format(new Date(screenshot.timestamp), "HH:mm:ss")}
                 </div>
               </div>
-              <div className="text-xs text-gray-500 truncate">{screenshot.user?.email}</div>
+              <div className="text-xs text-muted-foreground truncate">{screenshot.user?.email}</div>
             </CardContent>
           </Card>
         ))}
 
         {loading && Array.from({ length: 8 }).map((_, i) => (
-          <div key={`sk-${i}`} className="aspect-video bg-white/5 rounded-xl animate-pulse" />
+          <div key={`sk-${i}`} className="aspect-video bg-muted rounded-xl animate-pulse" />
         ))}
         
         {!loading && filteredScreenshots.length === 0 && (
           <div className="col-span-full py-20 text-center">
-            <Camera className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-400">No screenshots found</h3>
-            <p className="text-gray-500 mt-1">Try selecting a different date or clearing filters.</p>
+            <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-muted-foreground">No screenshots found</h3>
+            <p className="text-muted-foreground mt-1">Try selecting a different date or clearing filters.</p>
           </div>
         )}
       </div>
