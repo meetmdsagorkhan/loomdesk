@@ -48,6 +48,8 @@ model User {
   googleCalendarToken GoogleCalendarToken?
   schedulingPreferences SchedulingPreferences[]
   availability  Availability[]
+  timeEntries   TimeEntry[]
+  screenshots   Screenshot[]
 }
 
 model EmailVerificationToken {
@@ -208,6 +210,7 @@ model Shift {
   createdAt       DateTime          @default(now())
   assignments     ShiftAssignment[]
   exceptions      ShiftException[]
+  timeEntries     TimeEntry[]
 }
 
 model ShiftAssignment {
@@ -430,4 +433,65 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
+}
+
+model TimeEntry {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shiftId       String?
+  shift         Shift?    @relation(fields: [shiftId], references: [id])
+  date          DateTime  @db.Date
+  checkInTime   DateTime
+  checkOutTime  DateTime?
+  status        TimeEntryStatus @default(ACTIVE)
+  totalMinutes  Int       @default(0)
+  breaks        Break[]
+  notes         TimeEntryNote[]
+  screenshots   Screenshot[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, date])
+}
+
+enum TimeEntryStatus {
+  ACTIVE
+  ON_BREAK
+  COMPLETED
+}
+
+model Break {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model TimeEntryNote {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  content     String
+  createdAt   DateTime @default(now())
+}
+
+model Screenshot {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl    String
+  timestamp   DateTime @default(now())
+}
+
+model TrackerSettings {
+  id              String   @id @default(cuid())
+  intervalMinutes Int      @default(15)
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
 }

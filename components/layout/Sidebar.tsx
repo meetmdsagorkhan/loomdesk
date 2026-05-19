@@ -26,6 +26,7 @@ import {
   ChevronRight,
   ExternalLink,
   Send,
+  Monitor,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -60,6 +61,8 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   scheduling: Calendar,
   settings: Settings,
   profile: User,
+  'time-tracking': Clock,
+  monitoring: Monitor,
 };
 
 const ROLE_DISPLAY: Record<string, { label: string; icon: React.ElementType; color: string }> = {

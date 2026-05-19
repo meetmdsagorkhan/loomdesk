@@ -10,7 +10,9 @@ export type NavIcon =
   | 'submissions'
   | 'settings'
   | 'scheduling'
-  | 'profile';
+  | 'profile'
+  | 'time-tracking'
+  | 'monitoring';
 
 
 export type NavItem = {
@@ -106,6 +108,33 @@ export const navItems: NavItem[] = [
     icon: 'scheduling',
     section: 'Admin',
     matches: ['/dashboard/scheduling'],
+    roles: ['ADMIN'],
+  },
+  {
+    href: '/dashboard/time-tracking',
+    label: 'My Time Tracking',
+    description: 'Your check-ins and hours',
+    icon: 'time-tracking',
+    section: 'Operations',
+    matches: ['/dashboard/time-tracking'],
+    roles: ['MEMBER', 'TEAM_LEAD'],
+  },
+  {
+    href: '/dashboard/admin/time-tracking',
+    label: 'Team Time Tracking',
+    description: 'Team check-ins and notes',
+    icon: 'time-tracking',
+    section: 'Admin',
+    matches: ['/dashboard/admin/time-tracking'],
+    roles: ['ADMIN'],
+  },
+  {
+    href: '/dashboard/admin/monitoring',
+    label: 'Monitoring',
+    description: 'Automated screen captures',
+    icon: 'monitoring',
+    section: 'Admin',
+    matches: ['/dashboard/admin/monitoring'],
     roles: ['ADMIN'],
   },
   {
@@ -263,6 +292,22 @@ const routeOverrides: Array<{
         title: 'Scheduling',
         description: 'Create shareable meeting links and manage bookings powered by Google Meet.',
         href: '/dashboard/scheduling',
+      }),
+    },
+    {
+      test: (pathname) => pathname === '/dashboard/time-tracking' || pathname === '/dashboard/admin/time-tracking',
+      meta: (role) => ({
+        title: role === 'ADMIN' ? 'Team Time Tracking' : 'My Time Tracking',
+        description: role === 'ADMIN' ? 'Monitor team check-ins, hours, and notes.' : 'Track your work hours and schedule adherence.',
+        href: pathname,
+      }),
+    },
+    {
+      test: (pathname) => pathname === '/dashboard/admin/monitoring',
+      meta: () => ({
+        title: 'Activity Monitoring',
+        description: 'View automated screen captures of active sessions.',
+        href: '/dashboard/admin/monitoring',
       }),
     },
   ];
