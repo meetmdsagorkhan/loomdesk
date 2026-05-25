@@ -43,7 +43,7 @@ export default function LeaveAdminPage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState('PENDING');
-  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('all');
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [actionLeaveId, setActionLeaveId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
@@ -73,8 +73,8 @@ export default function LeaveAdminPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedStatus) params.append('status', selectedStatus);
-      if (selectedUserId) params.append('userId', selectedUserId);
+      if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus);
+      if (selectedUserId && selectedUserId !== 'all') params.append('userId', selectedUserId);
 
       const response = await fetch(`/api/leave?${params}`);
       if (!response.ok) {
@@ -190,10 +190,10 @@ export default function LeaveAdminPage() {
             <label className="block text-sm font-medium text-foreground mb-2">Member</label>
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
               <SelectTrigger className="form-input">
-                <SelectValue placeholder="All Members" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Members</SelectItem>
+                <SelectItem value="all">All Members</SelectItem>
                 {members.map((member) => (
                   <SelectItem key={member.id} value={member.id}>
                     {member.name}
