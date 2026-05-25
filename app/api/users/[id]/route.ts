@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { prisma as db } from '@/lib/db';
-import { isAdmin } from '@/lib/auth-utils';
+import { isAdmin, isAuthorized } from '@/lib/auth-utils';
 import { auditEvent } from '@/lib/audit-log';
 import { getRequestIp } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
@@ -10,7 +10,8 @@ import { logger } from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 
 const updateUserSchema = z.object({
-  action: z.enum(['pause', 'resume']),
+  action: z.enum(['pause', 'resume', 'permissions']),
+  permissions: z.array(z.string()).optional(),
 });
 
 export async function GET(
@@ -69,7 +70,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!isAdmin(session)) {
+    if (!isAuthorized(session, 'manage_users')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -103,6 +104,35 @@ export async function PATCH(
         action: payload.action,
       });
       return NextResponse.json({ error: 'Admin accounts cannot be modified here' }, { status: 400 });
+    }
+
+    if (payload.action === 'permissions') {
+      const newPermissions = payload.permissions || [];
+      await db.user.update({
+        where: { id },
+        data: {
+          permissions: newPermissions,
+          sessionVersion: { increment: 1 }, // Forces session update
+        },
+      });
+
+      auditEvent({
+        action: 'admin.user.permissions',
+        status: 'success',
+        actorId: session.user.id,
+        actorEmail: session.user.email ?? undefined,
+        actorRole: session.user.role ?? undefined,
+        targetType: 'user',
+        targetId: targetUser.id,
+        targetEmail: targetUser.email,
+        ipAddress,
+        metadata: { permissions: newPermissions },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Member permissions updated successfully',
+      });
     }
 
     const shouldBeActive = payload.action === 'resume';
@@ -157,7 +187,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!isAdmin(session)) {
+    if (!isAuthorized(session, 'manage_users')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

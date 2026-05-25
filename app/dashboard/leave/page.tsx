@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, type ComponentProps } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
+import { Plus, Loader2, Calendar as CalendarIcon, Check, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -413,6 +413,7 @@ export default function LeavePage() {
       )}
 
       {/* Leave Requests Table */}
+      {/* My Leave Requests Progress Tracker */}
       <GlassCard variant="panel" padding="none" className="overflow-hidden">
         <div className="border-b border-white/15 px-5 py-4 md:px-6">
           <h2 className="text-lg font-semibold text-foreground">My Leave Requests</h2>
@@ -424,88 +425,120 @@ export default function LeavePage() {
             </div>
           </div>
         ) : (
-          <div className="p-4 md:p-6">
-            <div className="hidden md:block">
-              <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/25 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 backdrop-blur-sm">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Start Date</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">End Date</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reason</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Status</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Applied On</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaveRequests.map((leave) => (
-                      <tr key={leave.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
-                        <td className="px-5 py-3.5 text-sm text-foreground">
-                          {format(new Date(leave.startDate), 'MMM d, yyyy')}
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-foreground">
-                          {format(new Date(leave.endDate), 'MMM d, yyyy')}
-                        </td>
-                        <td className="max-w-xs truncate px-5 py-3.5 text-sm text-muted-foreground">
-                          {leave.reason}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <Badge
-                            variant={
-                              leave.status === 'APPROVED'
-                                ? 'success'
-                                : leave.status === 'REJECTED'
-                                ? 'danger'
-                                : 'warning'
-                            }
-                            label={leave.status}
-                          />
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground">
-                          {format(new Date(leave.createdAt), 'MMM d, yyyy')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="p-4 md:p-6 grid gap-6">
+            {leaveRequests.map((leave) => {
+              const start = new Date(leave.startDate);
+              const end = new Date(leave.endDate);
+              const daysCount = differenceInDays(end, start) + 1;
 
-            <div className="space-y-3 md:hidden">
-              {leaveRequests.map((leave) => (
+              return (
                 <div
                   key={leave.id}
-                  className="rounded-2xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-transparent p-4 shadow-[0_8px_32px_rgba(76,92,148,0.12)] dark:bg-slate-900/30 dark:shadow-none backdrop-blur-sm"
+                  className="rounded-3xl border border-white/20 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-xl backdrop-blur-md hover:border-white/30 transition-all duration-300"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        {format(new Date(leave.startDate), 'MMM d')} - {format(new Date(leave.endDate), 'MMM d, yyyy')}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Applied {format(new Date(leave.createdAt), 'MMM d, yyyy')}
-                      </p>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="font-bold text-foreground text-base">{leave.reason}</h3>
+                        <Badge
+                          variant={
+                            leave.status === 'APPROVED'
+                              ? 'success'
+                              : leave.status === 'REJECTED'
+                              ? 'danger'
+                              : 'warning'
+                          }
+                          label={leave.status}
+                        />
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-4 text-xs text-muted-foreground sm:grid-cols-3">
+                        <div>
+                          <span className="font-semibold text-foreground">Dates:</span>{' '}
+                          {format(start, 'MMM d, yyyy')} - {format(end, 'MMM d, yyyy')}
+                        </div>
+                        <div>
+                          <span className="font-semibold text-foreground">Duration:</span>{' '}
+                          {daysCount} {daysCount === 1 ? 'day' : 'days'}
+                        </div>
+                        <div>
+                          <span className="font-semibold text-foreground">Applied:</span>{' '}
+                          {format(new Date(leave.createdAt), 'MMM d, yyyy')}
+                        </div>
+                      </div>
                     </div>
-                    <Badge
-                      variant={
-                        leave.status === 'APPROVED'
-                          ? 'success'
-                          : leave.status === 'REJECTED'
-                          ? 'danger'
-                          : 'warning'
-                      }
-                      label={leave.status}
-                    />
                   </div>
-                  <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Reason
-                    </p>
-                    <p className="mt-1 text-sm text-foreground break-words">{leave.reason}</p>
+
+                  {/* Horizontal Progress Timeline */}
+                  <div className="mt-8 relative">
+                    <div className="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 bg-white/10 rounded-full" />
+                    
+                    <div className="relative flex justify-between">
+                      {/* Step 1: Submitted */}
+                      <div className="flex flex-col items-center text-center">
+                        <div className="z-10 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
+                          <Check size={14} />
+                        </div>
+                        <span className="mt-2 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                          Submitted
+                        </span>
+                      </div>
+
+                      {/* Step 2: Under Review */}
+                      <div className="flex flex-col items-center text-center">
+                        <div className={`z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-md ${
+                          leave.status === 'PENDING'
+                            ? 'bg-amber-500 text-white animate-pulse'
+                            : 'bg-emerald-500 text-white'
+                        }`}>
+                          {leave.status === 'PENDING' ? (
+                            <Clock size={14} />
+                          ) : (
+                            <Check size={14} />
+                          )}
+                        </div>
+                        <span className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${
+                          leave.status === 'PENDING' ? 'text-amber-400' : 'text-emerald-400'
+                        }`}>
+                          Under Review
+                        </span>
+                      </div>
+
+                      {/* Step 3: Resolution */}
+                      <div className="flex flex-col items-center text-center">
+                        <div className={`z-10 flex h-7 w-7 items-center justify-center rounded-full shadow-md ${
+                          leave.status === 'APPROVED'
+                            ? 'bg-emerald-500 text-white'
+                            : leave.status === 'REJECTED'
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-white/10 text-muted-foreground'
+                        }`}>
+                          {leave.status === 'APPROVED' ? (
+                            <Check size={14} />
+                          ) : leave.status === 'REJECTED' ? (
+                            <X size={14} />
+                          ) : (
+                            <Clock size={14} />
+                          )}
+                        </div>
+                        <span className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${
+                          leave.status === 'APPROVED'
+                            ? 'text-emerald-400'
+                            : leave.status === 'REJECTED'
+                            ? 'text-rose-400'
+                            : 'text-muted-foreground'
+                        }`}>
+                          {leave.status === 'APPROVED'
+                            ? 'Approved'
+                            : leave.status === 'REJECTED'
+                            ? 'Rejected'
+                            : 'Outcome Pending'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </GlassCard>

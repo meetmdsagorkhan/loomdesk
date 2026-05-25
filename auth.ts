@@ -1,5 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Okta from "next-auth/providers/okta"
+import AzureAD from "next-auth/providers/azure-ad"
 import { prisma } from "@/lib/db"
 import * as bcrypt from "bcryptjs"
 import { env } from "@/lib/env.server"
@@ -270,11 +272,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           username: user.username,
           role: user.role,
+          permissions: user.permissions,
           sessionVersion: user.sessionVersion,
           twoFactorEnabled: user.twoFactorEnabled,
           rememberMe,
         }
       },
+    }),
+    Okta({
+      clientId: process.env.OKTA_CLIENT_ID || "okta-mock-client-id",
+      clientSecret: process.env.OKTA_CLIENT_SECRET || "okta-mock-client-secret",
+      issuer: process.env.OKTA_ISSUER || "https://okta.loomdesk.online/oauth2/default",
+    }),
+    AzureAD({
+      clientId: process.env.AZURE_AD_CLIENT_ID || "azure-ad-mock-client-id",
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET || "azure-ad-mock-client-secret",
+      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID || "common"}/v2.0`,
     }),
   ],
   session: {
@@ -298,6 +311,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.permissions = (user as any).permissions ?? []
         token.username = (user as any).username ?? null
         token.sessionVersion = user.sessionVersion ?? 0
         token.twoFactorEnabled = user.twoFactorEnabled ?? false
@@ -332,6 +346,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
         token.role = cached.user.role
+        token.permissions = cached.user.permissions ?? []
         token.sessionVersion = cached.user.sessionVersion
         token.twoFactorEnabled = cached.user.twoFactorEnabled
         token.lastDbCheck = now
@@ -343,6 +358,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         select: {
           isActive: true,
           role: true,
+          permissions: true,
           username: true,
           sessionVersion: true,
           twoFactorEnabled: true,
@@ -360,6 +376,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       token.role = currentUser.role
+      token.permissions = currentUser.permissions ?? []
       token.username = currentUser.username
       token.sessionVersion = currentUser.sessionVersion
       token.twoFactorEnabled = currentUser.twoFactorEnabled
@@ -371,6 +388,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const u = session.user as any
         u.id = token.id as string
         u.role = token.role as string
+        u.permissions = token.permissions ?? []
         u.username = token.username as string | null
         u.rememberMe = !!token.rememberMe
         u.sessionVersion = +(token.sessionVersion ?? 0)

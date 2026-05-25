@@ -3,7 +3,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { ArrowLeft, ChevronDown, ChevronUp, MessageSquare, MinusCircle, Loader2, X, CheckCircle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ChevronDown, 
+  ChevronUp, 
+  MessageSquare, 
+  MinusCircle, 
+  Loader2, 
+  X, 
+  CheckCircle,
+  Sliders,
+  CheckSquare,
+  ShieldCheck,
+  Trophy,
+  Sparkles,
+  Clock,
+  AlertCircle
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
 import { showToast } from '@/components/shared/Toast';
@@ -15,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
 import { cn } from '@/lib/utils';
@@ -72,6 +89,24 @@ export default function QADetailPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [scoreEvents, setScoreEvents] = useState<ScoreEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Premium Split-Pane Auditing Workspace States
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [deductionAmount, setDeductionAmount] = useState<number>(0.5);
+  const [error, setError] = useState('');
+  const [auditCriteria, setAuditCriteria] = useState({
+    tonePolite: true,
+    slaDeadlineMet: true,
+    resolutionAccurate: true,
+    taggingCorrect: true,
+  });
+
+  useEffect(() => {
+    if (report && report.entries && report.entries.length > 0 && !selectedEntryId) {
+      setSelectedEntryId(report.entries[0].id);
+    }
+  }, [report, selectedEntryId]);
+
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
   const [showDeductModal, setShowDeductModal] = useState(false);
   const [deductEntryId, setDeductEntryId] = useState<string | null>(null);
@@ -384,344 +419,451 @@ export default function QADetailPage() {
         </div>
       </GlassCard>
 
-      {/* Entries Table */}
-      <GlassCard variant="panel" padding="none" className="overflow-hidden">
-        <div className="border-b border-white/15 px-5 py-4 md:px-6">
-          <h2 className="text-lg font-medium text-foreground">Entries ({report.entries.length})</h2>
-        </div>
-        {/* Header Row */}
-        <div className="px-4 py-3 bg-white/10 dark:bg-slate-900/30 border-b border-white/15 grid grid-cols-[240px_1fr_120px_2fr] gap-4 items-center pl-14">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Type</div>
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reference ID</div>
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Status</div>
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Note</div>
-        </div>
-        <div className="divide-y divide-white/15">
-          {report.entries.map((entry) => {
-            const reviewed = isEntryReviewed(entry.id, entry.feedback?.length || 0);
-            return (
-              <div key={entry.id} className="border-b border-white/15 last:border-0">
-                <div className="p-4 flex items-center gap-4">
-                    <button
-                      onClick={() => toggleEntry(entry.id)}
-                      className="rounded-lg p-2 transition-colors hover:bg-white/30 dark:hover:bg-white/10"
-                    >
-                      {expandedEntries.has(entry.id) ? (
-                        <ChevronUp size={20} />
-                      ) : (
-                        <ChevronDown size={20} />
-                      )}
-                    </button>
-                    <div className="flex-1 grid grid-cols-[240px_1fr_120px_2fr] gap-4 items-center">
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={entry.type === 'TICKET' ? 'info' : entry.type === 'CHAT' ? 'success' : 'warning'} 
-                          label={entry.type} 
-                        />
-                        {(() => {
-                          const scoreEvent = scoreEvents.find((e) => e.entryId === entry.id);
-                          if (scoreEvent) {
-                            return (
-                              <span className="text-[10px] font-bold tracking-wider text-rose-400 bg-rose-500/15 px-2.5 py-1 rounded-full select-none shadow-sm flex items-center whitespace-nowrap">
-                                Mark Deducted -{scoreEvent.deduction}
-                              </span>
-                            );
-                          }
-                          if (reviewed) {
-                            const hasFeedback = entry.feedback && entry.feedback.length > 0;
-                            return (
-                              <span className="text-[10px] font-bold tracking-wider text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full select-none shadow-sm flex items-center whitespace-nowrap">
-                                {hasFeedback ? 'FEEDBACK' : 'MARKED OK'}
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                  <div 
-                    className="text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => toggleField(entry.id, 'referenceId')}
-                    title={entry.referenceId}
-                  >
-                    {expandedFields.has(`${entry.id}-referenceId`) ? entry.referenceId : (entry.referenceId.length > 20 ? entry.referenceId.substring(0, 20) + '...' : entry.referenceId)}
-                  </div>
-                  <div>
-                    <Badge variant={entry.status === 'SOLVED' ? 'success' : 'warning'} label={entry.status} />
-                  </div>
-                  <div 
-                    className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => toggleNote(entry.id)}
-                  >
-                    {expandedNotes.has(entry.id) ? entry.note : entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '')}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Expanded Content */}
-              {expandedEntries.has(entry.id) && (
-                <div className="px-4 pb-4 pl-14 space-y-4">
-                  {entry.pendingReason && (
-                    <div className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25 backdrop-blur-sm">
-                      <p className="text-sm font-medium text-foreground mb-1">Pending Reason</p>
-                      <p className="text-sm text-muted-foreground">{entry.pendingReason}</p>
-                    </div>
-                  )}
+      {/* Enterprise Split-Pane Auditing Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Side: Entries Listing (lg:col-span-5) */}
+        <div className="lg:col-span-5 space-y-4">
+          <GlassCard variant="default" padding="md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Entries List</h2>
+              <Badge variant="info" label={`${report.entries.length} items`} />
+            </div>
+            
+            <div className="space-y-3">
+              {report.entries.map((entry) => {
+                const reviewed = isEntryReviewed(entry.id, entry.feedback?.length || 0);
+                const isSelected = selectedEntryId === entry.id;
+                const scoreEvent = scoreEvents.find((e) => e.entryId === entry.id);
 
-                  {/* Feedback Thread */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageSquare size={16} className="text-muted-foreground" />
-                      <p className="text-sm font-medium text-foreground">Feedback</p>
-                    </div>
-                    {entry.feedback.length > 0 ? (
-                      <div className="space-y-2">
-                        {entry.feedback.map((fb) => (
-                          <div key={fb.id} className="rounded-lg border border-white/15 bg-white/20 p-3 dark:bg-slate-900/25 backdrop-blur-sm">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium text-foreground">{fb.author.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(fb.createdAt), 'MMM d, yyyy HH:mm')}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{fb.comment}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No feedback yet</p>
+                return (
+                  <div
+                    key={entry.id}
+                    onClick={() => {
+                      setSelectedEntryId(entry.id);
+                      setDeductEntryId(entry.id);
+                      setError('');
+                    }}
+                    className={cn(
+                      "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer select-none",
+                      isSelected
+                        ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(99,102,241,0.15)]"
+                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                    )}
+                  >
+                    {isSelected && (
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-1 rounded-r bg-primary" />
                     )}
 
-                    {/* Add Feedback Form */}
-                    {isManager && report.status !== 'REVIEWED' && (
-                      feedbackEntryId === entry.id ? (
-                        <div className="mt-3 space-y-2">
-                          <textarea
-                            value={feedbackComment}
-                            onChange={(e) => setFeedbackComment(e.target.value)}
-                            placeholder="Add your feedback..."
-                            rows={2}
-                            className="w-full rounded-lg border border-white/20 bg-background/70 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant={entry.type === 'TICKET' ? 'info' : entry.type === 'CHAT' ? 'success' : 'warning'}
+                            label={entry.type}
                           />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleAddFeedback(entry.id)}
-                              disabled={isAddingFeedback || !feedbackComment.trim()}
-                            >
-                              {isAddingFeedback ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                'Add'
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setFeedbackEntryId(null);
-                                setFeedbackComment('');
+                          <Badge variant={entry.status === 'SOLVED' ? 'success' : 'warning'} label={entry.status} />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground mt-2 font-mono truncate max-w-[200px]">
+                          Ref: {entry.referenceId}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                          {entry.note}
+                        </p>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex flex-col items-end gap-1.5">
+                        {scoreEvent ? (
+                          <span className="text-[9px] font-bold tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 shadow-sm flex items-center gap-1">
+                            <MinusCircle size={10} /> -{scoreEvent.deduction}
+                          </span>
+                        ) : reviewed ? (
+                          <span className="text-[9px] font-bold tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shadow-sm flex items-center gap-1">
+                            <CheckCircle size={10} /> OK
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold tracking-wider text-muted-foreground bg-white/10 px-2 py-0.5 rounded-full border border-white/5 shadow-sm">
+                            PENDING
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Right Side: Scorecard Console (lg:col-span-7) */}
+        <div className="lg:col-span-7">
+          <AnimatePresence mode="wait">
+            {selectedEntryId ? (() => {
+              const entry = report.entries.find((e) => e.id === selectedEntryId);
+              if (!entry) return null;
+              const scoreEvent = scoreEvents.find((e) => e.entryId === entry.id);
+
+              return (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  {/* Detailed Entry Description */}
+                  <GlassCard variant="default" padding="md" className="relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare size={16} className="text-primary" />
+                        <h3 className="text-sm font-bold text-foreground">Audit Worksheet: {entry.referenceId}</h3>
+                      </div>
+                      <Badge variant={entry.type === 'TICKET' ? 'info' : 'success'} label={entry.type} />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Internal Note</span>
+                        <p className="text-sm text-foreground bg-white/5 border border-white/10 p-3.5 rounded-xl mt-1.5 whitespace-pre-wrap leading-relaxed shadow-inner">
+                          {entry.note}
+                        </p>
+                      </div>
+
+                      {entry.pendingReason && (
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pending Reason</span>
+                          <p className="text-sm text-foreground bg-white/5 border border-white/10 p-3 rounded-xl mt-1 leading-relaxed">
+                            {entry.pendingReason}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </GlassCard>
+
+                  {/* Auditing Form & Scorecard Console */}
+                  <GlassCard variant="default" padding="md" className="relative border border-primary/20">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <ShieldCheck size={120} className="text-primary" />
+                    </div>
+
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2 mb-4">
+                      <Sliders size={18} className="text-primary animate-pulse" />
+                      Auditor Scorecard Console
+                    </h3>
+
+                    {scoreEvent ? (
+                      /* Deducted State View */
+                      <div className="bg-rose-500/10 border border-rose-500/25 p-5 rounded-2xl space-y-3 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-widest text-rose-400">Score Event Active</span>
+                          <span className="text-lg font-extrabold text-rose-400 bg-rose-500/20 px-3 py-1 rounded-xl shadow-md border border-rose-500/20">
+                            -{scoreEvent.deduction} Pts
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-foreground">Reason: <span className="font-normal text-muted-foreground">{scoreEvent.reason}</span></p>
+                          {scoreEvent.adminNote && (
+                            <p className="text-xs text-muted-foreground border-t border-rose-500/10 pt-2 mt-2 italic">
+                              " {scoreEvent.adminNote} "
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Audit Form (Manager Exclusive) */
+                      isManager && report.status === 'SUBMITTED' ? (
+                        <div className="space-y-6">
+                          {/* 1. Checklist Criteria */}
+                          <div className="space-y-3">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Compliance Checklist</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={auditCriteria.tonePolite}
+                                  onChange={(e) => {
+                                    const next = { ...auditCriteria, tonePolite: e.target.checked };
+                                    setAuditCriteria(next);
+                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                  }}
+                                  className="accent-primary h-4 w-4 rounded"
+                                />
+                                <span className="text-xs font-medium text-foreground">Polite Tone & Greeting</span>
+                              </label>
+                              
+                              <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={auditCriteria.slaDeadlineMet}
+                                  onChange={(e) => {
+                                    const next = { ...auditCriteria, slaDeadlineMet: e.target.checked };
+                                    setAuditCriteria(next);
+                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                  }}
+                                  className="accent-primary h-4 w-4 rounded"
+                                />
+                                <span className="text-xs font-medium text-foreground">SLA Deadline Compliant</span>
+                              </label>
+
+                              <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={auditCriteria.resolutionAccurate}
+                                  onChange={(e) => {
+                                    const next = { ...auditCriteria, resolutionAccurate: e.target.checked };
+                                    setAuditCriteria(next);
+                                    if (!e.target.checked) setDeductionAmount(1.0);
+                                  }}
+                                  className="accent-primary h-4 w-4 rounded"
+                                />
+                                <span className="text-xs font-medium text-foreground">Resolution Accurate & Full</span>
+                              </label>
+
+                              <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={auditCriteria.taggingCorrect}
+                                  onChange={(e) => {
+                                    const next = { ...auditCriteria, taggingCorrect: e.target.checked };
+                                    setAuditCriteria(next);
+                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                  }}
+                                  className="accent-primary h-4 w-4 rounded"
+                                />
+                                <span className="text-xs font-medium text-foreground">Correct Metadata Tags</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* 2. Interactive deduction slider */}
+                          <div className="space-y-3 bg-white/5 border border-white/10 p-4 rounded-2xl shadow-inner">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Adjust Penalty Severity</span>
+                              <span className={cn(
+                                "text-xs font-bold px-3 py-1 rounded-full border",
+                                deductionAmount <= 0.5 
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20" 
+                                  : "bg-red-500/10 text-red-400 border-red-500/20"
+                              )}>
+                                {deductionAmount <= 0.5 ? 'MINOR DEDUCTION (-0.5 pts)' : 'MAJOR DEDUCTION (-1.0 pts)'}
+                              </span>
+                            </div>
+
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="1.5"
+                              step="0.1"
+                              value={deductionAmount}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setDeductionAmount(val);
+                                setDeductSeverity(val <= 0.5 ? 'MINOR' : 'MAJOR');
                               }}
+                              className="w-full accent-primary bg-slate-200/50 dark:bg-slate-700/50 h-1.5 rounded-lg appearance-none cursor-pointer"
+                            />
+
+                            <div className="flex justify-between text-[10px] text-muted-foreground px-1 font-semibold">
+                              <span>0.1 (Slight)</span>
+                              <span>0.5 (Minor Limit)</span>
+                              <span>1.0 (Major Limit)</span>
+                              <span>1.5 (Extreme)</span>
+                            </div>
+                          </div>
+
+                          {/* 3. Reason & Notes */}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1 block">Deduction Reason</label>
+                              <input
+                                type="text"
+                                value={deductReason}
+                                onChange={(e) => setDeductReason(e.target.value)}
+                                placeholder="e.g., Inaccurate tagging or SLA delay"
+                                className="form-input h-10 w-full rounded-xl"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1 block">Auditor Private Notes</label>
+                              <textarea
+                                value={deductAdminNote}
+                                onChange={(e) => setDeductAdminNote(e.target.value)}
+                                placeholder="Optional internal coaching commentary"
+                                className="form-input min-h-[80px] w-full rounded-xl py-2 resize-none"
+                              />
+                            </div>
+                          </div>
+
+                          {error && (
+                            <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-2.5 rounded-xl text-xs font-medium">
+                              <AlertCircle size={14} />
+                              {error}
+                            </div>
+                          )}
+
+                          {/* 4. Action Buttons */}
+                          <div className="flex gap-2 justify-end border-t border-white/10 pt-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={async () => {
+                                setIsMarkingOk(true);
+                                try {
+                                  setReviewedEntries((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(entry.id);
+                                    return next;
+                                  });
+                                  showToast('Entry marked as OK', 'success');
+                                } finally {
+                                  setIsMarkingOk(false);
+                                }
+                              }}
+                              disabled={isMarkingOk}
+                              className="rounded-xl h-10 px-5"
                             >
-                              Cancel
+                              {isMarkingOk ? <Loader2 size={14} className="animate-spin" /> : 'Mark OK'}
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={async () => {
+                                if (!deductReason.trim()) {
+                                  setError('Please enter a reason for deduction');
+                                  return;
+                                }
+                                setIsDeducting(true);
+                                setError('');
+                                try {
+                                  const response = await fetch('/api/qa/score-events', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      userId: report.user.id,
+                                      reportId: report.id,
+                                      entryId: entry.id,
+                                      severity: deductSeverity,
+                                      reason: deductReason,
+                                      adminNote: deductAdminNote,
+                                    }),
+                                  });
+
+                                  if (!response.ok) {
+                                    const err = await response.json();
+                                    setError(err.error || 'Failed to submit deduction');
+                                    return;
+                                  }
+
+                                  const data = await response.json();
+                                  setScoreEvents((prev) => [...prev, data]);
+                                  await fetchReport();
+                                  setDeductReason('');
+                                  setDeductAdminNote('');
+                                  showToast('Deduction registered successfully', 'success');
+                                } catch (e) {
+                                  setError('Failed to submit deduction');
+                                } finally {
+                                  setIsDeducting(false);
+                                }
+                              }}
+                              disabled={isDeducting}
+                              className="rounded-xl h-10 px-5"
+                            >
+                              {isDeducting ? (
+                                <Loader2 size={14} className="animate-spin mr-2" />
+                              ) : (
+                                <MinusCircle size={14} className="mr-2" />
+                              )}
+                              Deduct Score
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-3"
-                          onClick={() => setFeedbackEntryId(entry.id)}
-                        >
-                          <MessageSquare size={14} className="mr-2" />
-                          Add Feedback
-                        </Button>
+                        <p className="text-xs text-muted-foreground italic">You must be a manager or team lead to log score deductions on submitted reports.</p>
                       )
                     )}
-                  </div>
+                  </GlassCard>
 
-                  {/* Action Buttons */}
-                  {isManager && report.status !== 'REVIEWED' && (
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkOk(entry.id)}
-                        disabled={isMarkingOk || reviewed}
-                      >
-                        {isMarkingOk ? (
-                          <Loader2 size={14} className="animate-spin mr-2" />
-                        ) : (
-                          <CheckCircle size={14} className="mr-2" />
-                        )}
-                        Mark OK
-                      </Button>
-                      {isManager && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            setDeductEntryId(entry.id);
-                            setShowDeductModal(true);
-                          }}
-                          disabled={reviewed}
-                        >
-                          <MinusCircle size={14} className="mr-2" />
-                          Deduct Score
-                        </Button>
-                      )}
+                  {/* Feedback Chat Thread Card */}
+                  <GlassCard variant="default" padding="md">
+                    <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                      <MessageSquare size={16} className="text-primary" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Coaching & Feedback Thread</h4>
                     </div>
-                  )}
 
-                </div>
-              )}
-                </div>
-              )
-            })}
+                    <div className="space-y-4">
+                      {entry.feedback && entry.feedback.length > 0 ? (
+                        <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                          {entry.feedback.map((fb) => (
+                            <div key={fb.id} className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-foreground">{fb.author.name}</span>
+                                <span className="text-[9px] text-muted-foreground">{format(new Date(fb.createdAt), 'MMM d, h:mm a')}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{fb.comment}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic py-2">No comments or feedback logged yet.</p>
+                      )}
+
+                      <div className="flex gap-2 items-center pt-2 border-t border-white/10">
+                        <input
+                          type="text"
+                          placeholder="Add comment..."
+                          value={feedbackComment}
+                          onChange={(e) => setFeedbackComment(e.target.value)}
+                          className="form-input h-9 flex-1 text-xs rounded-lg"
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!feedbackComment.trim()) return;
+                            setIsAddingFeedback(true);
+                            try {
+                              const response = await fetch(`/api/qa/reports/${report.id}/entries/${entry.id}/feedback`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ comment: feedbackComment }),
+                              });
+
+                              if (!response.ok) {
+                                showToast('Failed to add feedback', 'error');
+                                return;
+                              }
+
+                              setFeedbackComment('');
+                              await fetchReport();
+                              showToast('Feedback posted', 'success');
+                            } catch (e) {
+                              showToast('Failed to add feedback', 'error');
+                            } finally {
+                              setIsAddingFeedback(false);
+                            }
+                          }}
+                          disabled={isAddingFeedback}
+                          size="sm"
+                          className="rounded-lg h-9 px-4 text-xs font-semibold"
+                        >
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              );
+            })() : (
+              <GlassCard variant="default" padding="md" className="text-center py-12">
+                <ShieldCheck size={48} className="mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">Select an entry from the left column to begin auditing.</p>
+              </GlassCard>
+            )}
+          </AnimatePresence>
         </div>
-      </GlassCard>
-
-      {/* Score History */}
-      <GlassCard variant="panel" padding="none" className="overflow-hidden">
-        <div className="border-b border-white/15 px-5 py-4 md:px-6">
-          <h2 className="text-lg font-medium text-foreground">Score History</h2>
-        </div>
-        {scoreEvents.length > 0 ? (
-          <div className="overflow-x-auto p-4 md:p-6">
-            <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/25 dark:bg-slate-900/30 backdrop-blur-sm">
-            <table className="w-full">
-              <thead className="border-b border-white/20 bg-white/35 dark:bg-white/5 backdrop-blur-sm">
-                <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Date</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Severity</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Reason</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Admin Note</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Deduction</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scoreEvents.map((event) => (
-                  <tr key={event.id} className="border-b border-white/15 last:border-0 hover:bg-white/35 dark:hover:bg-white/5 backdrop-blur-sm">
-                    <td className="px-5 py-3.5 text-sm text-foreground">
-                      {format(new Date(event.createdAt), 'MMM d, yyyy HH:mm')}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Badge variant={event.severity === 'MAJOR' ? 'danger' : 'warning'} label={event.severity} />
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-foreground">{event.reason}</td>
-                    <td className="px-5 py-3.5 text-sm text-muted-foreground">{event.adminNote || '-'}</td>
-                    <td className="px-5 py-3.5 text-sm font-medium text-destructive">-{event.deduction}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          </div>
-        ) : (
-          <div className="p-12 text-center">
-            <p className="text-muted-foreground">No score deductions yet</p>
-          </div>
-        )}
-      </GlassCard>
-
-      {/* Deduct Score Modal */}
-      <Dialog open={showDeductModal} onOpenChange={setShowDeductModal}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Deduct Score</DialogTitle>
-            <button
-              onClick={() => {
-                setShowDeductModal(false);
-                setDeductSeverity('MINOR');
-                setDeductReason('');
-                setDeductAdminNote('');
-                setDeductEntryId(null);
-              }}
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <X size={16} />
-            </button>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Severity</label>
-              <div className="flex gap-2">
-                <label className="flex-1">
-                  <input
-                    type="radio"
-                    value="MINOR"
-                    checked={deductSeverity === 'MINOR'}
-                    onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
-                    className="peer sr-only"
-                  />
-                  <div className="px-4 py-2.5 rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 text-center cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600">
-                    Minor (-0.5)
-                  </div>
-                </label>
-                <label className="flex-1">
-                  <input
-                    type="radio"
-                    value="MAJOR"
-                    checked={deductSeverity === 'MAJOR'}
-                    onChange={(e) => setDeductSeverity(e.target.value as 'MINOR' | 'MAJOR')}
-                    className="peer sr-only"
-                  />
-                  <div className="px-4 py-2.5 rounded-xl border border-white/20 bg-gradient-to-br from-white/40 via-white/20 to-white/40 text-center cursor-pointer hover:from-primary/15 hover:via-primary/10 hover:to-primary/15 hover:text-primary backdrop-blur-sm shadow-sm peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-[0_8px_24px_rgba(168,85,247,0.5)] dark:border-white/10 dark:from-slate-800/40 dark:via-slate-900/20 dark:to-slate-800/40 dark:hover:from-primary/20 dark:hover:via-primary/15 dark:hover:to-primary/20 dark:hover:text-primary peer-checked:bg-purple-600">
-                    Major (-1.0)
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Reason</label>
-              <select
-                value={deductReason}
-                onChange={(e) => setDeductReason(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-              >
-                <option value="">Select a reason</option>
-                <option value="Incorrect resolution">Incorrect resolution</option>
-                <option value="Missing information">Missing information</option>
-                <option value="Wrong categorization">Wrong categorization</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Admin Note (Optional)</label>
-              <textarea
-                value={deductAdminNote}
-                onChange={(e) => setDeductAdminNote(e.target.value)}
-                placeholder="Additional notes..."
-                rows={2}
-                className="w-full px-4 py-2.5 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeductModal(false);
-                setDeductSeverity('MINOR');
-                setDeductReason('');
-                setDeductAdminNote('');
-                setDeductEntryId(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeductScore}
-              disabled={isDeducting || !deductReason}
-            >
-              {isDeducting ? <Loader2 size={16} className="animate-spin" /> : 'Deduct'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </div>
     </div>
   );
 }

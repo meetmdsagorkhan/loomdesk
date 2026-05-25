@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, Loader2, Plus, Trash2, Pencil, X, AlertCircle } from 'lucide-react';
+import { Clock, Loader2, Plus, Trash2, Pencil, X, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,11 +25,19 @@ import {
 import ConfirmModal from '@/components/shared/ConfirmModal';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin } from '@/lib/auth-utils';
 import { showToast } from '@/components/shared/Toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { handleApiError } from '@/lib/error-handler';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -115,6 +123,64 @@ export default function ShiftsPage() {
   });
   const [isCreatingException, setIsCreatingException] = useState(false);
   const [deleteExceptionId, setDeleteExceptionId] = useState<string | null>(null);
+
+  // Premium Timeline UI States
+  const [activeSubTab, setActiveSubTab] = useState<'timeline' | 'templates'>('timeline');
+  const [selectedCell, setSelectedCell] = useState<{ memberId: string; memberName: string; date: Date } | null>(null);
+  const [cellActionType, setCellActionType] = useState<'assign' | 'override'>('assign');
+
+  // Next 7 days builder
+  const getNext7Days = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  };
+  const weekDays = getNext7Days();
+
+  // Helper matching dates & standard assignments or override exceptions
+  const getMemberScheduleForDate = (memberId: string, date: Date) => {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    const dateStr = d.toISOString().split('T')[0];
+    
+    // 1. Check override Exceptions
+    const exception = exceptions.find(
+      (e) => {
+        const excD = new Date(e.date);
+        excD.setMinutes(excD.getMinutes() - excD.getTimezoneOffset());
+        return e.user.id === memberId && excD.toISOString().split('T')[0] === dateStr;
+      }
+    );
+    if (exception) {
+      return { type: 'exception' as const, data: exception };
+    }
+    
+    // 2. Check Standard Assignments
+    const assignment = assignments.find((a) => {
+      if (a.user.id !== memberId) return false;
+      const startD = new Date(a.startDate);
+      startD.setMinutes(startD.getMinutes() - startD.getTimezoneOffset());
+      const start = startD.toISOString().split('T')[0];
+      
+      let end = null;
+      if (a.endDate) {
+        const endD = new Date(a.endDate);
+        endD.setMinutes(endD.getMinutes() - endD.getTimezoneOffset());
+        end = endD.toISOString().split('T')[0];
+      }
+      return dateStr >= start && (!end || dateStr <= end);
+    });
+    if (assignment) {
+      return { type: 'assignment' as const, data: assignment };
+    }
+    
+    return null;
+  };
 
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -478,515 +544,889 @@ export default function ShiftsPage() {
         subtitle="Define work schedules, assign shifts to team members, and track all assignments from one centralized location."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Shifts Panel */}
-        <GlassCard variant="default" padding="md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Shift Templates</h2>
-            {!showCreateShift && (
-              <Button size="sm" onClick={() => setShowCreateShift(true)}>
-                <Plus size={16} className="mr-2" />
-                Create Shift
-              </Button>
-            )}
+      {/* Sub-Tab Selector */}
+      <div className="flex gap-2 rounded-[1.25rem] border border-black/10 bg-black/5 dark:border-white/10 dark:bg-black/20 p-1.5 w-fit backdrop-blur-md shadow-inner">
+        <button
+          onClick={() => setActiveSubTab('timeline')}
+          className={cn(
+            'relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+            activeSubTab === 'timeline'
+              ? 'text-white'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {activeSubTab === 'timeline' && (
+            <motion.div
+              layoutId="activeShiftSubTab"
+              className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+              transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Calendar size={15} />
+            Shift Timeline Grid
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('templates')}
+          className={cn(
+            'relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+            activeSubTab === 'templates'
+              ? 'text-white'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {activeSubTab === 'templates' && (
+            <motion.div
+              layoutId="activeShiftSubTab"
+              className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+              transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Clock size={15} />
+            Templates & Assigning
+          </span>
+        </button>
+      </div>
+
+      {activeSubTab === 'timeline' ? (
+        /* ==================== ATTIO-GRADE TIMELINE GRID ==================== */
+        <GlassCard variant="default" padding="md" className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Weekly Shift Coverage Timeline</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Click any cell to assign standard schedules or log custom holiday overrides</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-white/10 dark:bg-slate-900/30 px-3 py-1.5 rounded-full border border-white/5">
+                <span className="h-2 w-2 rounded-full bg-blue-500" /> Standard Shift
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-white/10 dark:bg-slate-900/30 px-3 py-1.5 rounded-full border border-white/5">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> Custom Swap
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-white/10 dark:bg-slate-900/30 px-3 py-1.5 rounded-full border border-white/5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Day Off
+              </span>
+            </div>
           </div>
 
-          {/* Create Shift Form */}
-          {showCreateShift && (
-            <GlassCard variant="panel" padding="sm" className="mb-6">
-              <form onSubmit={handleCreateShift} className="space-y-4">
-                <div>
-                <Label className="form-label">Name</Label>
-                <Input
-                  type="text"
-                  value={newShift.name}
-                  onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
-                  placeholder="e.g., Morning Shift"
-                  className="form-input"
-                />
+          <div className="overflow-x-auto rounded-2xl border border-white/15">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-white/15 bg-white/15 dark:bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground select-none">
+                  <th className="px-5 py-4 text-left font-bold min-w-[200px]">Support Operator</th>
+                  {weekDays.map((day, idx) => (
+                    <th key={idx} className="px-4 py-4 text-center font-bold min-w-[120px] border-l border-white/10">
+                      <div>{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                      <div className="text-xs font-semibold text-foreground mt-0.5">
+                        {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {members.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                      No support members registered yet.
+                    </td>
+                  </tr>
+                ) : (
+                  members.map((member) => (
+                    <tr key={member.id} className="border-b border-white/10 hover:bg-white/5 last:border-0 transition-colors">
+                      <td className="px-5 py-4 text-xs font-semibold text-foreground flex items-center gap-2">
+                        <Avatar className="h-7 w-7 border border-primary/20">
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                            {member.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{member.name}</span>
+                      </td>
+                      {weekDays.map((day, idx) => {
+                        const sched = getMemberScheduleForDate(member.id, day);
+                        return (
+                          <td
+                            key={idx}
+                            onClick={() => {
+                              const d = new Date(day);
+                              d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                              const dateStr = d.toISOString().split('T')[0];
+                              
+                              setSelectedCell({ memberId: member.id, memberName: member.name, date: day });
+                              setAssignForm({
+                                userId: member.id,
+                                shiftId: (sched?.type === 'assignment' && sched.data.shift) ? sched.data.shift.id : (shifts[0]?.id || ''),
+                                startDate: dateStr,
+                                endDate: (sched?.type === 'assignment' && sched.data.endDate) ? new Date(sched.data.endDate).toISOString().split('T')[0] : '',
+                                untilFurtherNotice: sched?.type === 'assignment' ? !sched.data.endDate : true,
+                              });
+                              setExceptionForm({
+                                userId: member.id,
+                                date: dateStr,
+                                shiftId: sched?.type === 'exception' ? (sched.data.shiftId || 'off') : 'off',
+                                note: sched?.type === 'exception' && sched.data.note ? sched.data.note : '',
+                              });
+                              setCellActionType(sched?.type === 'exception' ? 'override' : 'assign');
+                              setError('');
+                            }}
+                            className="px-2 py-3 text-center border-l border-white/10 cursor-pointer hover:bg-white/10 transition-colors min-h-[64px] group"
+                          >
+                            {sched ? (
+                              sched.type === 'exception' ? (
+                                <span className={cn(
+                                  "inline-flex flex-col gap-0.5 items-center rounded-xl px-2.5 py-1.5 text-[10px] font-bold shadow-sm border text-center select-none w-full",
+                                  sched.data.shiftId 
+                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20" 
+                                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                )}>
+                                  <span>{sched.data.shift ? `🏢 Override: ${sched.data.shift.name}` : '🏖️ Day Off'}</span>
+                                  {sched.data.note && <span className="opacity-60 text-[8px] truncate max-w-[100px]">"{sched.data.note}"</span>}
+                                </span>
+                              ) : (
+                                <span className="inline-flex flex-col gap-0.5 items-center rounded-xl px-2.5 py-1.5 text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm w-full select-none">
+                                  <span>🏢 {sched.data.shift?.name || 'Shift'}</span>
+                                  <span className="opacity-60 text-[8px]">({sched.data.shift?.startTime || ''} - {sched.data.shift?.endTime || ''})</span>
+                                </span>
+                              )
+                            ) : (
+                              <div className="flex justify-center items-center h-full py-2">
+                                <span className="text-[10px] text-muted-foreground/30 font-medium group-hover:text-muted-foreground group-hover:scale-110 transition-all flex items-center gap-1">
+                                  <Plus size={10} /> Assign
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      ) : (
+        /* ==================== TEMPLATES & ASSIGNMENTS ADMIN ==================== */
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Shifts Panel */}
+            <GlassCard variant="default" padding="md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Shift Templates</h2>
+                {!showCreateShift && (
+                  <Button size="sm" onClick={() => setShowCreateShift(true)}>
+                    <Plus size={16} className="mr-2" />
+                    Create Shift
+                  </Button>
+                )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="form-label">Start Time</Label>
-                  <Input
-                    type="time"
-                    value={newShift.startTime}
-                    onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <Label className="form-label">End Time</Label>
-                  <Input
-                    type="time"
-                    value={newShift.endTime}
-                    onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <Label className="form-label">Report Deadline</Label>
-                  <Input
-                    type="time"
-                    value={newShift.reportDeadline}
-                    onChange={(e) => setNewShift({ ...newShift, reportDeadline: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-              {error && (
-                <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
-                  <AlertCircle size={16} />
-                  {error}
-                </div>
-              )}
-              <div className="flex gap-3">
-                <Button type="submit" disabled={isCreatingShift} className="rounded-xl">
-                  {isCreatingShift ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create'
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateShift(false);
-                    setNewShift({ name: '', startTime: '', endTime: '', reportDeadline: '' });
-                    setError('');
-                  }}
-                  className="rounded-xl"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-            </GlassCard>
-          )}
 
-          {/* Shifts List */}
-          {shifts.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
-                <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No shift templates created yet</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {shifts.map((shift) => (
-                <GlassCard key={shift.id} variant="panel" padding="sm" hover>
-                  {editingShiftId === shift.id ? (
-                    <form onSubmit={handleUpdateShift} className="space-y-4">
+              {/* Create Shift Form */}
+              {showCreateShift && (
+                <GlassCard variant="panel" padding="sm" className="mb-6">
+                  <form onSubmit={handleCreateShift} className="space-y-4">
+                    <div>
+                      <Label className="form-label">Name</Label>
+                      <Input
+                        type="text"
+                        value={newShift.name}
+                        onChange={(e) => setNewShift({ ...newShift, name: e.target.value })}
+                        placeholder="e.g., Morning Shift"
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <Label className="form-label">Name</Label>
+                        <Label className="form-label">Start Time</Label>
                         <Input
-                          type="text"
-                          value={editingShiftForm.name}
-                          onChange={(e) => setEditingShiftForm({ ...editingShiftForm, name: e.target.value })}
+                          type="time"
+                          value={newShift.startTime}
+                          onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
                           className="form-input"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="form-label">Start Time</Label>
-                          <Input
-                            type="time"
-                            value={editingShiftForm.startTime}
-                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, startTime: e.target.value })}
-                            className="form-input"
-                          />
-                        </div>
-                        <div>
-                          <Label className="form-label">End Time</Label>
-                          <Input
-                            type="time"
-                            value={editingShiftForm.endTime}
-                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, endTime: e.target.value })}
-                            className="form-input"
-                          />
-                        </div>
-                        <div>
-                          <Label className="form-label">Report Deadline</Label>
-                          <Input
-                            type="time"
-                            value={editingShiftForm.reportDeadline}
-                            onChange={(e) => setEditingShiftForm({ ...editingShiftForm, reportDeadline: e.target.value })}
-                            className="form-input"
-                          />
-                        </div>
-                      </div>
-                      {error && (
-                        <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
-                          <AlertCircle size={16} />
-                          {error}
-                        </div>
-                      )}
-                      <div className="flex gap-2 justify-end">
-                        <Button type="submit" size="sm" disabled={isUpdatingShift} className="rounded-xl">
-                          {isUpdatingShift ? <Loader2 size={14} className="mr-2 animate-spin" /> : 'Save'}
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingShiftId(null)} className="rounded-xl">
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-foreground">{shift.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {shift.startTime} - {shift.endTime} ({getShiftHours(shift.startTime, shift.endTime)}h)
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Report deadline: {shift.reportDeadline}
-                        </p>
+                        <Label className="form-label">End Time</Label>
+                        <Input
+                          type="time"
+                          value={newShift.endTime}
+                          onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
+                          className="form-input"
+                        />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => handleEditShiftClick(shift)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                          <Pencil size={14} />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => setDeleteShiftId(shift.id)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
-                          <Trash2 size={14} />
-                        </Button>
+                      <div>
+                        <Label className="form-label">Report Deadline</Label>
+                        <Input
+                          type="time"
+                          value={newShift.reportDeadline}
+                          onChange={(e) => setNewShift({ ...newShift, reportDeadline: e.target.value })}
+                          className="form-input"
+                        />
                       </div>
                     </div>
-                  )}
-                </GlassCard>
-              ))}
-            </div>
-          )}
-        </GlassCard>
-
-        {/* Assign/Edit Shift Panel */}
-        <GlassCard variant="default" padding="md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">
-              {editingAssignmentId ? 'Edit Assignment' : 'Assign Shift'}
-            </h2>
-            {editingAssignmentId && (
-              <Button size="icon" variant="ghost" onClick={() => {
-                setEditingAssignmentId(null);
-                setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '', untilFurtherNotice: false });
-                setError('');
-              }}>
-                <X size={16} />
-              </Button>
-            )}
-          </div>
-          <form onSubmit={handleAssignShift} className="space-y-4">
-            <div>
-              <Label className="form-label">Member</Label>
-              <Select
-                value={assignForm.userId}
-                onValueChange={(value) => setAssignForm({ ...assignForm, userId: value })}
-              >
-                <SelectTrigger className="form-input">
-                  <SelectValue placeholder="Select member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="form-label">Shift</Label>
-              <Select
-                value={assignForm.shiftId}
-                onValueChange={(value) => setAssignForm({ ...assignForm, shiftId: value })}
-              >
-                <SelectTrigger className="form-input">
-                  <SelectValue placeholder="Select shift" />
-                </SelectTrigger>
-                <SelectContent>
-                  {shifts.map((shift) => (
-                    <SelectItem key={shift.id} value={shift.id}>
-                      {shift.name} ({shift.startTime} - {shift.endTime})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="form-label">Start Date</Label>
-                <Input
-                  type="date"
-                  value={assignForm.startDate}
-                  onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className={assignForm.untilFurtherNotice ? 'opacity-50' : ''}>
-                <Label className="form-label">End Date</Label>
-                <Input
-                  type="date"
-                  value={assignForm.endDate}
-                  onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
-                  min={assignForm.startDate}
-                  disabled={assignForm.untilFurtherNotice}
-                  className="form-input"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 pt-1">
-              <Checkbox
-                id="untilFurtherNotice"
-                checked={assignForm.untilFurtherNotice}
-                onChange={(e) => {
-                  setAssignForm({
-                    ...assignForm,
-                    untilFurtherNotice: e.target.checked,
-                    ...(e.target.checked ? { endDate: '' } : {})
-                  });
-                }}
-              />
-              <Label htmlFor="untilFurtherNotice" className="text-sm font-medium text-foreground cursor-pointer">
-                Until further notice (No end date)
-              </Label>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
-                <AlertCircle size={16} />
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" disabled={isAssigning || isUpdatingAssignment} className="w-full rounded-xl">
-              {isAssigning || isUpdatingAssignment ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  {editingAssignmentId ? 'Updating...' : 'Assigning...'}
-                </>
-              ) : (
-                editingAssignmentId ? 'Update Assignment' : 'Assign Shift'
-              )}
-            </Button>
-          </form>
-        </GlassCard>
-      </div>
-
-      {/* Current Assignments Table */}
-      <GlassCard variant="default" padding="none">
-        <div className="p-6 pb-2">
-          <h2 className="text-lg font-semibold text-foreground">Current Assignments</h2>
-        </div>
-        {assignments.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
-              <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No shift assignments yet</p>
-            </div>
-          </div>
-        ) : (
-          <div className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8 border border-primary/20">
-                          {assignment.user.image && <AvatarImage src={assignment.user.image} />}
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {assignment.user.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm text-foreground">{assignment.user.name}</p>
-                          <p className="text-xs text-muted-foreground">{assignment.user.email}</p>
-                        </div>
+                    {error && (
+                      <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                        <AlertCircle size={16} />
+                        {error}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
-                        {assignment.shift.name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {getShiftHours(assignment.shift.startTime, assignment.shift.endTime)}h
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(assignment.startDate).toLocaleDateString()} - {assignment.endDate ? new Date(assignment.endDate).toLocaleDateString() : 'Until further notice'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleEditAssignmentClick(assignment)}
-                          className="rounded-xl"
-                        >
-                          <Pencil size={14} className="mr-2" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteAssignmentId(assignment.id)}
-                          className="rounded-xl"
-                        >
-                          <Trash2 size={14} className="mr-2" />
-                          Remove
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </GlassCard>
-
-      {/* Exceptions & Overrides Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <GlassCard variant="panel" padding="md" className="lg:col-span-1 h-fit">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Add Holiday / Override</h2>
-          <form onSubmit={handleCreateException} className="space-y-4">
-            <div>
-              <Label className="form-label">Member</Label>
-              <Select
-                value={exceptionForm.userId}
-                onValueChange={(value) => setExceptionForm({ ...exceptionForm, userId: value })}
-              >
-                <SelectTrigger className="form-input">
-                  <SelectValue placeholder="Select member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="form-label">Date</Label>
-              <Input
-                type="date"
-                value={exceptionForm.date}
-                onChange={(e) => setExceptionForm({ ...exceptionForm, date: e.target.value })}
-                className="form-input"
-              />
-            </div>
-            <div>
-              <Label className="form-label">Action</Label>
-              <Select
-                value={exceptionForm.shiftId}
-                onValueChange={(value) => setExceptionForm({ ...exceptionForm, shiftId: value })}
-              >
-                <SelectTrigger className="form-input">
-                  <SelectValue placeholder="Select action" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">🏖️ Day Off (Holiday)</SelectItem>
-                  {shifts.map((shift) => (
-                    <SelectItem key={shift.id} value={shift.id}>🏢 Work: {shift.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="form-label">Note (Optional)</Label>
-              <Input
-                type="text"
-                placeholder="e.g., Covering for John"
-                value={exceptionForm.note}
-                onChange={(e) => setExceptionForm({ ...exceptionForm, note: e.target.value })}
-                className="form-input"
-              />
-            </div>
-            <Button type="submit" disabled={isCreatingException} className="w-full rounded-xl">
-              {isCreatingException ? <Loader2 size={16} className="mr-2 animate-spin" /> : 'Add Override'}
-            </Button>
-          </form>
-        </GlassCard>
-
-        <GlassCard variant="default" padding="none" className="lg:col-span-2">
-          <div className="p-6 pb-2">
-            <h2 className="text-lg font-semibold text-foreground">Holiday Overrides & Exceptions</h2>
-          </div>
-          {exceptions.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
-                <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No overrides set yet</p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Note</TableHead>
-                    <TableHead>Remove</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {exceptions.map((exc) => (
-                    <TableRow key={exc.id}>
-                      <TableCell>
-                        <p className="font-medium text-sm text-foreground">{exc.user.name}</p>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(exc.date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {exc.shift ? (
-                          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
-                            Work: {exc.shift.name}
-                          </span>
+                    )}
+                    <div className="flex gap-3">
+                      <Button type="submit" disabled={isCreatingShift} className="rounded-xl">
+                        {isCreatingShift ? (
+                          <>
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                            Creating...
+                          </>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500 border border-green-500/20">
-                            Day Off
-                          </span>
+                          'Create'
                         )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {exc.note || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeleteExceptionId(exc.id)}
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowCreateShift(false);
+                          setNewShift({ name: '', startTime: '', endTime: '', reportDeadline: '' });
+                          setError('');
+                        }}
+                        className="rounded-xl"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </GlassCard>
+              )}
+
+              {/* Shifts List */}
+              {shifts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
+                    <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No shift templates created yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {shifts.map((shift) => (
+                    <GlassCard key={shift.id} variant="panel" padding="sm" hover>
+                      {editingShiftId === shift.id ? (
+                        <form onSubmit={handleUpdateShift} className="space-y-4">
+                          <div>
+                            <Label className="form-label">Name</Label>
+                            <Input
+                              type="text"
+                              value={editingShiftForm.name}
+                              onChange={(e) => setEditingShiftForm({ ...editingShiftForm, name: e.target.value })}
+                              className="form-input"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <Label className="form-label">Start Time</Label>
+                              <Input
+                                type="time"
+                                value={editingShiftForm.startTime}
+                                onChange={(e) => setEditingShiftForm({ ...editingShiftForm, startTime: e.target.value })}
+                                className="form-input"
+                              />
+                            </div>
+                            <div>
+                              <Label className="form-label">End Time</Label>
+                              <Input
+                                type="time"
+                                value={editingShiftForm.endTime}
+                                onChange={(e) => setEditingShiftForm({ ...editingShiftForm, endTime: e.target.value })}
+                                className="form-input"
+                              />
+                            </div>
+                            <div>
+                              <Label className="form-label">Report Deadline</Label>
+                              <Input
+                                type="time"
+                                value={editingShiftForm.reportDeadline}
+                                onChange={(e) => setEditingShiftForm({ ...editingShiftForm, reportDeadline: e.target.value })}
+                                className="form-input"
+                              />
+                            </div>
+                          </div>
+                          {error && (
+                            <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                              <AlertCircle size={16} />
+                              {error}
+                            </div>
+                          )}
+                          <div className="flex gap-2 justify-end">
+                            <Button type="submit" size="sm" disabled={isUpdatingShift} className="rounded-xl">
+                              {isUpdatingShift ? <Loader2 size={14} className="mr-2 animate-spin" /> : 'Save'}
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => setEditingShiftId(null)} className="rounded-xl">
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-foreground">{shift.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {shift.startTime} - {shift.endTime} ({getShiftHours(shift.startTime, shift.endTime)}h)
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Report deadline: {shift.reportDeadline}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => handleEditShiftClick(shift)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                              <Pencil size={14} />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setDeleteShiftId(shift.id)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </GlassCard>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              )}
+            </GlassCard>
+
+            {/* Assign/Edit Shift Panel */}
+            <GlassCard variant="default" padding="md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">
+                  {editingAssignmentId ? 'Edit Assignment' : 'Assign Shift'}
+                </h2>
+                {editingAssignmentId && (
+                  <Button size="icon" variant="ghost" onClick={() => {
+                    setEditingAssignmentId(null);
+                    setAssignForm({ userId: '', shiftId: '', startDate: '', endDate: '', untilFurtherNotice: false });
+                    setError('');
+                  }}>
+                    <X size={16} />
+                  </Button>
+                )}
+              </div>
+              <form onSubmit={handleAssignShift} className="space-y-4">
+                <div>
+                  <Label className="form-label">Member</Label>
+                  <Select
+                    value={assignForm.userId}
+                    onValueChange={(value) => setAssignForm({ ...assignForm, userId: value })}
+                  >
+                    <SelectTrigger className="form-input">
+                      <SelectValue placeholder="Select member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="form-label">Shift</Label>
+                  <Select
+                    value={assignForm.shiftId}
+                    onValueChange={(value) => setAssignForm({ ...assignForm, shiftId: value })}
+                  >
+                    <SelectTrigger className="form-input">
+                      <SelectValue placeholder="Select shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shifts.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id}>
+                          {shift.name} ({shift.startTime} - {shift.endTime})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="form-label">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={assignForm.startDate}
+                      onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className={assignForm.untilFurtherNotice ? 'opacity-50' : ''}>
+                    <Label className="form-label">End Date</Label>
+                    <Input
+                      type="date"
+                      value={assignForm.endDate}
+                      onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
+                      min={assignForm.startDate}
+                      disabled={assignForm.untilFurtherNotice}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-1">
+                  <Checkbox
+                    id="untilFurtherNotice"
+                    checked={assignForm.untilFurtherNotice}
+                    onChange={(e) => {
+                      setAssignForm({
+                        ...assignForm,
+                        untilFurtherNotice: e.target.checked,
+                        ...(e.target.checked ? { endDate: '' } : {})
+                      });
+                    }}
+                  />
+                  <Label htmlFor="untilFurtherNotice" className="text-sm font-medium text-foreground cursor-pointer">
+                    Until further notice (No end date)
+                  </Label>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-3 rounded-xl text-sm font-medium">
+                    <AlertCircle size={16} />
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" disabled={isAssigning || isUpdatingAssignment} className="w-full rounded-xl">
+                  {isAssigning || isUpdatingAssignment ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      {editingAssignmentId ? 'Updating...' : 'Assigning...'}
+                    </>
+                  ) : (
+                    editingAssignmentId ? 'Update Assignment' : 'Assign Shift'
+                  )}
+                </Button>
+              </form>
+            </GlassCard>
+          </div>
+
+          {/* Current Assignments Table */}
+          <GlassCard variant="default" padding="none">
+            <div className="p-6 pb-2">
+              <h2 className="text-lg font-semibold text-foreground">Current Assignments</h2>
             </div>
+            {assignments.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
+                  <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No shift assignments yet</p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Member</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignments.map((assignment) => (
+                      <TableRow key={assignment.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 border border-primary/20">
+                              {assignment.user.image && <AvatarImage src={assignment.user.image} />}
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                {assignment.user.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm text-foreground">{assignment.user.name}</p>
+                              <p className="text-xs text-muted-foreground">{assignment.user.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
+                            {assignment.shift.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {getShiftHours(assignment.shift.startTime, assignment.shift.endTime)}h
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(assignment.startDate).toLocaleDateString()} - {assignment.endDate ? new Date(assignment.endDate).toLocaleDateString() : 'Until further notice'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleEditAssignmentClick(assignment)}
+                              className="rounded-xl"
+                            >
+                              <Pencil size={14} className="mr-2" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setDeleteAssignmentId(assignment.id)}
+                              className="rounded-xl"
+                            >
+                              <Trash2 size={14} className="mr-2" />
+                              Remove
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </GlassCard>
+
+          {/* Exceptions & Overrides Panel */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <GlassCard variant="panel" padding="md" className="lg:col-span-1 h-fit">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Add Holiday / Override</h2>
+              <form onSubmit={handleCreateException} className="space-y-4">
+                <div>
+                  <Label className="form-label">Member</Label>
+                  <Select
+                    value={exceptionForm.userId}
+                    onValueChange={(value) => setExceptionForm({ ...exceptionForm, userId: value })}
+                  >
+                    <SelectTrigger className="form-input">
+                      <SelectValue placeholder="Select member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="form-label">Date</Label>
+                  <Input
+                    type="date"
+                    value={exceptionForm.date}
+                    onChange={(e) => setExceptionForm({ ...exceptionForm, date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <Label className="form-label">Action</Label>
+                  <Select
+                    value={exceptionForm.shiftId}
+                    onValueChange={(value) => setExceptionForm({ ...exceptionForm, shiftId: value })}
+                  >
+                    <SelectTrigger className="form-input">
+                      <SelectValue placeholder="Select action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="off">🏖️ Day Off (Holiday)</SelectItem>
+                      {shifts.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id}>🏢 Work: {shift.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="form-label">Note (Optional)</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Covering for John"
+                    value={exceptionForm.note}
+                    onChange={(e) => setExceptionForm({ ...exceptionForm, note: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <Button type="submit" disabled={isCreatingException} className="w-full rounded-xl">
+                  {isCreatingException ? <Loader2 size={16} className="mr-2 animate-spin" /> : 'Add Override'}
+                </Button>
+              </form>
+            </GlassCard>
+
+            <GlassCard variant="default" padding="none" className="lg:col-span-2">
+              <div className="p-6 pb-2">
+                <h2 className="text-lg font-semibold text-foreground">Holiday Overrides & Exceptions</h2>
+              </div>
+              {exceptions.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 backdrop-blur-sm">
+                    <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No overrides set yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Note</TableHead>
+                        <TableHead>Remove</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {exceptions.map((exc) => (
+                        <TableRow key={exc.id}>
+                          <TableCell>
+                            <p className="font-medium text-sm text-foreground">{exc.user.name}</p>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(exc.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {exc.shift ? (
+                              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-500 border border-blue-500/20">
+                                Work: {exc.shift.name}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-500 border border-green-500/20">
+                                Day Off
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {exc.note || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setDeleteExceptionId(exc.id)}
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </GlassCard>
+          </div>
+        </>
+      )}
+
+      {/* Date Cell Micro Editor Dialog popup */}
+      <Dialog open={!!selectedCell} onOpenChange={() => setSelectedCell(null)}>
+        <DialogContent className="sm:max-w-[480px] border border-white/20 bg-background/90 dark:bg-slate-900/90 backdrop-blur-lg shadow-2xl rounded-2xl">
+          <DialogHeader className="border-b border-white/10 pb-4 mb-4">
+            <DialogTitle className="text-base font-bold text-foreground">
+              📅 Schedule Override for {selectedCell?.memberName}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              For date: <strong className="text-foreground">{selectedCell ? new Date(selectedCell.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}</strong>
+            </p>
+          </DialogHeader>
+
+          {/* Form Action Segment Selector */}
+          <div className="flex gap-1 bg-white/10 dark:bg-slate-900/30 p-1 rounded-xl border border-white/5 mb-4">
+            <button
+              onClick={() => setCellActionType('assign')}
+              className={cn(
+                'flex-1 text-[11px] font-bold py-2 rounded-lg uppercase tracking-wide transition-all',
+                cellActionType === 'assign'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Standard Shift Assign
+            </button>
+            <button
+              onClick={() => setCellActionType('override')}
+              className={cn(
+                'flex-1 text-[11px] font-bold py-2 rounded-lg uppercase tracking-wide transition-all',
+                cellActionType === 'override'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Add Holiday / Override
+            </button>
+          </div>
+
+          {cellActionType === 'assign' ? (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await handleAssignShift(e);
+              setSelectedCell(null);
+            }} className="space-y-4">
+              <div>
+                <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">Shift Template</Label>
+                <Select
+                  value={assignForm.shiftId}
+                  onValueChange={(val) => setAssignForm({ ...assignForm, shiftId: val })}
+                >
+                  <SelectTrigger className="form-input h-10">
+                    <SelectValue placeholder="Choose shift template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shifts.map((shift) => (
+                      <SelectItem key={shift.id} value={shift.id}>
+                        🏢 {shift.name} ({shift.startTime} - {shift.endTime})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={assignForm.startDate}
+                    onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })}
+                    className="form-input h-10"
+                  />
+                </div>
+                <div className={assignForm.untilFurtherNotice ? 'opacity-50' : ''}>
+                  <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">End Date</Label>
+                  <Input
+                    type="date"
+                    value={assignForm.endDate}
+                    onChange={(e) => setAssignForm({ ...assignForm, endDate: e.target.value })}
+                    min={assignForm.startDate}
+                    disabled={assignForm.untilFurtherNotice}
+                    className="form-input h-10"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox
+                  id="cellUntilFurtherNotice"
+                  checked={assignForm.untilFurtherNotice}
+                  onChange={(e) => {
+                    setAssignForm({
+                      ...assignForm,
+                      untilFurtherNotice: e.target.checked,
+                      ...(e.target.checked ? { endDate: '' } : {})
+                    });
+                  }}
+                />
+                <Label htmlFor="cellUntilFurtherNotice" className="text-xs font-semibold text-foreground cursor-pointer">
+                  Until further notice (No end date)
+                </Label>
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-2.5 rounded-xl text-xs font-medium">
+                  <AlertCircle size={14} />
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-2 border-t border-white/10">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedCell(null)}
+                  className="rounded-xl h-9"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isAssigning}
+                  className="rounded-xl h-9 min-w-[80px]"
+                >
+                  {isAssigning ? <Loader2 size={14} className="animate-spin" /> : 'Assign'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await handleCreateException(e);
+              setSelectedCell(null);
+            }} className="space-y-4">
+              <div>
+                <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">Action / Shift</Label>
+                <Select
+                  value={exceptionForm.shiftId}
+                  onValueChange={(val) => setExceptionForm({ ...exceptionForm, shiftId: val })}
+                >
+                  <SelectTrigger className="form-input h-10">
+                    <SelectValue placeholder="Select override action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="off">🏖️ Day Off (Holiday)</SelectItem>
+                    {shifts.map((shift) => (
+                      <SelectItem key={shift.id} value={shift.id}>🏢 Work: {shift.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">Override Date</Label>
+                <Input
+                  type="date"
+                  value={exceptionForm.date}
+                  onChange={(e) => setExceptionForm({ ...exceptionForm, date: e.target.value })}
+                  className="form-input h-10"
+                />
+              </div>
+
+              <div>
+                <Label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">Override Notes (Optional)</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Covering for shift swap"
+                  value={exceptionForm.note}
+                  onChange={(e) => setExceptionForm({ ...exceptionForm, note: e.target.value })}
+                  className="form-input h-10"
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-2.5 rounded-xl text-xs font-medium">
+                  <AlertCircle size={14} />
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-2 border-t border-white/10">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedCell(null)}
+                  className="rounded-xl h-9"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isCreatingException}
+                  className="rounded-xl h-9 min-w-[80px]"
+                >
+                  {isCreatingException ? <Loader2 size={14} className="animate-spin" /> : 'Log Override'}
+                </Button>
+              </div>
+            </form>
           )}
-        </GlassCard>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Modals */}
       <ConfirmModal

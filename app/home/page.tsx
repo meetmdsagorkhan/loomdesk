@@ -71,21 +71,21 @@ export default function MarketingPage() {
             The Future of Support Operations ✨
           </Badge>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-6 font-heading">
-            Manage your team with <br className="hidden md:block" />
-            <span className="heading">effortless precision.</span>
+            The nervous system <br className="hidden md:block" />
+            for <span className="heading">high-throughput support teams.</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-sans">
-            LoomDesk brings intelligent scheduling, QA scoring, and seamless leave management into one ultra-premium workspace.
+          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto font-sans">
+            LoomDesk orchestrates scheduling, automated QA loops, and real-time support operations into a unified, high-performance engine. Built for teams that measure customer satisfaction in seconds, not hours.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="https://app.loomdesk.online/signup">
               <Button size="lg" className="btn-primary rounded-full h-14 px-8 text-base">
-                Start for free <ArrowRight className="ml-2 h-4 w-4" />
+                Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </a>
             <a href="https://meet.loomdesk.online">
               <Button variant="outline" size="lg" className="glass-pill rounded-full h-14 px-8 text-base border-white/10">
-                View Scheduling
+                Book Interactive Demo
               </Button>
             </a>
           </div>

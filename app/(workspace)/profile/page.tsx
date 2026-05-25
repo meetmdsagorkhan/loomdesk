@@ -9,6 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
 import { BentoGrid, BentoCard } from '@/components/shared/BentoGrid';
@@ -17,6 +24,36 @@ import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
 
 export default function ProfilePage() {
+  const DEFAULT_DEPARTMENTS = [
+    'Engineering',
+    'Operations',
+    'Product Management',
+    'Design',
+    'Marketing',
+    'Sales',
+    'Customer Support',
+    'Customer Success',
+    'Finance',
+    'Human Resources',
+  ];
+
+  const DEFAULT_POSITIONS = [
+    'Software Engineer',
+    'Senior Software Engineer',
+    'Staff Engineer',
+    'Product Manager',
+    'Product Designer',
+    'Operations Manager',
+    'Support Specialist',
+    'Support Lead',
+    'Customer Success Manager',
+    'Sales Development Rep',
+    'HR Specialist',
+    'VP of Operations',
+    'CTO',
+    'CEO',
+  ];
+
   const { user, isLoading: userLoading } = useCurrentUser();
   const { update } = useSession();
 
@@ -106,6 +143,19 @@ export default function ProfilePage() {
       showToast('New passwords do not match', 'error');
       setIsUpdatingProfile(false);
       return;
+    }
+
+    if (profileData.joiningDate) {
+      const selected = new Date(profileData.joiningDate);
+      const today = new Date();
+      selected.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      
+      if (selected > today) {
+        showToast('Joining Date must be in the past', 'error');
+        setIsUpdatingProfile(false);
+        return;
+      }
     }
 
     try {
@@ -464,12 +514,44 @@ export default function ProfilePage() {
 
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2"><Briefcase size={14} className="text-primary" /> Position</Label>
-                          <Input type="text" value={profileData.position} onChange={(e) => setProfileData({ ...profileData, position: e.target.value })} className="form-input" />
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Briefcase size={14} className="text-primary" /> Position
+                          </Label>
+                          <Select
+                            value={profileData.position || undefined}
+                            onValueChange={(val) => setProfileData({ ...profileData, position: val })}
+                          >
+                            <SelectTrigger className="form-input w-full">
+                              <SelectValue placeholder="Select Position" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60 overflow-y-auto">
+                              {Array.from(new Set([...DEFAULT_POSITIONS, ...(profileData.position ? [profileData.position] : [])])).map((pos) => (
+                                <SelectItem key={pos} value={pos}>
+                                  {pos}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2"><Building2 size={14} className="text-primary" /> Department</Label>
-                          <Input type="text" value={profileData.department} onChange={(e) => setProfileData({ ...profileData, department: e.target.value })} className="form-input" />
+                          <Label className="text-sm font-semibold ml-1 flex items-center gap-2">
+                            <Building2 size={14} className="text-primary" /> Department
+                          </Label>
+                          <Select
+                            value={profileData.department || undefined}
+                            onValueChange={(val) => setProfileData({ ...profileData, department: val })}
+                          >
+                            <SelectTrigger className="form-input w-full">
+                              <SelectValue placeholder="Select Department" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60 overflow-y-auto">
+                              {Array.from(new Set([...DEFAULT_DEPARTMENTS, ...(profileData.department ? [profileData.department] : [])])).map((dept) => (
+                                <SelectItem key={dept} value={dept}>
+                                  {dept}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold ml-1 flex items-center gap-2"><KeyRound size={14} className="text-primary" /> Company</Label>

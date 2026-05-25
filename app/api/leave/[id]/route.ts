@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
-import { isAdmin } from '@/lib/auth-utils';
+import { isAuthorized } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { createNotification } from '@/lib/notifications';
@@ -29,8 +29,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only admin can approve/reject
-    if (!isAdmin({ user: session.user })) {
+    // Requires manage_leaves permission
+    if (!isAuthorized(session, 'manage_leaves')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const body = await request.json();

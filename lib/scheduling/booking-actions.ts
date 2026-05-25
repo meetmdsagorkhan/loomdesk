@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { validateBookingSlot } from './availability-engine';
 import { sendBookingConfirmationEmail, sendBookingCancellationEmail } from './email-notifications';
 import { createGoogleCalendarEvent, deleteGoogleCalendarEvent } from './google-calendar-sync';
+import { auditEvent } from '@/lib/audit-log';
 
 // Validation schemas
 const createBookingSchema = z.object({
@@ -67,83 +68,52 @@ export async function createBooking(data: z.infer<typeof createBookingSchema>) {
     throw new Error(validation.reason || 'Slot not available');
   }
 
-  // Use transaction to prevent race conditions
-  const booking = await prisma.$transaction(async (tx: any) => {
-    // Double-check availability within transaction
-    const conflictingBooking = await tx.booking.findFirst({
-      where: {
-        eventTypeId,
-        status: 'CONFIRMED',
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startTimeDate } },
-              { endTime: { gt: startTimeDate } }
-            ]
-          },
-          {
-            AND: [
-              { startTime: { lt: endTimeDate } },
-              { endTime: { gte: endTimeDate } }
-            ]
-          },
-          {
-            AND: [
-              { startTime: { gte: startTimeDate } },
-              { endTime: { lte: endTimeDate } }
-            ]
-          }
-        ]
-      }
-    });
+  let booking;
 
-    if (conflictingBooking) {
-      throw new Error('This time slot was just booked. Please select another time.');
-    }
-
-    // Create the booking
-    const newBooking = await tx.booking.create({
-      data: {
-        eventTypeId,
-        name,
-        email,
-        startTime: startTimeDate,
-        endTime: endTimeDate,
-        status: 'CONFIRMED'
-      },
-      include: {
-        eventType: {
-          include: {
-            user: true
-          }
-        }
-      }
-    });
-
-    return newBooking;
-  });
-
-  // Create Google Calendar event if user has connected calendar
   try {
-    const googleToken = await prisma.googleCalendarToken.findUnique({
-      where: { userId: eventType.user.id }
-    });
+    // Use transaction to prevent race conditions
+    booking = await prisma.$transaction(async (tx: any) => {
+      // Double-check availability within transaction across all host event types to prevent cross-type double booking
+      const conflictingBooking = await tx.booking.findFirst({
+        where: {
+          eventType: { userId: eventType.user.id },
+          status: 'CONFIRMED',
+          OR: [
+            {
+              AND: [
+                { startTime: { lte: startTimeDate } },
+                { endTime: { gt: startTimeDate } }
+              ]
+            },
+            {
+              AND: [
+                { startTime: { lt: endTimeDate } },
+                { endTime: { gte: endTimeDate } }
+              ]
+            },
+            {
+              AND: [
+                { startTime: { gte: startTimeDate } },
+                { endTime: { lte: endTimeDate } }
+              ]
+            }
+          ]
+        }
+      });
 
-    if (googleToken) {
-      const calendarEvent = await createGoogleCalendarEvent(
-        eventType.user.id,
-        booking.startTime,
-        booking.endTime,
-        `${eventType.title} with ${name}`,
-        `Booking email: ${email}${notes ? '\n\nNotes: ' + notes : ''}`
-      );
+      if (conflictingBooking) {
+        throw new Error('This time slot was just booked. Please select another time.');
+      }
 
-      // Update booking with calendar event details
-      const updatedBooking = await prisma.booking.update({
-        where: { id: booking.id },
+      // Create the booking
+      const newBooking = await tx.booking.create({
         data: {
-          googleCalendarEventId: calendarEvent.id,
-          meetLink: calendarEvent.hangoutLink
+          eventTypeId,
+          name,
+          email,
+          startTime: startTimeDate,
+          endTime: endTimeDate,
+          status: 'CONFIRMED'
         },
         include: {
           eventType: {
@@ -153,20 +123,88 @@ export async function createBooking(data: z.infer<typeof createBookingSchema>) {
           }
         }
       });
-      // Replace the initial booking with the updated one
-      Object.assign(booking, updatedBooking);
-    }
-  } catch (error) {
-    console.error('Failed to create Google Calendar event:', error);
-    // Don't fail the booking if calendar sync fails
-  }
 
-  // Send confirmation emails
-  try {
-    await sendBookingConfirmationEmail(booking);
-  } catch (error) {
-    console.error('Failed to send confirmation email:', error);
-    // Don't fail the booking if email fails
+      return newBooking;
+    });
+
+    // Create Google Calendar event if user has connected calendar
+    try {
+      const googleToken = await prisma.googleCalendarToken.findUnique({
+        where: { userId: eventType.user.id }
+      });
+
+      if (googleToken) {
+        const calendarEvent = await createGoogleCalendarEvent(
+          eventType.user.id,
+          booking.startTime,
+          booking.endTime,
+          `${eventType.title} with ${name}`,
+          `Booking email: ${email}${notes ? '\n\nNotes: ' + notes : ''}`
+        );
+
+        // Update booking with calendar event details
+        const updatedBooking = await prisma.booking.update({
+          where: { id: booking.id },
+          data: {
+            googleCalendarEventId: calendarEvent.id,
+            meetLink: calendarEvent.hangoutLink
+          },
+          include: {
+            eventType: {
+              include: {
+                user: true
+              }
+            }
+          }
+        });
+        // Replace the initial booking with the updated one
+        Object.assign(booking, updatedBooking);
+      }
+    } catch (error) {
+      console.error('Failed to create Google Calendar event:', error);
+      // Don't fail the booking if calendar sync fails
+    }
+
+    // Send confirmation emails
+    try {
+      await sendBookingConfirmationEmail(booking);
+    } catch (error) {
+      console.error('Failed to send confirmation email:', error);
+      // Don't fail the booking if email fails
+    }
+
+    // Log success audit log
+    auditEvent({
+      action: 'BOOKING_CREATE',
+      status: 'success',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      targetType: 'Booking',
+      targetId: booking.id,
+      targetEmail: booking.email,
+      metadata: {
+        eventTypeId,
+        name,
+        startTime: booking.startTime.toISOString(),
+        endTime: booking.endTime.toISOString(),
+      }
+    });
+
+  } catch (error: any) {
+    // Log failure audit log
+    auditEvent({
+      action: 'BOOKING_CREATE',
+      status: 'failure',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      metadata: {
+        eventTypeId,
+        name,
+        startTime,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    });
+    throw error;
   }
 
   revalidatePath(`/book/${eventType.user.username}`);
@@ -310,90 +348,127 @@ export async function rescheduleBooking(data: z.infer<typeof rescheduleBookingSc
     throw new Error(validation.reason || 'New slot not available');
   }
 
-  // Use transaction to prevent race conditions
-  const updatedBooking = await prisma.$transaction(async (tx: any) => {
-    // Double-check availability within transaction (excluding current booking)
-    const conflictingBooking = await tx.booking.findFirst({
-      where: {
-        eventTypeId: existingBooking.eventTypeId,
-        status: 'CONFIRMED',
-        id: { not: bookingId },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: newStartTimeDate } },
-              { endTime: { gt: newStartTimeDate } }
-            ]
-          },
-          {
-            AND: [
-              { startTime: { lt: newEndTimeDate } },
-              { endTime: { gte: newEndTimeDate } }
-            ]
-          },
-          {
-            AND: [
-              { startTime: { gte: newStartTimeDate } },
-              { endTime: { lte: newEndTimeDate } }
-            ]
-          }
-        ]
-      }
-    });
+  let updatedBooking;
 
-    if (conflictingBooking) {
-      throw new Error('This time slot was just booked. Please select another time.');
-    }
-
-    // Update the booking
-    const updated = await tx.booking.update({
-      where: { id: bookingId },
-      data: {
-        startTime: newStartTimeDate,
-        endTime: newEndTimeDate
-      },
-      include: {
-        eventType: {
-          include: {
-            user: true
-          }
-        }
-      }
-    });
-
-    return updated;
-  });
-
-  // Update Google Calendar event if exists
-  if (existingBooking.googleCalendarEventId) {
-    try {
-      await deleteGoogleCalendarEvent(existingBooking.eventType.user.id, existingBooking.googleCalendarEventId);
-      
-      const newCalendarEvent = await createGoogleCalendarEvent(
-        existingBooking.eventType.user.id,
-        updatedBooking.startTime,
-        updatedBooking.endTime,
-        `${existingBooking.eventType.title} with ${existingBooking.name}`,
-        `Booking email: ${existingBooking.email}`
-      );
-
-      await prisma.booking.update({
-        where: { id: bookingId },
-        data: {
-          googleCalendarEventId: newCalendarEvent.id,
-          meetLink: newCalendarEvent.hangoutLink
+  try {
+    // Use transaction to prevent race conditions
+    updatedBooking = await prisma.$transaction(async (tx: any) => {
+      // Double-check availability within transaction across all host event types (excluding current booking)
+      const conflictingBooking = await tx.booking.findFirst({
+        where: {
+          eventType: { userId: existingBooking.eventType.user.id },
+          status: 'CONFIRMED',
+          id: { not: bookingId },
+          OR: [
+            {
+              AND: [
+                { startTime: { lte: newStartTimeDate } },
+                { endTime: { gt: newStartTimeDate } }
+              ]
+            },
+            {
+              AND: [
+                { startTime: { lt: newEndTimeDate } },
+                { endTime: { gte: newEndTimeDate } }
+              ]
+            },
+            {
+              AND: [
+                { startTime: { gte: newStartTimeDate } },
+                { endTime: { lte: newEndTimeDate } }
+              ]
+            }
+          ]
         }
       });
-    } catch (error) {
-      console.error('Failed to update Google Calendar event:', error);
-    }
-  }
 
-  // Send reschedule notification emails
-  try {
-    await sendBookingConfirmationEmail(updatedBooking, true);
-  } catch (error) {
-    console.error('Failed to send reschedule email:', error);
+      if (conflictingBooking) {
+        throw new Error('This time slot was just booked. Please select another time.');
+      }
+
+      // Update the booking
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          startTime: newStartTimeDate,
+          endTime: newEndTimeDate
+        },
+        include: {
+          eventType: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
+
+      return updated;
+    });
+
+    // Update Google Calendar event if exists
+    if (existingBooking.googleCalendarEventId) {
+      try {
+        await deleteGoogleCalendarEvent(existingBooking.eventType.user.id, existingBooking.googleCalendarEventId);
+        
+        const newCalendarEvent = await createGoogleCalendarEvent(
+          existingBooking.eventType.user.id,
+          updatedBooking.startTime,
+          updatedBooking.endTime,
+          `${existingBooking.eventType.title} with ${existingBooking.name}`,
+          `Booking email: ${existingBooking.email}`
+        );
+
+        await prisma.booking.update({
+          where: { id: bookingId },
+          data: {
+            googleCalendarEventId: newCalendarEvent.id,
+            meetLink: newCalendarEvent.hangoutLink
+          }
+        });
+      } catch (error) {
+        console.error('Failed to update Google Calendar event:', error);
+      }
+    }
+
+    // Send reschedule notification emails
+    try {
+      await sendBookingConfirmationEmail(updatedBooking, true);
+    } catch (error) {
+      console.error('Failed to send reschedule email:', error);
+    }
+
+    // Log success audit log
+    auditEvent({
+      action: 'BOOKING_RESCHEDULE',
+      status: 'success',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      targetType: 'Booking',
+      targetId: bookingId,
+      targetEmail: updatedBooking.email,
+      metadata: {
+        bookingId,
+        newStartTime: updatedBooking.startTime.toISOString(),
+        newEndTime: updatedBooking.endTime.toISOString(),
+      }
+    });
+
+  } catch (error: any) {
+    // Log failure audit log
+    auditEvent({
+      action: 'BOOKING_RESCHEDULE',
+      status: 'failure',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      targetType: 'Booking',
+      targetId: bookingId,
+      metadata: {
+        bookingId,
+        newStartTime,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    });
+    throw error;
   }
 
   revalidatePath('/dashboard/bookings');
@@ -440,35 +515,70 @@ export async function cancelBooking(data: z.infer<typeof cancelBookingSchema>) {
     throw new Error('Booking is already cancelled');
   }
 
-  // Update booking status
-  const cancelledBooking = await prisma.booking.update({
-    where: { id: bookingId },
-    data: {
-      status: 'CANCELLED'
-    },
-    include: {
-      eventType: {
-        include: {
-          user: true
+  let cancelledBooking;
+
+  try {
+    // Update booking status
+    cancelledBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'CANCELLED'
+      },
+      include: {
+        eventType: {
+          include: {
+            user: true
+          }
         }
       }
-    }
-  });
+    });
 
-  // Delete from Google Calendar if exists
-  if (existingBooking.googleCalendarEventId) {
+    // Delete from Google Calendar if exists
+    if (existingBooking.googleCalendarEventId) {
+      try {
+        await deleteGoogleCalendarEvent(existingBooking.eventType.user.id, existingBooking.googleCalendarEventId);
+      } catch (error) {
+        console.error('Failed to delete Google Calendar event:', error);
+      }
+    }
+
+    // Send cancellation emails
     try {
-      await deleteGoogleCalendarEvent(existingBooking.eventType.user.id, existingBooking.googleCalendarEventId);
+      await sendBookingCancellationEmail(cancelledBooking, reason, isHost);
     } catch (error) {
-      console.error('Failed to delete Google Calendar event:', error);
+      console.error('Failed to send cancellation email:', error);
     }
-  }
 
-  // Send cancellation emails
-  try {
-    await sendBookingCancellationEmail(cancelledBooking, reason, isHost);
-  } catch (error) {
-    console.error('Failed to send cancellation email:', error);
+    // Log success audit log
+    auditEvent({
+      action: 'BOOKING_CANCEL',
+      status: 'success',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      targetType: 'Booking',
+      targetId: bookingId,
+      targetEmail: cancelledBooking.email,
+      metadata: {
+        bookingId,
+        reason,
+      }
+    });
+
+  } catch (error: any) {
+    // Log failure audit log
+    auditEvent({
+      action: 'BOOKING_CANCEL',
+      status: 'failure',
+      actorId: session?.user?.id || undefined,
+      actorEmail: session?.user?.email || undefined,
+      targetType: 'Booking',
+      targetId: bookingId,
+      metadata: {
+        bookingId,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    });
+    throw error;
   }
 
   revalidatePath('/dashboard/bookings');

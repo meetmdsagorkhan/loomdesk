@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
-import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { isAdmin, isTeamLead, isAuthorized } from '@/lib/auth-utils';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { auditEvent } from '@/lib/audit-log';
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN and TEAM_LEAD can access score events
-    if (!isAdmin(session) && !isTeamLead(session)) {
+    // Requires score_reports permission
+    if (!isAuthorized(session, 'score_reports')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN and TEAM_LEAD can create score events
-    if (!isAdmin(session) && !isTeamLead(session)) {
+    // Requires score_reports permission
+    if (!isAuthorized(session, 'score_reports')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
