@@ -124,8 +124,11 @@ export async function POST(request: NextRequest) {
     today.setHours(0, 0, 0, 0);
     reportDate.setHours(0, 0, 0, 0);
 
-    if (reportDate.getTime() !== today.getTime()) {
-      return NextResponse.json({ error: 'New reports can only be created for the current date' }, { status: 400 });
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (reportDate.getTime() !== today.getTime() && reportDate.getTime() !== yesterday.getTime()) {
+      return NextResponse.json({ error: 'New reports can only be created for today or yesterday' }, { status: 400 });
     }
 
     // Check if report already exists for this date

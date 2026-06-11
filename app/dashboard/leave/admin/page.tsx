@@ -43,7 +43,7 @@ export default function LeaveAdminPage() {
   const { user, isLoading: userLoading } = useCurrentUser();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState('PENDING');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedUserId, setSelectedUserId] = useState('all');
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [actionLeaveId, setActionLeaveId] = useState<string | null>(null);
