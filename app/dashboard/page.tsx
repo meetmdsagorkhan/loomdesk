@@ -307,7 +307,7 @@ export default function DashboardPage() {
       <div className="flex justify-between items-end mb-8">
         <div>
           <div className="mb-2">
-            <Badge variant="primary" label={isAdminView ? 'Admin Dashboard' : 'Member Dashboard'} />
+            <Badge variant="info" label={isAdminView ? 'Admin Dashboard' : 'Member Dashboard'} />
           </div>
           <h2 className="text-2xl font-bold font-heading">
             Welcome back, {user?.name ? user.name.split(' ')[0] : 'Operator'}

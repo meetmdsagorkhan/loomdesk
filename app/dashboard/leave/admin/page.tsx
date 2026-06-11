@@ -126,7 +126,7 @@ export default function LeaveAdminPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus);
+      // Do not filter by status server-side so the Timeline gets all leave data
       if (selectedUserId && selectedUserId !== 'all') params.append('userId', selectedUserId);
 
       const response = await fetch(`/api/leave?${params}`);
@@ -210,6 +210,9 @@ export default function LeaveAdminPage() {
   }
 
   const pendingRequests = leaveRequests.filter((r) => r.status === 'PENDING');
+  const filteredLeaveRequests = leaveRequests.filter((req) => 
+    selectedStatus === 'all' || req.status === selectedStatus
+  );
 
   return (
     <div className="space-y-8">
@@ -483,10 +486,10 @@ export default function LeaveAdminPage() {
               <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
                 <div className="border-b border-border/60 p-4 md:p-6">
                   <h2 className="text-lg font-semibold text-foreground">
-                    All Requests ({leaveRequests.length})
+                    All Requests ({filteredLeaveRequests.length})
                   </h2>
                 </div>
-                {leaveRequests.length === 0 ? (
+                {filteredLeaveRequests.length === 0 ? (
                   <div className="p-12 text-center">
                     <div className="rounded-2xl border border-dashed border-slate-300/50 p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),inset_0_-1px_0_rgba(0,0,0,0.05),0_8px_32px_rgba(0,0,0,0.05)] dark:border-slate-700/50 dark:bg-slate-800/50 dark:backdrop-blur-sm dark:shadow-none">
                       <Calendar size={48} className="mx-auto text-muted-foreground mb-4" />
@@ -510,7 +513,7 @@ export default function LeaveAdminPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {leaveRequests.map((leave) => (
+                            {filteredLeaveRequests.map((leave) => (
                               <tr key={leave.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30 backdrop-blur-sm">
                                 <td className="px-6 py-4 text-sm text-foreground">{leave.user?.name || "Unknown User"}</td>
                                 <td className="px-6 py-4 text-sm text-foreground">
@@ -548,7 +551,7 @@ export default function LeaveAdminPage() {
                     </div>
 
                     <div className="space-y-3 lg:hidden">
-                      {leaveRequests.map((leave) => (
+                      {filteredLeaveRequests.map((leave) => (
                         <div
                           key={leave.id}
                           className="rounded-2xl border border-border/40 bg-background/35 p-4 backdrop-blur-sm"
