@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest) {
     const now = new Date();
     
     // Close any active breaks
-    const activeBreak = activeEntry.breaks.find((b) => !b.endTime);
+    const activeBreak = activeEntry.breaks.find((b: any) => !b.endTime);
     if (activeBreak) {
       const breakDuration = Math.round((now.getTime() - activeBreak.startTime.getTime()) / 60000);
       await prisma.break.update({
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest) {
       where: { timeEntryId: activeEntry.id },
     });
     
-    const totalBreakMinutes = updatedBreaks.reduce((acc, b) => acc + (b.duration || 0), 0);
+    const totalBreakMinutes = updatedBreaks.reduce((acc: number, b: any) => acc + (b.duration || 0), 0);
     const totalDurationMinutes = Math.round((now.getTime() - activeEntry.checkInTime.getTime()) / 60000);
     const totalMinutesWorked = Math.max(0, totalDurationMinutes - totalBreakMinutes);
 

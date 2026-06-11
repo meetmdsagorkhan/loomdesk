@@ -47,7 +47,7 @@ export async function GET(
     const dayMap: Record<string, number> = {
       SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6
     };
-    const availableDays = [...new Set(availabilities.map(a => dayMap[a.dayOfWeek]))];
+    const availableDays = [...new Set(availabilities.map((a: any) => dayMap[a.dayOfWeek]))];
 
     // If a date is provided, return available slots for that day using the engine
     let availableSlots: { startTime: string; endTime: string; displayTime: string }[] = [];

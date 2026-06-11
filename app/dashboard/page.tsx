@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import StatCard from '@/components/shared/StatCard';
@@ -302,71 +303,34 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-8 fade-in">
-      <PageHeader
-        badge={isAdminView ? 'Admin Control Center' : 'Zen Focus Portal'}
-        title={`Welcome back, ${user?.name || 'Operator'}`}
-        subtitle={
-          isAdminView
-            ? 'Here is an operational cockpit of your team activity and scheduling performance today.'
-            : 'Maintain complete focus. Here is your structured, stress-free snapshot for shift performance.'
-        }
-      />
+    <div className="space-y-8 font-sans">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <div className="mb-2">
+            <Badge variant="primary" label={isAdminView ? 'Admin Dashboard' : 'Member Dashboard'} />
+          </div>
+          <h2 className="text-2xl font-bold font-heading">
+            Welcome back, {user?.name ? user.name.split(' ')[0] : 'Operator'}
+          </h2>
+          <p className="text-muted-foreground text-sm font-sans">
+            {isAdminView
+              ? "Here's an operational cockpit of your team activity and scheduling performance today."
+              : "Maintain complete focus. Here's your structured, stress-free snapshot for shift performance."}
+          </p>
+        </div>
+      </div>
 
       {/* METRICS HUD GRID */}
-      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {metricCards.map((metric) => (
-          <Link href={metric.href} key={metric.title} className="block group">
-            <GlassCard
-              variant="panel"
-              padding="md"
-              className="hover-lift overflow-hidden border-white/10 bg-gradient-to-br from-white/30 via-white/10 to-transparent shadow-[0_16px_48px_rgba(76,92,148,0.06)] dark:from-slate-900/50 dark:via-slate-900/20"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {metric.title}
-                </span>
-                <div className={`p-2.5 rounded-xl bg-${metric.color}/10 text-${metric.color}`}>
-                  {metric.icon}
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold tracking-tight text-foreground">
-                  {typeof metric.value === 'number'
-                    ? (metric.title.includes('QA') || metric.title.includes('Quality') || metric.title.includes('Score')
-                        ? `${metric.value.toFixed(1)}%`
-                        : metric.value)
-                    : metric.value}
-                </span>
-                {metric.change !== 0 && (
-                  <span className="text-xs font-semibold text-emerald-500 inline-flex items-center">
-                    +{metric.change}%
-                  </span>
-                )}
-              </div>
-
-              {/* CRISP INLINE SVG SPARKLINE */}
-              <div className="mt-4 h-8 w-full opacity-60 group-hover:opacity-100 transition-opacity">
-                <svg className="h-full w-full" viewBox="0 0 100 30" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id={`sparkGrad-${metric.color}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={`hsl(var(--primary))` } stopOpacity="0.4" />
-                      <stop offset="100%" stopColor={`hsl(var(--primary))` } stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d={`M ${metric.sparkData
-                      .map((val, i) => `${(i / (metric.sparkData.length - 1)) * 100},${30 - (val / 100) * 20}`)
-                      .join(' L ')}`}
-                    fill="none"
-                    stroke={`hsl(var(--primary))`}
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </GlassCard>
+          <Link href={metric.href} key={metric.title} className="block transition-transform duration-200 hover:scale-[1.02] cursor-pointer">
+            <StatCard 
+              title={metric.title} 
+              value={metric.value as number} 
+              icon={metric.icon} 
+              color={metric.color as any} 
+              change={metric.change} 
+            />
           </Link>
         ))}
       </section>
@@ -400,65 +364,21 @@ export default function DashboardPage() {
                   <p className="text-sm text-muted-foreground">No agents found matching &quot;{searchQuery}&quot;</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/10 dark:bg-slate-900/10 backdrop-blur-md">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/15 bg-white/20 dark:bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                        <th className="px-5 py-3.5 text-left font-semibold">Rank</th>
-                        <th className="px-5 py-3.5 text-left font-semibold">Operator</th>
-                        <th className="px-5 py-3.5 text-center font-semibold">Reports Logged</th>
-                        <th className="px-5 py-3.5 text-center font-semibold">Avg QA Index</th>
-                        <th className="px-5 py-3.5 text-right font-semibold">Status Performance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredLeaderboard.map((row, index) => {
-                        const rankNum = index + 1;
-                        return (
-                          <tr
-                            key={`${row.name}-${index}`}
-                            className="border-b border-white/10 last:border-0 hover:bg-white/20 dark:hover:bg-slate-800/10 transition-colors"
-                          >
-                            <td className="px-5 py-4 text-xs font-bold text-muted-foreground">
-                              {rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : `#${rankNum}`}
-                            </td>
-                            <td className="px-5 py-4 text-xs font-semibold text-foreground">{row.name}</td>
-                            <td className="px-5 py-4 text-xs text-center text-foreground">{row.reports}</td>
-                            <td className="px-5 py-4 text-center">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
-                                  row.avgScore >= 95
-                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
-                                    : row.avgScore >= 90
-                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300'
-                                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
-                                }`}
-                              >
-                                {row.avgScore.toFixed(1)}%
-                              </span>
-                            </td>
-                            <td className="px-5 py-4 text-right pr-6">
-                              <div className="flex items-center justify-end gap-2">
-                                <div className="w-16 h-1.5 rounded-full bg-slate-300/30 overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      row.avgScore >= 95
-                                        ? 'bg-emerald-500'
-                                        : row.avgScore >= 90
-                                        ? 'bg-amber-500'
-                                        : 'bg-rose-500'
-                                    }`}
-                                    style={{ width: `${row.avgScore}%` }}
-                                  />
-                                </div>
-                                <ChevronRight size={14} className="text-muted-foreground" />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="space-y-4 font-sans mt-4">
+                  {filteredLeaderboard.map((row, index) => (
+                    <div key={`${row.name}-${index}`} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 transition-all hover:bg-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                          {row.name[0] || '?'}
+                        </div>
+                        <div>
+                           <span className="text-sm font-medium">{row.name}</span>
+                           <p className="text-[10px] text-muted-foreground">{row.reports} Reports Logged</p>
+                        </div>
+                      </div>
+                      <Badge variant="success" label={`${row.avgScore.toFixed(1)}%`} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -466,6 +386,25 @@ export default function DashboardPage() {
 
           {/* ACTIVE DISPATCH: LEAVE AVALANCHE / PENDING APPROVALS */}
           <div className="space-y-6">
+            {/* SYSTEM STATUS */}
+            <GlassCard variant="panel" padding="md" className="flex flex-col font-sans">
+              <h3 className="font-semibold text-muted-foreground uppercase tracking-widest text-xs mb-4">System Status</h3>
+              <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5 mb-3">
+                <ShieldCheck className="text-success" />
+                <div>
+                  <p className="text-sm font-medium">API Services</p>
+                  <p className="text-xs text-success">Operational</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                <Clock className="text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Next Sync</p>
+                  <p className="text-xs text-muted-foreground">In 14 mins</p>
+                </div>
+              </div>
+            </GlassCard>
+
             <GlassCard variant="panel" padding="none" className="overflow-hidden border-white/10">
               <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">
                 <div>
