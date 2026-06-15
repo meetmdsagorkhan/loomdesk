@@ -12,7 +12,8 @@ export type NavIcon =
   | 'scheduling'
   | 'profile'
   | 'time-tracking'
-  | 'monitoring';
+  | 'monitoring'
+  | 'trackers';
 
 
 export type NavItem = {
@@ -58,6 +59,14 @@ export const navItems: NavItem[] = [
     icon: 'scoring',
     section: 'Workflows',
     matches: ['/dashboard/scoring'],
+  },
+  {
+    href: '/trackers',
+    label: 'Task Trackers',
+    description: 'Track card suspensions, due waives, terminations, and closures',
+    icon: 'trackers',
+    section: 'Workflows',
+    matches: ['/trackers', '/dashboard/trackers'],
   },
   {
     href: '/leave',
@@ -284,6 +293,14 @@ const routeOverrides: Array<{
         title: 'Profile Settings',
         description: 'Manage your personal information and security preferences.',
         href: '/profile',
+      }),
+    },
+    {
+      test: (pathname) => pathname === '/trackers' || pathname === '/dashboard/trackers',
+      meta: () => ({
+        title: 'Special Task Trackers',
+        description: 'Log and monitor card suspensions, due waives, account terminations, and resource closures.',
+        href: '/trackers',
       }),
     },
     {

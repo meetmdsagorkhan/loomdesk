@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckSquare,
   Clock,
+  ClipboardList,
   FileText,
   LayoutDashboard,
   PanelLeftClose,
@@ -63,6 +64,7 @@ const iconMap: Record<NavIcon, React.ComponentType<{ size?: number; className?: 
   profile: User,
   'time-tracking': Clock,
   monitoring: Monitor,
+  trackers: ClipboardList,
 };
 
 const ROLE_DISPLAY: Record<string, { label: string; icon: React.ElementType; color: string }> = {

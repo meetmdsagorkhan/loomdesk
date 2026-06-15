@@ -27,6 +27,7 @@ const PROTECTED_PAGE_PREFIXES = [
   '/scoring',
   '/calendar',
   '/profile',
+  '/trackers',
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {

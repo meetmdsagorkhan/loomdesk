@@ -51,6 +51,7 @@ model User {
   availability  Availability[]
   timeEntries   TimeEntry[]
   screenshots   Screenshot[]
+  trackers      SpecialTaskTracker[]
 }
 
 model EmailVerificationToken {
@@ -496,3 +497,33 @@ model TrackerSettings {
   enabled         Boolean  @default(true)
   updatedAt       DateTime @updatedAt
 }
+
+model SpecialTaskTracker {
+  id              String      @id @default(cuid())
+  type            TrackerType
+  userName        String
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cardLast4       String?     // For Card Suspension and Due Waive
+  amount          Float?      // For Due Waive
+  reason          String      // Reason for suspension/waive/termination/closure
+  status          String      @default("PENDING") // PENDING, RESOLVED, UNBLOCKED, etc.
+  actionDate      DateTime?   // Unblocked Date / Deletion Date
+  actionBy        String?     // Unblocked By / Waived By / Terminated By
+  actionReason    String?     // Unblocking Reason
+  resourceType    String?     // For Resource Closure (e.g. Server, DB)
+  note            String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum TrackerType {
+  CARD_SUSPENSION
+  DUE_WAIVE
+  ACCOUNT_TERMINATION
+  RESOURCE_CLOSURE
+}
+
