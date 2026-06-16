@@ -129,10 +129,12 @@ function LoginForm() {
             onChange={(event) => handleFieldChange('email', event.target.value)}
             placeholder="you@example.com"
             disabled={isLoading}
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
             suppressHydrationWarning
           />
           {fieldErrors.email && (
-            <p className="text-destructive text-xs mt-1.5">{fieldErrors.email}</p>
+            <p id="email-error" className="text-destructive text-xs mt-1.5">{fieldErrors.email}</p>
           )}
         </div>
 
@@ -149,6 +151,8 @@ function LoginForm() {
               className="pr-12"
               placeholder="Password"
               disabled={isLoading}
+              aria-invalid={!!fieldErrors.password}
+              aria-describedby={fieldErrors.password ? 'password-error' : undefined}
               suppressHydrationWarning
             />
             <button
@@ -160,7 +164,7 @@ function LoginForm() {
             </button>
           </div>
           {fieldErrors.password && (
-            <p className="text-destructive text-xs mt-1.5">{fieldErrors.password}</p>
+            <p id="password-error" className="text-destructive text-xs mt-1.5">{fieldErrors.password}</p>
           )}
         </div>
 

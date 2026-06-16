@@ -25,7 +25,7 @@ export default function PageHeader({
       <div className="space-y-4">
         {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="pl-12 lg:pl-0">
             {badge && (
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80 mb-3">
                 {badge}

@@ -102,21 +102,21 @@ export const navItems: NavItem[] = [
     roles: ['ADMIN', 'TEAM_LEAD'],
   },
   {
-    href: '/dashboard/submissions',
+    href: '/submissions',
     label: 'Submissions',
     description: 'User feedback, bugs, and requests',
     icon: 'submissions',
     section: 'Admin',
-    matches: ['/dashboard/submissions'],
+    matches: ['/submissions', '/dashboard/submissions'],
     roles: ['ADMIN'],
   },
   {
-    href: '/dashboard/scheduling',
+    href: '/scheduling',
     label: 'Scheduling',
     description: 'Create & manage meeting links',
     icon: 'scheduling',
     section: 'Admin',
-    matches: ['/dashboard/scheduling'],
+    matches: ['/scheduling', '/dashboard/scheduling'],
     roles: ['ADMIN'],
   },
   {
@@ -260,11 +260,11 @@ const routeOverrides: Array<{
       }),
     },
     {
-      test: (pathname) => pathname === '/dashboard/submissions',
+      test: (pathname) => pathname === '/submissions' || pathname === '/dashboard/submissions',
       meta: () => ({
         title: 'User Submissions',
         description: 'View and manage user feedback, bug reports, and feature requests.',
-        href: '/dashboard/submissions',
+        href: '/submissions',
       }),
     },
     {
@@ -304,11 +304,11 @@ const routeOverrides: Array<{
       }),
     },
     {
-      test: (pathname) => pathname.startsWith('/dashboard/scheduling'),
+      test: (pathname) => pathname.startsWith('/scheduling') || pathname.startsWith('/dashboard/scheduling'),
       meta: () => ({
         title: 'Scheduling',
         description: 'Create shareable meeting links and manage bookings powered by Google Meet.',
-        href: '/dashboard/scheduling',
+        href: '/scheduling',
       }),
     },
     {

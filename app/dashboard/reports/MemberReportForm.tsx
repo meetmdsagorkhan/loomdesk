@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import { Trash2, Loader2, AlertCircle, CheckCircle2, Pencil, Info, Calendar as CalendarIcon, History, ChevronDown } from 'lucide-react';
+import { Trash2, Loader2, AlertCircle, CheckCircle2, Pencil, Info, Calendar as CalendarIcon, History, ChevronDown, Sparkles } from 'lucide-react';
 import {
   flexRender,
   useReactTable,
@@ -49,6 +49,14 @@ const defaultEntryForm: EntryFormData = {
   pendingReason: '',
 };
 
+const NOTE_SUGGESTIONS = [
+  { label: 'Billing Dispute', text: 'Resolved billing discrepancy and updated account payment status.' },
+  { label: 'Password Reset', text: 'Assisted member with secure password reset and identity verification.' },
+  { label: 'Server Latency', text: 'Investigated and reported server lag to core infrastructure engineers.' },
+  { label: 'General Inquiry', text: 'Provided clarification on platform features and user subscription options.' },
+  { label: 'Bug Escalation', text: 'Identified frontend rendering bug and escalated ticket to QA division.' },
+];
+
 export default function MemberReportForm() {
   const [report, setReport] = useState<Report | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,10 +81,131 @@ export default function MemberReportForm() {
   const [isFetchingPrevious, setIsFetchingPrevious] = useState(false);
   const [visiblePreviousCount, setVisiblePreviousCount] = useState(5);
 
-  const handleFieldChange = (field: keyof EntryFormData, value: string) => {
-    setEntryForm((prev) => ({ ...prev, [field]: value }));
-    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [bulkIds, setBulkIds] = useState('');
+  const [bulkType, setBulkType] = useState<'TICKET' | 'CHAT' | 'MISCELLANEOUS'>('TICKET');
+  const [bulkStatus, setBulkStatus] = useState<'SOLVED' | 'PENDING'>('SOLVED');
+  const [bulkNote, setBulkNote] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      onAddEntry();
+    }
   };
+
+  const handleBulkImport = async () => {
+    const ids = bulkIds
+      .split(/[\s,]+/)
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (ids.length === 0) {
+      showToast('No valid reference IDs found', 'error');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      let currentReport = report;
+      if (!currentReport) {
+        currentReport = await createReportForDate(selectedDate);
+        if (!currentReport) {
+          showToast('Failed to create report', 'error');
+          setIsImporting(false);
+          return;
+        }
+        setReport(currentReport);
+      }
+
+      await Promise.all(
+        ids.map((refId) =>
+          fetch(`/api/reports/${currentReport!.id}/entries`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: bulkType,
+              referenceId: refId,
+              status: bulkStatus,
+              note: bulkNote || `Processed bulk entry ${refId}`,
+              pendingReason: bulkStatus === 'PENDING' ? 'Bulk import pending state' : '',
+            }),
+          })
+        )
+      );
+
+      await fetchReport();
+      setBulkIds('');
+      setBulkNote('');
+      setShowBulkImportModal(false);
+      showToast(`Successfully imported ${ids.length} entries`, 'success');
+    } catch (e) {
+      showToast('Failed to import entries', 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleFieldChange = (field: keyof EntryFormData, value: string) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+
+    if (field === 'referenceId') {
+      const upperVal = value.toUpperCase();
+      let predictedType = entryForm.type;
+      let predictedNote = entryForm.note;
+
+      if (upperVal.includes('BILL') || upperVal.includes('PAY') || upperVal.includes('INV')) {
+        predictedType = 'TICKET';
+        predictedNote = predictedNote || 'Resolved billing discrepancy and updated account payment status.';
+      } else if (upperVal.includes('PWD') || upperVal.includes('AUTH') || upperVal.includes('LOGIN')) {
+        predictedType = 'TICKET';
+        predictedNote = predictedNote || 'Assisted member with secure password reset and identity verification.';
+      } else if (upperVal.includes('LAG') || upperVal.includes('LAT') || upperVal.includes('SERVER') || upperVal.includes('DOWN')) {
+        predictedType = 'TICKET';
+        predictedNote = predictedNote || 'Investigated and reported server lag to core infrastructure engineers.';
+      } else if (upperVal.includes('CHAT')) {
+        predictedType = 'CHAT';
+      }
+
+      setEntryForm((prev) => ({
+        ...prev,
+        referenceId: value,
+        type: predictedType,
+        note: predictedNote,
+      }));
+      return;
+    }
+
+    setEntryForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const getAIQualityAlerts = () => {
+    const alerts = [];
+
+    if (entryForm.referenceId && report?.entries) {
+      const isDuplicate = report.entries.some(
+        (entry) => entry.referenceId.trim().toUpperCase() === entryForm.referenceId.trim().toUpperCase()
+      );
+      if (isDuplicate) {
+        alerts.push({
+          type: 'warning',
+          message: `AI Duplicate Alert: '${entryForm.referenceId}' has already been logged in today's report draft.`,
+        });
+      }
+    }
+
+    if (entryForm.note && entryForm.note.trim().length > 0 && entryForm.note.trim().length < 12) {
+      alerts.push({
+        type: 'info',
+        message: 'AI Quality Suggestion: Descriptive notes (>12 chars) expedite review times and improve QA outcomes.',
+      });
+    }
+
+    return alerts;
+  };
+
+  const aiQualityAlerts = getAIQualityAlerts();
 
   const fetchReport = useCallback(async () => {
     try {
@@ -183,8 +312,8 @@ export default function MemberReportForm() {
     }
   };
 
-  const onAddEntry = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onAddEntry = async (event?: FormEvent<HTMLFormElement>) => {
+    if (event) event.preventDefault();
 
     const parsed = entrySchema.safeParse(entryForm);
 
@@ -649,12 +778,23 @@ export default function MemberReportForm() {
 
       {!isSubmitted && (
         <GlassCard variant="panel" padding="none" className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">
+          <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6 flex-wrap gap-2">
             <h2 className="text-lg font-semibold text-foreground">Add Entry</h2>
-            <span className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
-              <CheckCircle2 size={13} className="text-emerald-500" />
-              Auto Saved
-            </span>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onClick={() => setShowBulkImportModal(true)}
+                className="text-xs h-7 px-2.5 rounded-lg border-primary/30 hover:bg-primary/10 hover:text-white hover:bg-white/5"
+              >
+                Bulk Import
+              </Button>
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5 select-none">
+                <CheckCircle2 size={13} className="text-emerald-500" />
+                Auto Saved
+              </span>
+            </div>
           </div>
           <form onSubmit={onAddEntry} className="space-y-5 p-5 md:p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -708,6 +848,7 @@ export default function MemberReportForm() {
                   type="text"
                   value={entryForm.referenceId}
                   onChange={(event) => handleFieldChange('referenceId', event.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="e.g. TKT-1042"
                 />
                 {fieldErrors.referenceId && (
@@ -751,6 +892,7 @@ export default function MemberReportForm() {
               <textarea
                 value={entryForm.note}
                 onChange={(event) => handleFieldChange('note', event.target.value)}
+                onKeyDown={handleKeyDown}
                 rows={2}
                 className="form-input resize-none"
                 placeholder="Describe the work done..."
@@ -758,6 +900,19 @@ export default function MemberReportForm() {
               {fieldErrors.note && (
                 <p className="text-destructive text-xs mt-1">{fieldErrors.note}</p>
               )}
+              {/* Note suggestions quick-fill capsules */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {NOTE_SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion.label}
+                    type="button"
+                    onClick={() => handleFieldChange('note', suggestion.text)}
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all select-none"
+                  >
+                    + {suggestion.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {entryForm.status === 'PENDING' && (
@@ -769,11 +924,32 @@ export default function MemberReportForm() {
                   type="text"
                   value={entryForm.pendingReason ?? ''}
                   onChange={(event) => handleFieldChange('pendingReason', event.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Why is this pending?"
                 />
                 {fieldErrors.pendingReason && (
                   <p className="text-destructive text-xs mt-1">{fieldErrors.pendingReason}</p>
                 )}
+              </div>
+            )}
+
+            {/* AI Real-time Quality Alerts */}
+            {aiQualityAlerts.length > 0 && (
+              <div className="space-y-2">
+                {aiQualityAlerts.map((alert, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-start gap-2.5 px-4 py-3 rounded-xl border text-xs font-semibold leading-relaxed shadow-sm",
+                      alert.type === 'warning'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    )}
+                  >
+                    <Sparkles size={13} className="shrink-0 mt-0.5 text-primary" />
+                    <span>{alert.message}</span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -799,6 +975,80 @@ export default function MemberReportForm() {
           <span className="text-sm font-medium">Saved</span>
         </div>
       )}
+
+      {/* Bulk Import Dialog */}
+      <Dialog open={showBulkImportModal} onOpenChange={setShowBulkImportModal}>
+        <DialogContent className="glass-panel border-0 sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Bulk Import Reference IDs</DialogTitle>
+            <DialogDescription>
+              Paste comma or space-separated Reference IDs to create multiple entries at once.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="bulk-ids">Reference IDs (comma or space separated)</Label>
+              <textarea
+                id="bulk-ids"
+                value={bulkIds}
+                onChange={(e) => setBulkIds(e.target.value)}
+                placeholder="e.g. TKT-1001, TKT-1002, TKT-1003"
+                className="form-input min-h-[100px] w-full rounded-xl py-2 mt-2 resize-none text-white bg-slate-900/50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Type</Label>
+                <select
+                  value={bulkType}
+                  onChange={(e) => setBulkType(e.target.value as any)}
+                  className="form-input w-full rounded-xl mt-2 bg-slate-900/50 text-white"
+                >
+                  <option value="TICKET">Ticket</option>
+                  <option value="CHAT">Chat</option>
+                  <option value="MISCELLANEOUS">Miscellaneous</option>
+                </select>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <select
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value as any)}
+                  className="form-input w-full rounded-xl mt-2 bg-slate-900/50 text-white"
+                >
+                  <option value="SOLVED">Solved</option>
+                  <option value="PENDING">Pending</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="bulk-note">Default Note / Comment</Label>
+              <Input
+                id="bulk-note"
+                value={bulkNote}
+                onChange={(e) => setBulkNote(e.target.value)}
+                placeholder="Describe work (optional)"
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowBulkImportModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkImport} disabled={isImporting || !bulkIds.trim()}>
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                'Import'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <GlassCard variant="panel" padding="none" className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-white/15 px-5 py-4 md:px-6">

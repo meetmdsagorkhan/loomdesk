@@ -12,6 +12,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { showToast } from '@/components/shared/Toast';
 import { handleApiError } from '@/lib/error-handler';
 
+import { SubmissionModal } from '@/components/feedback/SubmissionModal';
+
 type SubmissionType = 'FEEDBACK' | 'BUG_REPORT' | 'FEATURE_REQUEST';
 type SubmissionStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 type SubmissionPriority = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -116,11 +118,12 @@ export default function MySubmissionsPage() {
       {submissions.length === 0 ? (
         <GlassCard variant="panel" padding="md">
           <div className="text-center py-12">
-            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 backdrop-blur-sm">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 backdrop-blur-sm flex flex-col items-center">
               <p className="text-muted-foreground">No submissions yet</p>
               <p className="text-sm text-muted-foreground mt-2">
                 Use the feedback button to submit your first feedback, bug report, or feature request.
               </p>
+              <SubmissionModal trigger={<Button className="mt-4 rounded-xl">Create Submission</Button>} />
             </div>
           </div>
         </GlassCard>

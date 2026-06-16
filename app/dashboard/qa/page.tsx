@@ -11,11 +11,21 @@ import {
   ColumnDef,
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Badge from '@/components/shared/Badge';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { isAdmin, isTeamLead } from '@/lib/auth-utils';
+import { showToast } from '@/components/shared/Toast';
+
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -42,8 +52,58 @@ export default function QAPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+
+  interface SavedFilter {
+    id: string;
+    name: string;
+    date: string;
+    userId: string;
+    status: string;
+  }
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [newFilterName, setNewFilterName] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('loomdesk_qa_filters');
+    if (stored) {
+      try {
+        setSavedFilters(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSaveFilter = () => {
+    if (!newFilterName.trim()) return;
+    const newFilter: SavedFilter = {
+      id: Date.now().toString(),
+      name: newFilterName.trim(),
+      date: selectedDate,
+      userId: selectedUserId,
+      status: selectedStatus,
+    };
+    const next = [...savedFilters, newFilter];
+    setSavedFilters(next);
+    localStorage.setItem('loomdesk_qa_filters', JSON.stringify(next));
+    setNewFilterName('');
+    showToast(`Filter preset "${newFilter.name}" saved`, 'success');
+  };
+
+  const handleDeleteFilter = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = savedFilters.filter((f) => f.id !== id);
+    setSavedFilters(next);
+    localStorage.setItem('loomdesk_qa_filters', JSON.stringify(next));
+    showToast('Filter preset deleted', 'success');
+  };
+
+  const handleApplyPreset = (preset: SavedFilter) => {
+    setSelectedDate(preset.date);
+    setSelectedUserId(preset.userId);
+    setSelectedStatus(preset.status);
+    showToast(`Loaded view: ${preset.name}`, 'info');
+  };
   const [currentPage, setCurrentPage] = useState(1);
   const [totalReports, setTotalReports] = useState(0);
   const limit = 10;
@@ -70,8 +130,8 @@ export default function QAPage() {
     try {
       const params = new URLSearchParams();
       if (selectedDate) params.append('date', selectedDate);
-      if (selectedUserId) params.append('userId', selectedUserId);
-      if (selectedStatus) params.append('status', selectedStatus);
+      if (selectedUserId && selectedUserId !== 'all') params.append('userId', selectedUserId);
+      if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus);
       params.append('limit', limit.toString());
       params.append('offset', ((currentPage - 1) * limit).toString());
 
@@ -92,8 +152,8 @@ export default function QAPage() {
     try {
       const params = new URLSearchParams();
       if (selectedDate) params.append('date', selectedDate);
-      if (selectedUserId) params.append('userId', selectedUserId);
-      if (selectedStatus) params.append('status', selectedStatus);
+      if (selectedUserId && selectedUserId !== 'all') params.append('userId', selectedUserId);
+      if (selectedStatus && selectedStatus !== 'all') params.append('status', selectedStatus);
       params.append('limit', limit.toString());
       params.append('offset', '0');
 
@@ -217,43 +277,45 @@ export default function QAPage() {
             {/* Date Picker */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Date</label>
-              <input
+              <Input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className={filterInputClass}
+                className="h-10 rounded-xl bg-white/5 border-white/10 text-foreground"
               />
             </div>
 
             {/* Member Dropdown */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Member</label>
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className={filterInputClass}
-              >
-                <option value="">All Members</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="w-full h-10 rounded-xl bg-white/5 border-white/10 text-foreground">
+                  <SelectValue placeholder="All Members" />
+                </SelectTrigger>
+                <SelectContent className="border border-white/10">
+                  <SelectItem value="all">All Members</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Status Filter */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className={filterInputClass}
-              >
-                <option value="">All Statuses</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="DRAFT">Draft</option>
-              </select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-full h-10 rounded-xl bg-white/5 border-white/10 text-foreground">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent className="border border-white/10">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Apply Button */}
@@ -267,6 +329,53 @@ export default function QAPage() {
                 {isFilterLoading ? 'Applying...' : 'Apply Filters'}
               </Button>
             </div>
+          </div>
+
+          {/* Saved Views Preset Bar */}
+          {savedFilters.length > 0 && (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2 select-none">Saved Views</span>
+              <div className="flex flex-wrap gap-2">
+                {savedFilters.map((preset) => (
+                  <div
+                    key={preset.id}
+                    onClick={() => handleApplyPreset(preset)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary-foreground cursor-pointer transition-all"
+                  >
+                    <span>{preset.name}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteFilter(preset.id, e)}
+                      className="text-muted-foreground hover:text-red-400 font-bold transition-colors ml-1"
+                      title="Delete View"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Save Current View Form */}
+          <div className="mt-4 flex gap-2 items-center justify-end border-t border-white/10 pt-4">
+            <Input
+              type="text"
+              placeholder="Name current filter view..."
+              value={newFilterName}
+              onChange={(e) => setNewFilterName(e.target.value)}
+              className="h-8 text-xs max-w-[200px] rounded-lg"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={handleSaveFilter}
+              disabled={!newFilterName.trim()}
+              className="text-xs h-8 px-3 rounded-lg border-white/20 hover:bg-white/5"
+            >
+              Save Preset
+            </Button>
           </div>
         </GlassCard>
       )}

@@ -173,6 +173,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Notify admins and team leads of the new leave request
+    try {
+      const adminsAndLeads = await prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN', 'TEAM_LEAD'] },
+        },
+        select: { id: true },
+      });
+
+      const startStr = format(start, 'MMM d');
+      const endStr = format(end, 'MMM d, yyyy');
+      const dateRange = startStr === endStr ? endStr : `${startStr} - ${endStr}`;
+
+      for (const admin of adminsAndLeads) {
+        // Don't notify the applicant if they are an admin/lead
+        if (admin.id === session.user.id) continue;
+
+        await createNotification({
+          userId: admin.id,
+          type: 'LEAVE_REQUEST',
+          title: 'New Leave Request',
+          message: `${leaveRequest.user.name} requested leave for ${dateRange}. [LeaveID: ${leaveRequest.id}]`,
+        });
+      }
+    } catch (notifError) {
+      logger.error('Failed to notify admins of leave request', {
+        error: notifError instanceof Error ? notifError.message : 'Unknown error',
+      });
+    }
+
     return NextResponse.json({
       ...leaveRequest,
       warning: overlappingReports.length > 0

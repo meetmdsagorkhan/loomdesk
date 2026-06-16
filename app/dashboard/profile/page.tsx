@@ -411,14 +411,37 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-3 space-y-4">
           <GlassCard variant="minimal" padding="sm" className="border-white/10 overflow-hidden sticky top-24">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1" role="tablist" aria-label="Profile Settings Sections">
               {[
                 { id: 'profile', label: 'Personal Details', icon: User },
                 { id: 'security', label: 'Security & Privacy', icon: ShieldCheck },
               ].map((item) => (
                 <button
                   key={item.id}
+                  id={`tab-${item.id}`}
+                  role="tab"
+                  aria-selected={activeTab === item.id}
+                  aria-controls={`tabpanel-${item.id}`}
+                  tabIndex={activeTab === item.id ? 0 : -1}
                   onClick={() => setActiveTab(item.id)}
+                  onKeyDown={(e) => {
+                    const tabIds = ['profile', 'security'];
+                    const currentIndex = tabIds.indexOf(activeTab);
+                    let nextIndex = currentIndex;
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                      nextIndex = (currentIndex + 1) % tabIds.length;
+                      e.preventDefault();
+                    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                      nextIndex = (currentIndex - 1 + tabIds.length) % tabIds.length;
+                      e.preventDefault();
+                    }
+                    if (nextIndex !== currentIndex) {
+                      setActiveTab(tabIds[nextIndex] as any);
+                      setTimeout(() => {
+                        document.getElementById(`tab-${tabIds[nextIndex]}`)?.focus();
+                      }, 0);
+                    }
+                  }}
                   className={`relative flex items-center justify-between w-full overflow-hidden px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
                     activeTab === item.id
                       ? 'text-primary-foreground font-semibold'
@@ -453,6 +476,9 @@ export default function ProfilePage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
+              role="tabpanel"
+              id={`tabpanel-${activeTab}`}
+              aria-labelledby={`tab-${activeTab}`}
               initial={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, x: -20, filter: 'blur(10px)' }}

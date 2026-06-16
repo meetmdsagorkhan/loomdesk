@@ -635,9 +635,32 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Tabs Bar ───────────────────────────── */}
-      <div className="flex border-b border-border/50 gap-6">
+      <div className="flex border-b border-border/50 gap-6" role="tablist" aria-label="Settings configuration sections">
         <button
+          id="tab-roster"
+          role="tab"
+          aria-selected={activeTab === 'roster'}
+          aria-controls="tabpanel-roster"
+          tabIndex={activeTab === 'roster' ? 0 : -1}
           onClick={() => setActiveTab('roster')}
+          onKeyDown={(e) => {
+            const tabIds = ['roster', 'audit'];
+            const currentIndex = tabIds.indexOf(activeTab);
+            let nextIndex = currentIndex;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              nextIndex = (currentIndex + 1) % tabIds.length;
+              e.preventDefault();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              nextIndex = (currentIndex - 1 + tabIds.length) % tabIds.length;
+              e.preventDefault();
+            }
+            if (nextIndex !== currentIndex) {
+              setActiveTab(tabIds[nextIndex] as any);
+              setTimeout(() => {
+                document.getElementById(`tab-${tabIds[nextIndex]}`)?.focus();
+              }, 0);
+            }
+          }}
           className={cn(
             'pb-3 text-sm font-semibold tracking-wide border-b-2 transition-all relative uppercase',
             activeTab === 'roster'
@@ -651,7 +674,30 @@ export default function SettingsPage() {
         </button>
 
         <button
+          id="tab-audit"
+          role="tab"
+          aria-selected={activeTab === 'audit'}
+          aria-controls="tabpanel-audit"
+          tabIndex={activeTab === 'audit' ? 0 : -1}
           onClick={() => setActiveTab('audit')}
+          onKeyDown={(e) => {
+            const tabIds = ['roster', 'audit'];
+            const currentIndex = tabIds.indexOf(activeTab);
+            let nextIndex = currentIndex;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+              nextIndex = (currentIndex + 1) % tabIds.length;
+              e.preventDefault();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+              nextIndex = (currentIndex - 1 + tabIds.length) % tabIds.length;
+              e.preventDefault();
+            }
+            if (nextIndex !== currentIndex) {
+              setActiveTab(tabIds[nextIndex] as any);
+              setTimeout(() => {
+                document.getElementById(`tab-${tabIds[nextIndex]}`)?.focus();
+              }, 0);
+            }
+          }}
           className={cn(
             'pb-3 text-sm font-semibold tracking-wide border-b-2 transition-all relative uppercase',
             activeTab === 'audit'
@@ -671,6 +717,9 @@ export default function SettingsPage() {
         {/* Tab 1: Team Roster Layout */}
         {activeTab === 'roster' && (
           <motion.div
+            id="tabpanel-roster"
+            role="tabpanel"
+            aria-labelledby="tab-roster"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -691,7 +740,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
+                  <Input
                     type="text"
                     placeholder="Search members…"
                     value={search}
@@ -768,6 +817,9 @@ export default function SettingsPage() {
         {/* Tab 2: Compliance Audit Logs Layout */}
         {activeTab === 'audit' && (
           <motion.div
+            id="tabpanel-audit"
+            role="tabpanel"
+            aria-labelledby="tab-audit"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -788,7 +840,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
+                  <Input
                     type="text"
                     placeholder="Search logs…"
                     value={auditSearch}

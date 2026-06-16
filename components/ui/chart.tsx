@@ -92,21 +92,41 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   // Generate CSS strings safely - config is controlled and validated
   // SECURITY: The config is controlled by the application, not user input.
-  // Only CSS color values are inserted, which are validated against the ChartConfig type.
+  // Validate and sanitize color values to prevent arbitrary code or XSS injection.
   const generateCSS = (theme: string, prefix: string) => {
     const colors = colorConfig
       .map(([key, itemConfig]) => {
         const color =
           itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
-          itemConfig.color
-        // Only allow valid CSS color values (hex, rgb, hsl, named colors)
-        // Config type ensures these are strings, not arbitrary code
-        return color ? `  --color-${key}: ${color};` : null
+          itemConfig.color;
+        
+        // Strict sanitization of keys and color values
+        if (typeof color === 'string') {
+          const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+          
+          // Allow hex colors, rgb/rgba, hsl/hsla, css-vars, and clean color keywords
+          const isHex = /^#[0-9a-fA-F]{3,8}$/.test(color);
+          const isRgb = /^rgba?\(\s*\d+\s*(?:,\s*\d+\s*){2,3}\)$/.test(color) || 
+                        /^rgba?\(\s*\d+(?:\s+\d+){2,3}(?:\s*\/\s*[\d\.]+)?\s*\)$/.test(color);
+          const isHsl = /^hsla?\(\s*\d+(?:deg|grad|rad|turn)?\s*(?:,\s*\d+%\s*){2}(?:,\s*[\d\.]+\s*)?\)$/.test(color) || 
+                        /^hsla?\(\s*\d+(?:deg|grad|rad|turn)?(?:\s+\d+%){2}(?:\s*\/\s*[\d\.]+)?\s*\)$/.test(color) || 
+                        /^hsl\(\s*var\(--[a-zA-Z0-9_-]+\)\s*\)$/.test(color) ||
+                        /^var\(--[a-zA-Z0-9_-]+\)$/.test(color);
+          const isCssVar = /^var\(--[a-zA-Z0-9_-]+\)$/.test(color);
+          const isColorKeyword = /^[a-zA-Z0-9_-]+$/.test(color);
+          
+          if (isHex || isRgb || isHsl || isCssVar || isColorKeyword) {
+            return `  --color-${safeKey}: ${color};`;
+          }
+        }
+        return null;
       })
       .filter(Boolean)
       .join("\n")
 
-    return `${prefix} [data-chart=${id}] {\n${colors}\n}`
+    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+    const selector = prefix ? `${prefix} [data-chart="${safeId}"]` : `[data-chart="${safeId}"]`;
+    return `${selector} {\n${colors}\n}`
   }
 
   const cssContent = Object.entries(THEMES)

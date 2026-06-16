@@ -331,10 +331,10 @@ export default function Sidebar({ isMobileOpen, onMobileClose, isCollapsed = fal
           ) : (
             <button
               type="button"
-              className="glass-pill flex shrink-0 rounded-full text-muted-foreground mx-auto h-9 w-9 items-center justify-center hover:text-foreground transition-colors"
+              className="glass-pill flex shrink-0 rounded-full text-muted-foreground mx-auto h-11 w-11 items-center justify-center hover:text-foreground transition-colors"
               onClick={onToggleCollapse}
             >
-              <PanelRightClose size={16} />
+              <PanelRightClose size={18} />
             </button>
           )}
         </div>

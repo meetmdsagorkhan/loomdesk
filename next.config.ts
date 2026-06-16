@@ -35,6 +35,21 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/dashboard/submissions',
+        destination: '/submissions',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/scheduling/:path*',
+        destination: '/scheduling/:path*',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/scheduling',
+        destination: '/scheduling',
+        permanent: false,
+      },
+      {
         source: '/dashboard/qa/:path*',
         destination: '/qa/:path*',
         permanent: false,

@@ -179,7 +179,7 @@ export default function DataTable({
 
       <>
         {/* Desktop Table View */}
-        <div className="hidden overflow-hidden rounded-2xl border border-white/20 bg-white/20 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 md:block">
+        <div className="hidden overflow-x-auto rounded-2xl border border-white/20 bg-white/20 shadow-[0_16px_48px_rgba(76,92,148,0.16)] dark:bg-slate-900/30 md:block">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-white/20 bg-white/35 dark:bg-white/5">

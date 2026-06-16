@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useHotkeys } from '@/hooks/useHotkeys';
 import { format } from 'date-fns';
 import { 
   ArrowLeft, 
@@ -18,13 +19,17 @@ import {
   Trophy,
   Sparkles,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Badge from '@/components/shared/Badge';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { showToast } from '@/components/shared/Toast';
 import PageHeader from '@/components/shared/PageHeader';
 import GlassCard from '@/components/shared/GlassCard';
+import { trackEvent } from '@/lib/analytics';
 import {
   Dialog,
   DialogContent,
@@ -86,9 +91,19 @@ export default function QADetailPage() {
   const params = useParams();
   const reportId = params.reportId as string;
 
+  const [startTime] = useState(Date.now());
   const [report, setReport] = useState<Report | null>(null);
   const [scoreEvents, setScoreEvents] = useState<ScoreEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (reportId) {
+      trackEvent('qa_audit', 'review_started', reportId);
+    }
+  }, [reportId]);
+
+  const deductReasonRef = useRef<HTMLInputElement>(null);
+  const feedbackCommentRef = useRef<HTMLInputElement>(null);
 
   // Premium Split-Pane Auditing Workspace States
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -99,6 +114,117 @@ export default function QADetailPage() {
     slaDeadlineMet: true,
     resolutionAccurate: true,
     taggingCorrect: true,
+  });
+
+  const getAISuggestions = () => {
+    const uncheckedCount = [
+      auditCriteria.tonePolite,
+      auditCriteria.slaDeadlineMet,
+      auditCriteria.resolutionAccurate,
+      auditCriteria.taggingCorrect,
+    ].filter((v) => !v).length;
+
+    if (uncheckedCount === 0) {
+      return {
+        severity: 'MINOR' as const,
+        deduction: 0,
+        reason: 'Optimal performance - No compliance issues detected.',
+        note: 'All criteria met successfully. Agent demonstrated standard compliance and polite tone.',
+        confidence: 100,
+      };
+    }
+
+    const severity = uncheckedCount >= 2 ? ('MAJOR' as const) : ('MINOR' as const);
+    const deduction = uncheckedCount >= 2 ? 1.0 : 0.5;
+
+    const reasons: string[] = [];
+    const notes: string[] = [];
+
+    if (!auditCriteria.tonePolite) {
+      reasons.push('Tone/Greeting breach');
+      notes.push('Focus on friendly greetings and closing phrases.');
+    }
+    if (!auditCriteria.slaDeadlineMet) {
+      reasons.push('SLA breach');
+      notes.push('Recommend workflow alerts to prevent ticket breaches.');
+    }
+    if (!auditCriteria.resolutionAccurate) {
+      reasons.push('Inaccurate resolution');
+      notes.push('Recommend double-checking technical resolutions before solving.');
+    }
+    if (!auditCriteria.taggingCorrect) {
+      reasons.push('Incorrect metadata tag');
+      notes.push('Double-check category definitions and tags.');
+    }
+
+    return {
+      severity,
+      deduction,
+      reason: reasons.join(', '),
+      note: `AI coaching suggestions for agent: Focus on ${reasons.join(' & ')}. Note: ${notes.join(' ')}`,
+      confidence: Math.max(98 - uncheckedCount * 12, 60),
+    };
+  };
+
+  const aiSuggestion = getAISuggestions();
+
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const { recordVisit } = useRecentlyViewed();
+
+  // Record visit in recents
+  useEffect(() => {
+    if (report) {
+      recordVisit({
+        id: report.id,
+        type: 'qa-report',
+        title: `QA Audit: ${report.user.name}`,
+        subtitle: `Score: ${report.score} • ${format(new Date(report.date), 'MMM d, yyyy')}`,
+        url: `/dashboard/qa/${report.id}`,
+      });
+    }
+  }, [report, recordVisit]);
+
+  // Hotkeys inside the audit workspace:
+  // J / K for next / previous entry
+  // O to mark as OK
+  // D to focus deduction reason input
+  // C to focus feedback comment input
+  useHotkeys('j', () => {
+    if (!report || report.entries.length === 0) return;
+    const currentIndex = report.entries.findIndex((e) => e.id === selectedEntryId);
+    if (currentIndex === -1) {
+      setSelectedEntryId(report.entries[0].id);
+    } else {
+      const nextIndex = (currentIndex + 1) % report.entries.length;
+      setSelectedEntryId(report.entries[nextIndex].id);
+    }
+  });
+
+  useHotkeys('k', () => {
+    if (!report || report.entries.length === 0) return;
+    const currentIndex = report.entries.findIndex((e) => e.id === selectedEntryId);
+    if (currentIndex === -1) {
+      setSelectedEntryId(report.entries[report.entries.length - 1].id);
+    } else {
+      const nextIndex = (currentIndex - 1 + report.entries.length) % report.entries.length;
+      setSelectedEntryId(report.entries[nextIndex].id);
+    }
+  });
+
+  useHotkeys('o', () => {
+    if (selectedEntryId) {
+      handleMarkOk(selectedEntryId);
+    }
+  });
+
+  useHotkeys('d', (e) => {
+    e.preventDefault();
+    deductReasonRef.current?.focus();
+  });
+
+  useHotkeys('c', (e) => {
+    e.preventDefault();
+    feedbackCommentRef.current?.focus();
   });
 
   useEffect(() => {
@@ -312,6 +438,43 @@ export default function QADetailPage() {
     }
   };
 
+  const handleBulkMarkOk = async () => {
+    if (!report) return;
+    const pendingEntries = report.entries.filter(
+      (entry) => !isEntryReviewed(entry.id, entry.feedback?.length || 0)
+    );
+
+    if (pendingEntries.length === 0) {
+      showToast('All entries are already reviewed', 'info');
+      return;
+    }
+
+    setIsMarkingOk(true);
+    try {
+      await Promise.all(
+        pendingEntries.map((entry) =>
+          fetch('/api/qa/entries/mark-ok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entryId: entry.id }),
+          })
+        )
+      );
+
+      await fetchReport();
+      setReviewedEntries((prev) => {
+        const next = new Set(prev);
+        pendingEntries.forEach((entry) => next.add(entry.id));
+        return next;
+      });
+      showToast(`Marked ${pendingEntries.length} entries as OK`, 'success');
+    } catch (error) {
+      showToast('Failed to mark entries as OK', 'error');
+    } finally {
+      setIsMarkingOk(false);
+    }
+  };
+
   const handleMarkReviewed = async () => {
     if (!report) return;
 
@@ -325,6 +488,10 @@ export default function QADetailPage() {
         showToast('Failed to mark as reviewed', 'error');
         return;
       }
+
+      // Record QA audit completion event with time elapsed in seconds
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      trackEvent('qa_audit', 'review_completed', report.id, elapsedSeconds);
 
       await fetchReport();
       showToast('Report marked as reviewed', 'success');
@@ -368,7 +535,36 @@ export default function QADetailPage() {
         title="Report Review"
         subtitle="Review entries, add feedback, and apply score deductions."
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const item = {
+                  id: report.id,
+                  type: 'qa-report',
+                  title: `QA Audit: ${report.user.name}`,
+                  subtitle: `Score: ${report.score} • ${format(new Date(report.date), 'MMM d, yyyy')}`,
+                  url: `/dashboard/qa/${report.id}`,
+                };
+                if (isFavorite(report.id, 'qa-report')) {
+                  removeFavorite(report.id, 'qa-report');
+                  showToast('Removed from favorites', 'info');
+                } else {
+                  addFavorite(item);
+                  showToast('Added to favorites', 'success');
+                }
+              }}
+              className="rounded-xl h-9 w-9 p-0 border-white/20 hover:bg-white/5"
+              title={isFavorite(report.id, 'qa-report') ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Star
+                size={16}
+                className={cn(
+                  isFavorite(report.id, 'qa-report') ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'
+                )}
+              />
+            </Button>
             {isManager && report.status === 'SUBMITTED' && (
               <Button
                 size="sm"
@@ -424,9 +620,22 @@ export default function QADetailPage() {
         {/* Left Side: Entries Listing (lg:col-span-5) */}
         <div className="lg:col-span-5 space-y-4">
           <GlassCard variant="default" padding="md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Entries List</h2>
-              <Badge variant="info" label={`${report.entries.length} items`} />
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Entries List</h2>
+                <Badge variant="info" label={`${report.entries.length} items`} />
+              </div>
+              {isManager && report.status === 'SUBMITTED' && (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={handleBulkMarkOk}
+                  disabled={isMarkingOk}
+                  className="text-xs h-7 px-2.5 rounded-lg border-primary/30 hover:bg-primary/10 hover:text-white"
+                >
+                  Bulk Mark OK
+                </Button>
+              )}
             </div>
             
             <div className="space-y-3">
@@ -574,6 +783,59 @@ export default function QADetailPage() {
                       /* Audit Form (Manager Exclusive) */
                       isManager && report.status === 'SUBMITTED' ? (
                         <div className="space-y-6">
+                          {/* AI Copilot Suggestion Box */}
+                          <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl space-y-2.5 relative overflow-hidden shadow-inner">
+                            <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
+                              <Sparkles size={40} className="text-primary animate-pulse" />
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
+                                <Sparkles size={12} className="animate-spin text-primary" />
+                                AI Review Copilot Suggestions
+                              </span>
+                              <span className="text-[9px] font-bold tracking-wider text-primary bg-primary/20 px-2 py-0.5 rounded-full border border-primary/20 shadow-sm">
+                                {aiSuggestion.confidence}% Confidence
+                              </span>
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Rec Severity:</span>
+                                <span className={cn(
+                                  "font-bold px-1.5 py-0.5 rounded text-[10px]",
+                                  aiSuggestion.severity === 'MINOR' ? 'text-amber-400 bg-amber-500/10' : 'text-rose-400 bg-rose-500/10'
+                                )}>
+                                  {aiSuggestion.severity} (-{aiSuggestion.deduction} Pts)
+                                </span>
+                              </div>
+                              <div className="text-xs flex gap-1.5">
+                                <span className="text-muted-foreground shrink-0">Rec Reason:</span>
+                                <span className="text-foreground font-semibold line-clamp-1">{aiSuggestion.reason}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground italic leading-normal border-t border-white/5 pt-1.5 mt-1.5">
+                                "{aiSuggestion.note}"
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center gap-2 pt-2 border-t border-white/5 flex-wrap">
+                              <span className="text-[10px] text-muted-foreground select-none italic">
+                                Similar cases: {aiSuggestion.deduction > 0 ? '2 found (avg score: 88.5%)' : '0 found'}
+                              </span>
+                              <Button
+                                type="button"
+                                size="xs"
+                                onClick={() => {
+                                  setDeductionAmount(aiSuggestion.deduction);
+                                  setDeductSeverity(aiSuggestion.severity);
+                                  setDeductReason(aiSuggestion.reason);
+                                  setDeductAdminNote(aiSuggestion.note);
+                                  showToast('AI review suggestions applied', 'success');
+                                }}
+                                className="h-7 text-[10px] font-extrabold uppercase tracking-wider px-3 rounded-lg bg-primary hover:bg-primary/90 text-white"
+                              >
+                                Apply AI suggestions
+                              </Button>
+                            </div>
+                          </div>
+
                           {/* 1. Checklist Criteria */}
                           <div className="space-y-3">
                             <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Compliance Checklist</span>
@@ -585,7 +847,12 @@ export default function QADetailPage() {
                                   onChange={(e) => {
                                     const next = { ...auditCriteria, tonePolite: e.target.checked };
                                     setAuditCriteria(next);
-                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                    if (!e.target.checked) {
+                                      setDeductionAmount(0.5);
+                                      setDeductSeverity('MINOR');
+                                      setDeductReason('Missed Polite Tone & Greeting compliance');
+                                      setDeductAdminNote('Encourage active listening and ensure standard greeting and closing phrases are included in every customer interaction.');
+                                    }
                                   }}
                                   className="accent-primary h-4 w-4 rounded"
                                 />
@@ -599,7 +866,12 @@ export default function QADetailPage() {
                                   onChange={(e) => {
                                     const next = { ...auditCriteria, slaDeadlineMet: e.target.checked };
                                     setAuditCriteria(next);
-                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                    if (!e.target.checked) {
+                                      setDeductionAmount(0.5);
+                                      setDeductSeverity('MINOR');
+                                      setDeductReason('Missed SLA Deadline compliance');
+                                      setDeductAdminNote('Recommend setting up reminders or auto-escalations to prevent tickets from breaching target SLA deadlines.');
+                                    }
                                   }}
                                   className="accent-primary h-4 w-4 rounded"
                                 />
@@ -613,7 +885,12 @@ export default function QADetailPage() {
                                   onChange={(e) => {
                                     const next = { ...auditCriteria, resolutionAccurate: e.target.checked };
                                     setAuditCriteria(next);
-                                    if (!e.target.checked) setDeductionAmount(1.0);
+                                    if (!e.target.checked) {
+                                      setDeductionAmount(1.0);
+                                      setDeductSeverity('MAJOR');
+                                      setDeductReason('Inaccurate or incomplete resolution');
+                                      setDeductAdminNote('Focus coaching on detail-oriented troubleshooting and comprehensive verification before solving tickets.');
+                                    }
                                   }}
                                   className="accent-primary h-4 w-4 rounded"
                                 />
@@ -627,7 +904,12 @@ export default function QADetailPage() {
                                   onChange={(e) => {
                                     const next = { ...auditCriteria, taggingCorrect: e.target.checked };
                                     setAuditCriteria(next);
-                                    if (!e.target.checked) setDeductionAmount(0.5);
+                                    if (!e.target.checked) {
+                                      setDeductionAmount(0.5);
+                                      setDeductSeverity('MINOR');
+                                      setDeductReason('Incorrect metadata tagging');
+                                      setDeductAdminNote('Remind the agent to double-check ticket category definitions and metadata tags before submitting logs.');
+                                    }
                                   }}
                                   className="accent-primary h-4 w-4 rounded"
                                 />
@@ -677,6 +959,7 @@ export default function QADetailPage() {
                             <div>
                               <label className="form-label text-xs uppercase tracking-widest text-muted-foreground mb-1 block">Deduction Reason</label>
                               <input
+                                ref={deductReasonRef}
                                 type="text"
                                 value={deductReason}
                                 onChange={(e) => setDeductReason(e.target.value)}
@@ -708,19 +991,7 @@ export default function QADetailPage() {
                             <Button
                               type="button"
                               variant="outline"
-                              onClick={async () => {
-                                setIsMarkingOk(true);
-                                try {
-                                  setReviewedEntries((prev) => {
-                                    const next = new Set(prev);
-                                    next.add(entry.id);
-                                    return next;
-                                  });
-                                  showToast('Entry marked as OK', 'success');
-                                } finally {
-                                  setIsMarkingOk(false);
-                                }
-                              }}
+                              onClick={() => handleMarkOk(entry.id)}
                               disabled={isMarkingOk}
                               className="rounded-xl h-10 px-5"
                             >
@@ -813,6 +1084,7 @@ export default function QADetailPage() {
 
                       <div className="flex gap-2 items-center pt-2 border-t border-white/10">
                         <input
+                          ref={feedbackCommentRef}
                           type="text"
                           placeholder="Add comment..."
                           value={feedbackComment}

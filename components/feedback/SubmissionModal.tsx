@@ -11,7 +11,11 @@ import { showToast } from '@/components/shared/Toast';
 
 type SubmissionType = 'FEEDBACK' | 'BUG_REPORT' | 'FEATURE_REQUEST';
 
-export function SubmissionModal() {
+interface SubmissionModalProps {
+  trigger?: React.ReactElement;
+}
+
+export function SubmissionModal({ trigger }: SubmissionModalProps = {}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<SubmissionType>('FEEDBACK');
@@ -108,11 +112,15 @@ export function SubmissionModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className="glass-pill flex h-12 w-12 items-center justify-center rounded-full hover:scale-110 transition-transform"
-        title="Submit Feedback"
-      >
-        <MessageSquare size={20} className="text-foreground" />
-      </DialogTrigger>
+        render={trigger || (
+          <button
+            className="glass-pill flex h-12 w-12 items-center justify-center rounded-full hover:scale-110 transition-transform cursor-pointer animate-pulse"
+            title="Submit Feedback"
+          >
+            <MessageSquare size={20} className="text-foreground" />
+          </button>
+        )}
+      />
       <DialogContent className="glass-panel rounded-3xl border-0 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

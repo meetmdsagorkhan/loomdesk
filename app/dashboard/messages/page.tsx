@@ -31,6 +31,11 @@ export default function MessagesPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Lock body scroll on mobile to prevent double scrollbars
+    document.body.classList.add('overflow-hidden', 'lg:overflow-auto', 'h-screen', 'lg:h-auto');
+    return () => {
+      document.body.classList.remove('overflow-hidden', 'lg:overflow-auto', 'h-screen', 'lg:h-auto');
+    };
   }, []);
 
   useEffect(() => {

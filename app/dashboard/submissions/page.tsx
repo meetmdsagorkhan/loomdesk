@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, MessageSquare, Bug, Lightbulb, Filter } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { showToast } from '@/components/shared/Toast';
@@ -38,8 +45,8 @@ export default function SubmissionsPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [adminNote, setAdminNote] = useState('');
 
@@ -66,8 +73,8 @@ export default function SubmissionsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (filterType) params.append('type', filterType);
-      if (filterStatus) params.append('status', filterStatus);
+      if (filterType && filterType !== 'all') params.append('type', filterType);
+      if (filterStatus && filterStatus !== 'all') params.append('status', filterStatus);
 
       const response = await fetch(`/api/submissions?${params}`);
       const data = await response.json();
@@ -177,29 +184,31 @@ export default function SubmissionsPage() {
       {/* Filters */}
       <div className="flex gap-4 items-center">
         <div className="flex items-center gap-2">
-          <Filter size={16} />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 rounded-lg border bg-background"
-          >
-            <option value="">All Types</option>
-            <option value="FEEDBACK">Feedback</option>
-            <option value="BUG_REPORT">Bug Reports</option>
-            <option value="FEATURE_REQUEST">Feature Requests</option>
-          </select>
+          <Filter size={16} className="text-muted-foreground" />
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-40 h-10 rounded-xl bg-white/5 border-white/10 text-foreground">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="border border-white/10">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="FEEDBACK">Feedback</SelectItem>
+              <SelectItem value="BUG_REPORT">Bug Reports</SelectItem>
+              <SelectItem value="FEATURE_REQUEST">Feature Requests</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 rounded-lg border bg-background"
-        >
-          <option value="">All Statuses</option>
-          <option value="OPEN">Open</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="RESOLVED">Resolved</option>
-          <option value="CLOSED">Closed</option>
-        </select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-40 h-10 rounded-xl bg-white/5 border-white/10 text-foreground">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent className="border border-white/10">
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="OPEN">Open</SelectItem>
+            <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+            <SelectItem value="RESOLVED">Resolved</SelectItem>
+            <SelectItem value="CLOSED">Closed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Submissions List */}

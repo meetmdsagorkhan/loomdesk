@@ -6,6 +6,7 @@ import { format, differenceInDays } from 'date-fns';
 import { Check, X, Loader2, Calendar, Filter, ChevronLeft, ChevronRight, User, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -50,6 +51,98 @@ export default function LeaveAdminPage() {
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  interface SavedLeaveFilter {
+    id: string;
+    name: string;
+    status: string;
+    userId: string;
+  }
+  const [savedLeaveFilters, setSavedLeaveFilters] = useState<SavedLeaveFilter[]>([]);
+  const [newLeaveFilterName, setNewLeaveFilterName] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('loomdesk_leave_filters');
+    if (stored) {
+      try {
+        setSavedLeaveFilters(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSaveLeaveFilter = () => {
+    if (!newLeaveFilterName.trim()) return;
+    const newFilter: SavedLeaveFilter = {
+      id: Date.now().toString(),
+      name: newLeaveFilterName.trim(),
+      status: selectedStatus,
+      userId: selectedUserId,
+    };
+    const next = [...savedLeaveFilters, newFilter];
+    setSavedLeaveFilters(next);
+    localStorage.setItem('loomdesk_leave_filters', JSON.stringify(next));
+    setNewLeaveFilterName('');
+    showToast(`Filter preset "${newFilter.name}" saved`, 'success');
+  };
+
+  const handleDeleteLeaveFilter = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = savedLeaveFilters.filter((f) => f.id !== id);
+    setSavedLeaveFilters(next);
+    localStorage.setItem('loomdesk_leave_filters', JSON.stringify(next));
+    showToast('Filter preset deleted', 'success');
+  };
+
+  const handleApplyLeavePreset = (preset: SavedLeaveFilter) => {
+    setSelectedStatus(preset.status);
+    setSelectedUserId(preset.userId);
+    showToast(`Loaded view: ${preset.name}`, 'info');
+  };
+  const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+
+  const toggleSelectRequest = (id: string) => {
+    setSelectedRequestIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllPending = () => {
+    if (selectedRequestIds.length === pendingRequests.length) {
+      setSelectedRequestIds([]);
+    } else {
+      setSelectedRequestIds(pendingRequests.map((r) => r.id));
+    }
+  };
+
+  const handleBulkAction = async (type: 'approve' | 'reject') => {
+    if (selectedRequestIds.length === 0) return;
+
+    setIsProcessing(true);
+    try {
+      await Promise.all(
+        selectedRequestIds.map((id) =>
+          fetch(`/api/leave/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: type === 'approve' ? 'APPROVED' : 'REJECTED',
+            }),
+          })
+        )
+      );
+
+      await fetchLeaveRequests();
+      setSelectedRequestIds([]);
+      showToast(
+        `Successfully ${type === 'approve' ? 'approved' : 'rejected'} ${selectedRequestIds.length} requests`,
+        'success'
+      );
+    } catch (error) {
+      handleApiError(error, 'Leave Admin Bulk');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // New Timeline Grid sub-tab states
   const [activeSubTab, setActiveSubTab] = useState<'timeline' | 'inbox'>('timeline');
@@ -405,79 +498,208 @@ export default function LeaveAdminPage() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Saved Views Preset Bar */}
+                {savedLeaveFilters.length > 0 && (
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2 select-none">Saved Views</span>
+                    <div className="flex flex-wrap gap-2">
+                      {savedLeaveFilters.map((preset) => (
+                        <div
+                          key={preset.id}
+                          onClick={() => handleApplyLeavePreset(preset)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary-foreground cursor-pointer transition-all"
+                        >
+                          <span>{preset.name}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteLeaveFilter(preset.id, e)}
+                            className="text-muted-foreground hover:text-red-400 font-bold transition-colors ml-1"
+                            title="Delete View"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Save Current View Form */}
+                <div className="mt-4 flex gap-2 items-center justify-end border-t border-white/10 pt-4">
+                  <Input
+                    type="text"
+                    placeholder="Name current filter view..."
+                    value={newLeaveFilterName}
+                    onChange={(e) => setNewLeaveFilterName(e.target.value)}
+                    className="h-8 text-xs max-w-[200px] rounded-lg bg-white/5 border-white/10 text-foreground"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={handleSaveLeaveFilter}
+                    disabled={!newLeaveFilterName.trim()}
+                    className="text-xs h-8 px-3 rounded-lg border-white/20 hover:bg-white/5"
+                  >
+                    Save Preset
+                  </Button>
+                </div>
               </section>
 
               {/* Pending Requests Section */}
               {selectedStatus === 'PENDING' && pendingRequests.length > 0 && (
                 <section className="glass-card rounded-3xl overflow-hidden card-elevation-md">
-                  <div className="border-b border-border/60 bg-warning/5 p-4 md:p-6">
+                  <div className="border-b border-border/60 bg-warning/5 p-4 md:p-6 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-foreground">
                       Pending Requests ({pendingRequests.length})
                     </h2>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={handleSelectAllPending}
+                      className="text-xs h-7 px-2.5 rounded-lg border-white/20 text-muted-foreground hover:text-white hover:bg-white/5"
+                    >
+                      {selectedRequestIds.length === pendingRequests.length ? 'Deselect All' : 'Select All'}
+                    </Button>
                   </div>
                   <div className="divide-y divide-border/40">
-                    {pendingRequests.map((leave) => (
-                      <div key={leave.id} className="p-4 md:p-6">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    {pendingRequests.map((leave) => {
+                      const overlapCount = leaveRequests.filter((req) => 
+                        req.status === 'APPROVED' &&
+                        new Date(req.startDate) <= new Date(leave.endDate) &&
+                        new Date(leave.startDate) <= new Date(req.endDate) &&
+                        req.id !== leave.id
+                      ).length;
+
+                      const thirtyDaysAgo = new Date();
+                      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                      const requestFrequency = leaveRequests.filter((req) => 
+                        req.user?.id === leave.user?.id && 
+                        new Date(req.createdAt) >= thirtyDaysAgo
+                      ).length;
+
+                      // Weekend border checks: start on Fri/Sat or end on Sun/Mon
+                      const startDay = new Date(leave.startDate).getDay();
+                      const endDay = new Date(leave.endDate).getDay();
+                      const isWeekendBorder = startDay === 5 || startDay === 6 || endDay === 0 || endDay === 1;
+
+                      // Risk calculations
+                      let riskScore = overlapCount * 35;
+                      if (isWeekendBorder) riskScore += 20;
+                      if (requestFrequency > 2) riskScore += 20;
+                      riskScore = Math.min(riskScore, 100);
+
+                      let riskLevel = 'Safe';
+                      let riskColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+                      let riskReason = 'Optimal coverage, approve recommended.';
+                      
+                      if (riskScore >= 70) {
+                        riskLevel = 'Critical Risk';
+                        riskColor = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+                        riskReason = 'High staffing risk / potential attendance pattern cluster.';
+                      } else if (riskScore >= 30) {
+                        riskLevel = 'Warning Risk';
+                        riskColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+                        riskReason = 'Moderate overlap / verify department coverage.';
+                      }
+
+                      return (
+                        <div key={leave.id} className="p-4 md:p-6 flex items-start gap-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedRequestIds.includes(leave.id)}
+                            onChange={() => toggleSelectRequest(leave.id)}
+                            className="accent-primary h-4 w-4 mt-1.5 rounded cursor-pointer shrink-0"
+                          />
                           <div className="flex-1">
-                            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                              <h3 className="font-medium text-foreground">{leave.user?.name || "Unknown User"}</h3>
-                              <span className="text-sm text-muted-foreground">{leave.user?.email || "No email"}</span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
-                              <div>
-                                <span className="text-muted-foreground">Dates:</span>{' '}
-                                <span className="text-foreground">
-                                  {format(new Date(leave.startDate), 'MMM d')} -{' '}
-                                  {format(new Date(leave.endDate), 'MMM d, yyyy')}
-                                </span>
+                            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                              <div className="flex-1">
+                                <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                                  <h3 className="font-medium text-foreground">{leave.user?.name || "Unknown User"}</h3>
+                                  <span className="text-sm text-muted-foreground">{leave.user?.email || "No email"}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+                                  <div>
+                                    <span className="text-muted-foreground">Dates:</span>{' '}
+                                    <span className="text-foreground">
+                                      {format(new Date(leave.startDate), 'MMM d')} -{' '}
+                                      {format(new Date(leave.endDate), 'MMM d, yyyy')}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Duration:</span>{' '}
+                                    <span className="text-foreground">{getDaysCount(leave.startDate, leave.endDate)} days</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Applied:</span>{' '}
+                                    <span className="text-foreground">
+                                      {format(new Date(leave.createdAt), 'MMM d, yyyy')}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mt-2">
+                                  <span className="text-sm text-muted-foreground">Reason: </span>
+                                  <span className="text-sm text-foreground break-words">{leave.reason}</span>
+                                </div>
+                                
+                                {/* Decision Support Badges */}
+                                <div className="mt-3.5 flex flex-wrap gap-2 items-center">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Decision Support:</span>
+                                  {overlapCount > 0 ? (
+                                    <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                      {overlapCount} Approved Overlap{overlapCount > 1 ? 's' : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      No Overlap Conflicts
+                                    </span>
+                                  )}
+                                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${requestFrequency > 2 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                                    30D Freq: {requestFrequency} request{requestFrequency !== 1 ? 's' : ''}
+                                  </span>
+                                  {isWeekendBorder && (
+                                    <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                      Weekend Border
+                                    </span>
+                                  )}
+                                  <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${riskColor}`} title={riskReason}>
+                                    {riskLevel} ({riskScore}%)
+                                  </span>
+                                </div>
                               </div>
-                              <div>
-                                <span className="text-muted-foreground">Duration:</span>{' '}
-                                <span className="text-foreground">{getDaysCount(leave.startDate, leave.endDate)} days</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Applied:</span>{' '}
-                                <span className="text-foreground">
-                                  {format(new Date(leave.createdAt), 'MMM d, yyyy')}
-                                </span>
+                              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full rounded-xl border-destructive text-destructive hover:bg-destructive/10 sm:w-auto"
+                                  disabled={isProcessing}
+                                  onClick={() => {
+                                    setActionLeaveId(leave.id);
+                                    setActionType('reject');
+                                  }}
+                                >
+                                  <X size={16} className="mr-2" />
+                                  Reject
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="w-full rounded-xl bg-success text-success-foreground hover:bg-success/90 sm:w-auto"
+                                  disabled={isProcessing}
+                                  onClick={() => {
+                                    setActionLeaveId(leave.id);
+                                    setActionType('approve');
+                                  }}
+                                >
+                                  <Check size={16} className="mr-2" />
+                                  Approve
+                                </Button>
                               </div>
                             </div>
-                            <div className="mt-2">
-                              <span className="text-sm text-muted-foreground">Reason: </span>
-                              <span className="text-sm text-foreground break-words">{leave.reason}</span>
-                            </div>
-                          </div>
-                          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full rounded-xl border-destructive text-destructive hover:bg-destructive/10 sm:w-auto"
-                              disabled={isProcessing}
-                              onClick={() => {
-                                setActionLeaveId(leave.id);
-                                setActionType('reject');
-                              }}
-                            >
-                              <X size={16} className="mr-2" />
-                              Reject
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="w-full rounded-xl bg-success text-success-foreground hover:bg-success/90 sm:w-auto"
-                              disabled={isProcessing}
-                              onClick={() => {
-                                setActionLeaveId(leave.id);
-                                setActionType('approve');
-                              }}
-                            >
-                              <Check size={16} className="mr-2" />
-                              Approve
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               )}
@@ -615,6 +837,36 @@ export default function LeaveAdminPage() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Bulk actions floating toolbar */}
+      {selectedRequestIds.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-4 bg-slate-900/90 dark:bg-slate-950/90 border border-white/20 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5">
+          <span className="text-sm font-bold text-white">
+            {selectedRequestIds.length} request{selectedRequestIds.length > 1 ? 's' : ''} selected
+          </span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleBulkAction('reject')}
+              disabled={isProcessing}
+              className="border-red-500 text-red-400 hover:bg-red-500/10 rounded-xl"
+            >
+              <X size={14} className="mr-1.5" />
+              Reject Selected
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleBulkAction('approve')}
+              disabled={isProcessing}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl"
+            >
+              <Check size={14} className="mr-1.5" />
+              Approve Selected
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Modal */}
       <ConfirmModal

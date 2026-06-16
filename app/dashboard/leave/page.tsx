@@ -420,8 +420,11 @@ export default function LeavePage() {
         </div>
         {leaveRequests.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 backdrop-blur-sm">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-white/20 p-8 backdrop-blur-sm flex flex-col items-center">
               <p className="text-sm text-muted-foreground">No leave requests found</p>
+              <Button onClick={() => setShowCreateForm(true)} className="mt-4 rounded-xl">
+                Create Leave Request
+              </Button>
             </div>
           </div>
         ) : (

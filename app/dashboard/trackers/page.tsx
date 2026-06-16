@@ -10,6 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { showToast } from '@/components/shared/Toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -619,22 +626,23 @@ export default function TrackersPage() {
                 {formType === 'RESOURCE_CLOSURE' && (
                   <div className="space-y-1.5">
                     <Label htmlFor="resourceType" className="text-xs font-semibold ml-1">Resource Type</Label>
-                    <select
-                      id="resourceType"
+                    <Select
                       value={formData.resourceType}
-                      onChange={e => setFormData({ ...formData, resourceType: e.target.value })}
-                      className="form-input h-10 rounded-xl w-full text-sm py-2 px-3 bg-white/10 border-white/15 text-foreground"
-                      required
+                      onValueChange={(val) => setFormData({ ...formData, resourceType: val })}
                     >
-                      <option value="">Select resource category...</option>
-                      <option value="SERVER">Server / Compute</option>
-                      <option value="DATABASE">Database</option>
-                      <option value="DOMAIN">Domain Name</option>
-                      <option value="EMAIL">Email Address</option>
-                      <option value="REPOSITORY">Git Repository</option>
-                      <option value="API_KEY">API Key / Access Token</option>
-                      <option value="OTHER">Other Resource</option>
-                    </select>
+                      <SelectTrigger className="h-10 rounded-xl w-full bg-white/5 border-white/10 text-foreground">
+                        <SelectValue placeholder="Select resource category..." />
+                      </SelectTrigger>
+                      <SelectContent className="border border-white/10">
+                        <SelectItem value="SERVER">Server / Compute</SelectItem>
+                        <SelectItem value="DATABASE">Database</SelectItem>
+                        <SelectItem value="DOMAIN">Domain Name</SelectItem>
+                        <SelectItem value="EMAIL">Email Address</SelectItem>
+                        <SelectItem value="REPOSITORY">Git Repository</SelectItem>
+                        <SelectItem value="API_KEY">API Key / Access Token</SelectItem>
+                        <SelectItem value="OTHER">Other Resource</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 

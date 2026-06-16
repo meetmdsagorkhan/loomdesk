@@ -40,9 +40,9 @@ export default function StatCard({ title, value, change, icon, color = 'primary'
     >
       <div className="flex h-full flex-col justify-between gap-6">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="mt-2 text-3xl font-bold leading-none text-foreground">{value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate" title={title}>{title}</p>
+            <p className="mt-2 text-2xl sm:text-3xl font-bold leading-none text-foreground truncate">{value}</p>
           </div>
           <div className={`rounded-xl p-2.5 ring-1 ring-white/20 ${toneMap[color] ?? toneMap.primary}`}>{icon}</div>
         </div>
