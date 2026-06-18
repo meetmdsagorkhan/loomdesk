@@ -10,6 +10,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+
+const VideoPlayer = ({ stream, isMuted }: { stream: MediaStream, isMuted: boolean }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+  return <video ref={videoRef} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover" />;
+};
 
 export default function MonitoringPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -25,12 +36,94 @@ export default function MonitoringPage() {
   const [upgradedStreams, setUpgradedStreams] = useState<Record<string, boolean>>({});
   const [activeRecordings, setActiveRecordings] = useState<Record<string, { id: string; status: "RECORDING" | "PAUSED" }>>({});
   const [burstCountdowns, setBurstCountdowns] = useState<Record<string, number>>({});
+  const [liveStreams, setLiveStreams] = useState<Record<string, MediaStream>>({});
+  const [unmutedStreams, setUnmutedStreams] = useState<Record<string, boolean>>({});
+  const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
+  const connectionInitiatedRef = useRef<Set<string>>(new Set());
+  const sessionUserRef = useRef<{ id: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session').then(res => res.json()).then(data => {
+      if (data?.user?.id) sessionUserRef.current = data.user;
+    });
+  }, []);
 
   useEffect(() => {
     fetchPresenceData();
     const interval = setInterval(fetchPresenceData, 4000); // Poll presence every 4s
     return () => clearInterval(interval);
   }, []);
+
+  // WebRTC Connection Logic
+  useEffect(() => {
+    if (!supabase || !sessionUserRef.current) return;
+    const myAdminId = sessionUserRef.current.id;
+
+    filteredEmployees.forEach(emp => {
+      const presenceState = emp.currentPresence?.state || "Offline";
+      if (presenceState !== "Offline" && !connectionInitiatedRef.current.has(emp.id)) {
+        connectionInitiatedRef.current.add(emp.id);
+
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+        peerConnectionsRef.current[emp.id] = pc;
+
+        pc.ontrack = (event) => {
+          setLiveStreams(prev => ({ ...prev, [emp.id]: event.streams[0] }));
+        };
+
+        const channel = supabase.channel(`monitoring:signals:${emp.id}`);
+        
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            channel.send({
+              type: 'broadcast',
+              event: 'webrtc-ice-candidate',
+              payload: { targetId: emp.id, candidate: event.candidate, senderId: myAdminId }
+            });
+          }
+        };
+
+        channel.on("broadcast", { event: "webrtc-offer" }, async ({ payload }) => {
+          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            channel.send({
+              type: 'broadcast',
+              event: 'webrtc-answer',
+              payload: { targetId: emp.id, sdp: answer, senderId: myAdminId }
+            });
+          } catch (err) {
+            console.error("WebRTC offer error:", err);
+          }
+        });
+
+        channel.on("broadcast", { event: "webrtc-ice-candidate" }, async ({ payload }) => {
+          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
+          if (payload.candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (err) {
+              console.error("WebRTC ice error:", err);
+            }
+          }
+        });
+
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'request-webrtc',
+              payload: { viewerId: myAdminId }
+            });
+          }
+        });
+      }
+    });
+  }, [filteredEmployees]);
 
   const fetchPresenceData = async () => {
     try {
@@ -57,24 +150,22 @@ export default function MonitoringPage() {
   };
 
   const handleInstantScreenshot = async (userId: string) => {
-    toast.info("Triggering instant screenshot capture...");
-    try {
-      const res = await fetch("/api/monitoring/screenshots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          imageUrl: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%231e293b'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='24'>Instant Capture - ${format(new Date(), "yyyy-MM-dd HH:mm:ss")}</text></svg>`,
-          reason: "Instant Screenshot (Admin Triggered)"
-        })
+    toast.info("Triggering instant screenshot capture from client...");
+    if (supabase) {
+      const channel = supabase.channel(`monitoring:signals:${userId}`);
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channel.send({
+            type: 'broadcast',
+            event: 'take-screenshot',
+            payload: { reason: "Instant Screenshot (Admin Triggered)" }
+          });
+          setTimeout(() => supabase.removeChannel(channel), 1000);
+          toast.success("Capture signal sent successfully");
+        }
       });
-      if (res.ok) {
-        toast.success("Screenshot saved successfully");
-      } else {
-        throw new Error("Failed");
-      }
-    } catch {
-      toast.error("Failed to capture screenshot");
+    } else {
+      toast.error("Signaling server not connected");
     }
   };
 
@@ -87,18 +178,18 @@ export default function MonitoringPage() {
       remaining--;
       setBurstCountdowns(prev => ({ ...prev, [userId]: remaining }));
       
-      try {
-        await fetch("/api/monitoring/screenshots", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            imageUrl: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%231e293b'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23ef4444' font-size='24'>Burst Capture ${3 - remaining}/3 - ${format(new Date(), "HH:mm:ss")}</text></svg>`,
-            reason: `Burst Screenshot (Capture ${3 - remaining}/3)`
-          })
+      if (supabase) {
+        const channel = supabase.channel(`monitoring:signals:${userId}`);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'take-screenshot',
+              payload: { reason: `Burst Screenshot (Capture ${3 - remaining}/3)` }
+            });
+            setTimeout(() => supabase.removeChannel(channel), 1000);
+          }
         });
-      } catch (err) {
-        console.error(err);
       }
 
       if (remaining <= 0) {
@@ -134,6 +225,16 @@ export default function MonitoringPage() {
             delete next[userId];
             return next;
           });
+
+          if (supabase) {
+            const channel = supabase.channel(`monitoring:signals:${userId}`);
+            channel.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                channel.send({ type: 'broadcast', event: 'stop-recording' });
+                setTimeout(() => supabase.removeChannel(channel), 1000);
+              }
+            });
+          }
         }
       } catch {
         toast.error("Failed to stop recording");
@@ -157,6 +258,16 @@ export default function MonitoringPage() {
             ...prev,
             [userId]: { id: data.recording.id, status: "RECORDING" }
           }));
+
+          if (supabase) {
+            const channel = supabase.channel(`monitoring:signals:${userId}`);
+            channel.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                channel.send({ type: 'broadcast', event: 'start-recording', payload: { recordingId: data.recording.id } });
+                setTimeout(() => supabase.removeChannel(channel), 1000);
+              }
+            });
+          }
         }
       } catch {
         toast.error("Failed to start recording");
@@ -346,7 +457,18 @@ export default function MonitoringPage() {
                   )}
                 </div>
 
-                <div className="absolute top-3 right-3 z-10">
+                <div className="absolute top-3 right-3 z-10 flex gap-2">
+                  {liveStreams[emp.id] && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setUnmutedStreams(prev => ({ ...prev, [emp.id]: !prev[emp.id] }));
+                      }}
+                      className="text-[10px] bg-indigo-600/80 hover:bg-indigo-600 text-white px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      {unmutedStreams[emp.id] ? "🔊 Unmuted" : "🔇 Muted"}
+                    </button>
+                  )}
                   <span className="text-[10px] text-white/50 bg-black/60 px-2 py-0.5 rounded-full">
                     {isUpgraded ? "1080p @ 30fps" : "180p @ 5fps"}
                   </span>
@@ -355,10 +477,17 @@ export default function MonitoringPage() {
                 {/* Animated Mock stream or visual camera stream fallback */}
                 {presenceState !== "Offline" && presenceState !== "Monitoring Error" && presenceState !== "Camera Blocked" ? (
                   <div className="w-full h-full relative flex items-center justify-center">
-                    {/* Simulated live video stream noise / lines */}
-                    <div className="absolute inset-0 bg-cover bg-center filter saturate-[0.85] opacity-40" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600')` }}></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    {liveStreams[emp.id] ? (
+                      <VideoPlayer stream={liveStreams[emp.id]} isMuted={!unmutedStreams[emp.id]} />
+                    ) : (
+                      <>
+                        {/* Simulated live video stream noise / lines */}
+                        <div className="absolute inset-0 bg-cover bg-center filter saturate-[0.85] opacity-40" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600')` }}></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                        <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
+                      </>
+                    )}
                     {/* Mock pulse indicators representing movement */}
                     <div className="w-16 h-16 rounded-full border border-indigo-500/30 flex items-center justify-center animate-ping"></div>
                   </div>

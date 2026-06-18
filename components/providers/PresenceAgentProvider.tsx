@@ -40,6 +40,9 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const lastPushedStateRef = useRef<string>("Offline");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const activeRecordingIdRef = useRef<string | null>(null);
+  const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
 
   // 1. Setup activity listeners for Idle/Away tracking
   useEffect(() => {
@@ -124,6 +127,78 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
           console.log("Taking screenshot requested by admin");
           await captureAndUploadScreenshot(payload?.reason || "Instant Screenshot");
         })
+        .on("broadcast", { event: "start-recording" }, ({ payload }) => {
+          console.log("Starting video recording requested by admin");
+          handleStartRecording(payload?.recordingId);
+        })
+        .on("broadcast", { event: "stop-recording" }, () => {
+          console.log("Stopping video recording requested by admin");
+          handleStopRecording();
+        })
+        .on("broadcast", { event: "request-webrtc" }, async ({ payload }) => {
+          const { viewerId } = payload;
+          if (!viewerId || !streamRef.current) return;
+
+          if (peerConnectionsRef.current[viewerId]) {
+            peerConnectionsRef.current[viewerId].close();
+          }
+
+          const pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+          });
+          peerConnectionsRef.current[viewerId] = pc;
+
+          streamRef.current.getTracks().forEach(track => {
+            if (streamRef.current) pc.addTrack(track, streamRef.current);
+          });
+
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              channel.send({
+                type: 'broadcast',
+                event: 'webrtc-ice-candidate',
+                payload: { targetId: viewerId, candidate: event.candidate, senderId: user.id }
+              });
+            }
+          };
+
+          try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            channel.send({
+              type: 'broadcast',
+              event: 'webrtc-offer',
+              payload: { targetId: viewerId, sdp: offer, senderId: user.id }
+            });
+          } catch (err) {
+            console.error("Failed to create WebRTC offer:", err);
+          }
+        })
+        .on("broadcast", { event: "webrtc-answer" }, async ({ payload }) => {
+          const { senderId, targetId, sdp } = payload;
+          if (targetId !== user.id) return;
+          const pc = peerConnectionsRef.current[senderId];
+          if (pc) {
+            try {
+              await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+            } catch (err) {
+              console.error("Failed to set remote description:", err);
+            }
+          }
+        })
+        .on("broadcast", { event: "webrtc-ice-candidate" }, async ({ payload }) => {
+          const { senderId, targetId, candidate } = payload;
+          if (targetId !== user.id) return;
+          const pc = peerConnectionsRef.current[senderId];
+          if (pc && candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (err) {
+              console.error("Failed to add ICE candidate:", err);
+            }
+          }
+        })
         .subscribe((status) => {
           if (status === "SUBSCRIBED") {
             console.log("Subscribed to admin signaling channel");
@@ -190,7 +265,7 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
           height: { ideal: 180 },
           frameRate: { ideal: 5 },
         },
-        audio: false,
+        audio: true,
       });
 
       streamRef.current = stream;
@@ -234,6 +309,11 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       canvasRef.current = null;
     }
 
+    Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
+    peerConnectionsRef.current = {};
+
+    handleStopRecording();
+
     setIsCameraActive(false);
     // Send final offline/stop event to the API before closing
     if (isAuthenticated && user?.id) {
@@ -241,6 +321,43 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
         "/api/monitoring/presence",
         JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } })
       );
+    }
+  };
+
+  const handleStartRecording = (recordingId: string) => {
+    if (!streamRef.current || mediaRecorderRef.current || !recordingId) return;
+    
+    activeRecordingIdRef.current = recordingId;
+    const mediaRecorder = new MediaRecorder(streamRef.current, {
+      mimeType: "video/webm;codecs=vp8,opus",
+    });
+
+    mediaRecorder.ondataavailable = async (e) => {
+      if (e.data.size > 0 && activeRecordingIdRef.current) {
+        const formData = new FormData();
+        formData.append("chunk", e.data);
+        formData.append("recordingId", activeRecordingIdRef.current);
+        
+        try {
+          await fetch("/api/monitoring/recordings/upload", {
+            method: "POST",
+            body: formData,
+          });
+        } catch (err) {
+          console.error("Failed to upload video chunk", err);
+        }
+      }
+    };
+
+    mediaRecorder.start(2000); // Send chunks every 2 seconds
+    mediaRecorderRef.current = mediaRecorder;
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+      activeRecordingIdRef.current = null;
     }
   };
 

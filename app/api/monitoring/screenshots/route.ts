@@ -70,11 +70,27 @@ export async function POST(request: NextRequest) {
       ? session.user.id 
       : "system"; // system scheduled
 
+    const fs = require("fs");
+    const path = require("path");
+    const os = require("os");
+
+    const downloadsDir = path.join(os.homedir(), "Downloads", "LoomDesk");
+    if (!fs.existsSync(downloadsDir)) {
+      fs.mkdirSync(downloadsDir, { recursive: true });
+    }
+
+    const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+    const filename = `screenshot_${userId}_${Date.now()}.jpg`;
+    const filePath = path.join(downloadsDir, filename);
+    
+    fs.writeFileSync(filePath, buffer);
+
     // Save screenshot
     const screenshot = await prisma.monitoringScreenshot.create({
       data: {
         userId,
-        imageUrl,
+        imageUrl, // Keep the base64 or you can update it to path
         reason,
         capturedById: capturedById === "system" ? userId : capturedById, // fallback to avoid invalid foreign key if no system user exists
       },
