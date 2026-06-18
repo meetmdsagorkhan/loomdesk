@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ history });
     }
 
-    // Get current/latest presence event for each user
+    // Get current/latest presence event for each monitored user
     const users = await prisma.user.findMany({
+      where: { role: "MEMBER" },
       select: {
         id: true,
         name: true,

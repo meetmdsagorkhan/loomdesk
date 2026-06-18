@@ -165,11 +165,12 @@ export default function MonitoringPage() {
   };
 
   // Metrics calculators
-  const onlineCount = employees.filter(e => e.currentPresence?.state !== "Offline").length;
-  const activeCount = employees.filter(e => e.currentPresence?.state === "Active").length;
-  const idleCount = employees.filter(e => e.currentPresence?.state === "Idle").length;
-  const awayCount = employees.filter(e => e.currentPresence?.state === "Away From Desk").length;
-  const issueCount = employees.filter(e => ["Camera Blocked", "Monitoring Error"].includes(e.currentPresence?.state)).length;
+  const getPresenceState = (e: any) => e.currentPresence?.state || "Offline";
+  const onlineCount = employees.filter(e => getPresenceState(e) !== "Offline").length;
+  const activeCount = employees.filter(e => getPresenceState(e) === "Active").length;
+  const idleCount = employees.filter(e => getPresenceState(e) === "Idle").length;
+  const awayCount = employees.filter(e => getPresenceState(e) === "Away From Desk").length;
+  const issueCount = employees.filter(e => ["Camera Blocked", "Monitoring Error"].includes(getPresenceState(e))).length;
   const alertCount = employees.filter(e => e.pendingAlerts?.length > 0).length;
 
   const filteredEmployees = employees.filter(e => {

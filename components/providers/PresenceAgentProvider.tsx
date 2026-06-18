@@ -32,10 +32,14 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
 
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentSignalRef = useRef<string>("low"); // "low" or "high"
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const lastAudioLevelRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+  const lastPushedStateRef = useRef<string>("Offline");
 
   // 1. Setup activity listeners for Idle/Away tracking
   useEffect(() => {
@@ -196,6 +200,8 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       setIsCameraActive(true);
       setError(null);
       setState("Present");
+      lastPushedStateRef.current = "Present";
+      pushStateToBackend("Present", { reason: "camera_started" });
 
       // Start the frame analysis loop
       startAnalysisLoop();
@@ -385,8 +391,9 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       }
 
       // If state has changed or 30 seconds have passed, push update to backend
-      if (calculatedState !== state || Math.random() < 0.15) {
+      if (calculatedState !== lastPushedStateRef.current || Math.random() < 0.15) {
         setState(calculatedState);
+        lastPushedStateRef.current = calculatedState;
         pushStateToBackend(calculatedState, { avgLuminance, pixelVariance, resolution, fps });
       }
     }, 4000);
