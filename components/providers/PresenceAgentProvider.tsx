@@ -65,11 +65,10 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       return;
     }
 
-    // Attempt to start camera automatically if permission is already granted
     navigator.permissions
       ?.query({ name: "camera" as PermissionName })
       .then((permissionStatus) => {
-        if (permissionStatus.state === "granted") {
+        if (permissionStatus.state === "granted" || permissionStatus.state === "prompt") {
           startCamera();
         } else {
           setState("Monitoring Error");
