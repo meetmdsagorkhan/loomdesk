@@ -1,0 +1,603 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String?   @unique
+  emailVerifiedAt DateTime?
+  name          String
+  password      String
+  role          Role      @default(MEMBER)
+  permissions   String[]  @default([])
+  isActive      Boolean   @default(true)
+  sessionVersion Int      @default(0)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  twoFactorRecoveryCodes Json?
+  twoFactorConfirmedAt DateTime?
+  image         String?
+  position      String?
+  department    String?
+  company       String?
+  joiningDate   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  reports       Report[]
+  scoreEvents   ScoreEvent[]
+  leaveRequests LeaveRequest[]
+  shifts        ShiftAssignment[]
+  shiftExceptions ShiftException[]
+  notifications  Notification[]
+  sentMessages  Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+  forwardedMessages Message[] @relation("OriginalSender")
+  invitedBy     String?
+  invitations   Invitation[] @relation("invitedBy")
+  emailVerificationTokens EmailVerificationToken[]
+  submissions  UserSubmission[]
+  eventTypes   EventType[]
+  googleCalendarToken GoogleCalendarToken?
+  schedulingPreferences SchedulingPreferences[]
+  availability  Availability[]
+  timeEntries   TimeEntry[]
+  screenshots   Screenshot[]
+  trackers      SpecialTaskTracker[]
+
+  // Workforce monitoring relations
+  presenceEvents       PresenceEvent[]
+  employeeRecordings   RecordingSession[]     @relation("EmployeeRecordings")
+  adminRecordings      RecordingSession[]     @relation("AdminRecordings")
+  employeeScreenshots  MonitoringScreenshot[] @relation("EmployeeScreenshots")
+  adminScreenshots     MonitoringScreenshot[] @relation("AdminScreenshots")
+  complianceAlerts     ComplianceAlert[]
+  acknowledgedAlerts   ComplianceAlert[]      @relation("AcknowledgedAlerts")
+  resolvedAlerts       ComplianceAlert[]      @relation("ResolvedAlerts")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  status      AuditStatus
+  actorId     String?
+  actorEmail  String?
+  actorRole   String?
+  targetType  String?
+  targetId    String?
+  targetEmail String?
+  ipAddress   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetId, createdAt])
+}
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  blockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+model AccountLockoutState {
+  subject     String   @id
+  failureCount Int
+  firstFailedAt DateTime
+  lockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String           @unique
+  token       String           @unique @default(cuid())
+  role        Role             @default(MEMBER)
+  status      InvitationStatus @default(PENDING)
+  invitedById String
+  invitedBy   User             @relation("invitedBy", fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  date        DateTime      @db.Date
+  status      ReportStatus  @default(DRAFT)
+  submittedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  entries     ReportEntry[]
+  @@unique([userId, date])
+  @@index([status, date])
+}
+
+model ReportEntry {
+  id             String      @id @default(cuid())
+  reportId       String
+  report         Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  type           EntryType
+  referenceId    String
+  status         EntryStatus
+  note           String
+  pendingReason  String?
+  createdAt      DateTime    @default(now())
+  feedback       Feedback[]
+  @@unique([reportId, referenceId])
+  @@index([reportId, type])
+}
+
+model ScoreEvent {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  reportId    String?
+  entryId     String?
+  severity    ScoreSeverity
+  deduction   Float
+  reason      String
+  adminNote   String?
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([reportId])
+}
+
+model Feedback {
+  id        String      @id @default(cuid())
+  entryId   String
+  entry     ReportEntry @relation(fields: [entryId], references: [id])
+  comment   String
+  authorId  String
+  createdAt DateTime    @default(now())
+}
+
+model UserSubmission {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  type        SubmissionType
+  title       String
+  description String
+  status      SubmissionStatus @default(OPEN)
+  priority    SubmissionPriority @default(MEDIUM)
+  adminNote   String?
+  imageUrl    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([type, status])
+  @@index([userId, createdAt])
+}
+
+model LeaveRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  reason      String
+  status      LeaveStatus   @default(PENDING)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([userId, status, startDate])
+}
+
+model Shift {
+  id              String            @id @default(cuid())
+  name            String
+  startTime       String
+  endTime         String
+  reportDeadline  String
+  createdAt       DateTime          @default(now())
+  assignments     ShiftAssignment[]
+  exceptions      ShiftException[]
+  timeEntries     TimeEntry[]
+}
+
+model ShiftAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  shiftId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  startDate DateTime @db.Date
+  endDate   DateTime? @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([userId, startDate])
+}
+
+model ShiftException {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime @db.Date
+  shiftId   String?
+  shift     Shift?   @relation(fields: [shiftId], references: [id])
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  senderId       String
+  sender         User      @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId     String?   // Null means it's a channel message
+  receiver       User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  channel        String?   // 'general', 'announcements', etc.
+  content        String
+  read           Boolean   @default(false)
+  readAt         DateTime? // Tracks exactly when it was read for read receipts
+  replyToId      String?   // ID of the message being replied to
+  replyTo        Message?  @relation("MessageReply", fields: [replyToId], references: [id])
+  replies       Message[] @relation("MessageReply")
+  isForwarded    Boolean   @default(false)
+  originalSenderId String?  // Original sender if forwarded
+  originalSender User?     @relation("OriginalSender", fields: [originalSenderId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, read, createdAt])
+  @@index([replyToId])
+}
+
+enum Role {
+  ADMIN
+  TEAM_LEAD
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+}
+
+enum EntryType {
+  TICKET
+  CHAT
+  MISCELLANEOUS
+}
+
+enum EntryStatus {
+  SOLVED
+  PENDING
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ScoreSeverity {
+  MINOR
+  MAJOR
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum SubmissionType {
+  FEEDBACK
+  BUG_REPORT
+  FEATURE_REQUEST
+}
+
+enum SubmissionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SubmissionPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model EventType {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String?
+  duration    Int
+  meetLink    String?
+  active      Boolean   @default(true)
+  bookings    Booking[]
+  availabilities        Availability[]
+  schedulingPreferences SchedulingPreferences?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, slug])
+}
+
+model Booking {
+  id          String    @id @default(cuid())
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  name        String
+  email       String
+  startTime   DateTime
+  endTime     DateTime
+  status      BookingStatus @default(CONFIRMED)
+  meetLink               String?   // unique Google Meet link generated via Calendar API
+  googleCalendarEventId  String?   // to allow cancelling from Google Calendar
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([eventTypeId, startTime])
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model GoogleCalendarToken {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+model SchedulingPreferences {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId     String   @unique
+  eventType       EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  timezone        String   @default("UTC")
+  bufferBefore    Int      @default(0) // minutes
+  bufferAfter     Int      @default(0) // minutes
+  minimumNotice   Int      @default(60) // minutes in advance
+  slotDuration    Int      @default(30) // default slot duration in minutes
+  maxBookingsPerDay Int    @default(10)
+  workingDays     String[] @default(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Availability {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTypeId String
+  eventType   EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  dayOfWeek   DayOfWeek
+  startTime   String // format: "09:00"
+  endTime     String // format: "17:00"
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([eventTypeId, dayOfWeek, startTime, endTime])
+  @@index([eventTypeId, dayOfWeek])
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model TimeEntry {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shiftId       String?
+  shift         Shift?    @relation(fields: [shiftId], references: [id])
+  date          DateTime  @db.Date
+  checkInTime   DateTime
+  checkOutTime  DateTime?
+  status        TimeEntryStatus @default(ACTIVE)
+  totalMinutes  Int       @default(0)
+  breaks        Break[]
+  notes         TimeEntryNote[]
+  screenshots   Screenshot[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, date])
+}
+
+enum TimeEntryStatus {
+  ACTIVE
+  ON_BREAK
+  COMPLETED
+}
+
+model Break {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model TimeEntryNote {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  content     String
+  createdAt   DateTime @default(now())
+}
+
+model Screenshot {
+  id          String   @id @default(cuid())
+  timeEntryId String
+  timeEntry   TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl    String
+  timestamp   DateTime @default(now())
+}
+
+model TrackerSettings {
+  id              String   @id @default(cuid())
+  intervalMinutes Int      @default(15)
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model SpecialTaskTracker {
+  id              String      @id @default(cuid())
+  type            TrackerType
+  userName        String
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cardLast4       String?     // For Card Suspension and Due Waive
+  amount          Float?      // For Due Waive
+  reason          String      // Reason for suspension/waive/termination/closure
+  status          String      @default("PENDING") // PENDING, RESOLVED, UNBLOCKED, etc.
+  actionDate      DateTime?   // Unblocked Date / Deletion Date
+  actionBy        String?     // Unblocked By / Waived By / Terminated By
+  actionReason    String?     // Unblocking Reason
+  resourceType    String?     // For Resource Closure (e.g. Server, DB)
+  note            String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum TrackerType {
+  CARD_SUSPENSION
+  DUE_WAIVE
+  ACCOUNT_TERMINATION
+  RESOURCE_CLOSURE
+}
+
+model PresenceEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  state     String   // "Active" | "Present" | "Idle" | "Away From Desk" | "Camera Blocked" | "Multiple People Detected" | "Monitoring Error"
+  timestamp DateTime @default(now())
+  metadata  Json?
+
+  @@index([userId, timestamp])
+  @@index([timestamp])
+}
+
+model RecordingSession {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("EmployeeRecordings", fields: [userId], references: [id], onDelete: Cascade)
+  adminId   String
+  admin     User      @relation("AdminRecordings", fields: [adminId], references: [id], onDelete: Cascade)
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int?      // in seconds
+  reason    String
+  status    String    @default("COMPLETED") // "RECORDING" | "PAUSED" | "COMPLETED"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([adminId])
+}
+
+model MonitoringScreenshot {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("EmployeeScreenshots", fields: [userId], references: [id], onDelete: Cascade)
+  capturedById String
+  capturedBy   User     @relation("AdminScreenshots", fields: [capturedById], references: [id], onDelete: Cascade)
+  imageUrl     String   @db.Text // support base64 image data URL
+  reason       String
+  timestamp    DateTime @default(now())
+
+  @@index([userId, timestamp])
+}
+
+model ComplianceAlert {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String    // "camera_disconnected" | "camera_blocked" | "face_missing" | "multiple_faces" | "browser_inactive" | "long_idle" | "repeated_disconnects" | "monitoring_disabled"
+  severity         String    // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  status           String    @default("PENDING") // "PENDING" | "ACKNOWLEDGED" | "RESOLVED"
+  acknowledgedById String?
+  acknowledgedBy   User?     @relation("AcknowledgedAlerts", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+  acknowledgedAt   DateTime?
+  resolvedById     String?
+  resolvedBy       User?     @relation("ResolvedAlerts", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+
