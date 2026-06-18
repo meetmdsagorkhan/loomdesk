@@ -63,7 +63,7 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       window.removeEventListener("click", handleActivity);
       window.removeEventListener("visibilitychange", handleActivity);
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id, user?.role]);
 
   // 2. Initialize camera & real-time analytics
   useEffect(() => {
@@ -101,7 +101,7 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     return () => {
       cleanupCamera();
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id, user?.role]);
 
   // 3. Setup signaling channel (Supabase fallback to short-poll)
   useEffect(() => {
@@ -234,7 +234,7 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
         clearInterval(pollInterval);
       }
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id, user?.role]);
 
   const startCamera = async () => {
     try {
