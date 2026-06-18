@@ -54,76 +54,7 @@ export default function MonitoringPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // WebRTC Connection Logic
-  useEffect(() => {
-    if (!supabase || !sessionUserRef.current) return;
-    const myAdminId = sessionUserRef.current.id;
 
-    filteredEmployees.forEach(emp => {
-      const presenceState = emp.currentPresence?.state || "Offline";
-      if (presenceState !== "Offline" && !connectionInitiatedRef.current.has(emp.id)) {
-        connectionInitiatedRef.current.add(emp.id);
-
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-        });
-        peerConnectionsRef.current[emp.id] = pc;
-
-        pc.ontrack = (event) => {
-          setLiveStreams(prev => ({ ...prev, [emp.id]: event.streams[0] }));
-        };
-
-        const channel = supabase.channel(`monitoring:signals:${emp.id}`);
-        
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            channel.send({
-              type: 'broadcast',
-              event: 'webrtc-ice-candidate',
-              payload: { targetId: emp.id, candidate: event.candidate, senderId: myAdminId }
-            });
-          }
-        };
-
-        channel.on("broadcast", { event: "webrtc-offer" }, async ({ payload }) => {
-          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
-          try {
-            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            channel.send({
-              type: 'broadcast',
-              event: 'webrtc-answer',
-              payload: { targetId: emp.id, sdp: answer, senderId: myAdminId }
-            });
-          } catch (err) {
-            console.error("WebRTC offer error:", err);
-          }
-        });
-
-        channel.on("broadcast", { event: "webrtc-ice-candidate" }, async ({ payload }) => {
-          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
-          if (payload.candidate) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-            } catch (err) {
-              console.error("WebRTC ice error:", err);
-            }
-          }
-        });
-
-        channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            channel.send({
-              type: 'broadcast',
-              event: 'request-webrtc',
-              payload: { viewerId: myAdminId }
-            });
-          }
-        });
-      }
-    });
-  }, [filteredEmployees]);
 
   const fetchPresenceData = async () => {
     try {
@@ -296,6 +227,77 @@ export default function MonitoringPage() {
     if (statusFilter === "alert") return matchesSearch && e.pendingAlerts?.length > 0;
     return matchesSearch;
   });
+
+  // WebRTC Connection Logic
+  useEffect(() => {
+    if (!supabase || !sessionUserRef.current) return;
+    const myAdminId = sessionUserRef.current.id;
+
+    filteredEmployees.forEach(emp => {
+      const presenceState = emp.currentPresence?.state || "Offline";
+      if (presenceState !== "Offline" && !connectionInitiatedRef.current.has(emp.id)) {
+        connectionInitiatedRef.current.add(emp.id);
+
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+        peerConnectionsRef.current[emp.id] = pc;
+
+        pc.ontrack = (event) => {
+          setLiveStreams(prev => ({ ...prev, [emp.id]: event.streams[0] }));
+        };
+
+        const channel = supabase.channel(`monitoring:signals:${emp.id}`);
+        
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            channel.send({
+              type: 'broadcast',
+              event: 'webrtc-ice-candidate',
+              payload: { targetId: emp.id, candidate: event.candidate, senderId: myAdminId }
+            });
+          }
+        };
+
+        channel.on("broadcast", { event: "webrtc-offer" }, async ({ payload }) => {
+          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            channel.send({
+              type: 'broadcast',
+              event: 'webrtc-answer',
+              payload: { targetId: emp.id, sdp: answer, senderId: myAdminId }
+            });
+          } catch (err) {
+            console.error("WebRTC offer error:", err);
+          }
+        });
+
+        channel.on("broadcast", { event: "webrtc-ice-candidate" }, async ({ payload }) => {
+          if (payload.targetId !== myAdminId || payload.senderId !== emp.id) return;
+          if (payload.candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (err) {
+              console.error("WebRTC ice error:", err);
+            }
+          }
+        });
+
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'request-webrtc',
+              payload: { viewerId: myAdminId }
+            });
+          }
+        });
+      }
+    });
+  }, [filteredEmployees]);
 
   return (
     <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto relative">
