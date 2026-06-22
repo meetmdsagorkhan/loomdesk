@@ -45,6 +45,9 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeRecordingIdRef = useRef<string | null>(null);
   const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
+  // Tracks whether the camera has actually been started, so cleanupCamera's
+  // sendBeacon only fires when there's genuinely a live session to close.
+  const cameraStartedRef = useRef(false);
 
   // Roles that participate in presence monitoring
   const isMonitoredRole = user?.role === "MEMBER" || user?.role === "TEAM_LEAD";
@@ -71,30 +74,48 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
   }, [isAuthenticated, user?.id, user?.role]);
 
   // 2. Initialize camera & real-time analytics
+  //
+  // IMPORTANT: `sessionLoading` is intentionally NOT in the dependency array.
+  // Including it causes next-auth's periodic background session refresh to
+  // briefly toggle sessionLoading true→false, which triggers the effect cleanup
+  // (firing sendBeacon("Offline") while the user is still active).
+  //
+  // The initial loading case is handled correctly without sessionLoading:
+  //   - First render: isAuthenticated=false → skips camera start (no-op)
+  //   - Session resolves: isAuthenticated=true → deps change → camera starts
+  //   - Background refresh: only sessionLoading changes (not in deps) → no re-run ✓
   useEffect(() => {
-    // While the session is still being loaded, do nothing — avoids a spurious
-    // cleanupCamera() call that would fire sendBeacon("Offline") immediately.
-    if (sessionLoading) return;
-
     if (!isAuthenticated || !isMonitoredRole) {
-      cleanupCamera();
+      // Only clean up if we actually started the camera
+      if (cameraStartedRef.current) {
+        cameraStartedRef.current = false;
+        cleanupCamera();
+      }
       return;
     }
+
+    // Camera is already running for this session — don't restart it.
+    // This guard also prevents a double-start if some other dep re-triggers.
+    if (cameraStartedRef.current) return;
 
     navigator.permissions
       ?.query({ name: "camera" as PermissionName })
       .then((permissionStatus) => {
         if (permissionStatus.state === "granted" || permissionStatus.state === "prompt") {
+          cameraStartedRef.current = true;
           startCamera();
         } else {
           setState("Monitoring Error");
           setError("Webcam permission not granted");
+          pushStateToBackend("Monitoring Error", { reason: "permission_denied" });
         }
 
         permissionStatus.onchange = () => {
           if (permissionStatus.state === "granted") {
+            cameraStartedRef.current = true;
             startCamera();
           } else {
+            cameraStartedRef.current = false;
             cleanupCamera();
             setState("Monitoring Error");
             setError("Webcam permission revoked");
@@ -102,17 +123,20 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
         };
       })
       .catch(() => {
-        // Fallback to trying to start camera directly (triggers browser dialog if needed)
+        // Fallback: trigger browser dialog
+        cameraStartedRef.current = true;
         startCamera();
       });
 
-    // Clean up on unmount or logout
+    // Cleanup only on true unmount (component leaves the tree) or genuine logout
     return () => {
-      cleanupCamera();
+      if (cameraStartedRef.current) {
+        cameraStartedRef.current = false;
+        cleanupCamera();
+      }
     };
-  // sessionLoading added so the effect re-evaluates once the session resolves
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, sessionLoading, user?.id, user?.role]);
+  }, [isAuthenticated, user?.id, user?.role]);
 
   // 3. Setup signaling channel (Supabase fallback to short-poll)
   useEffect(() => {
@@ -326,9 +350,10 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     handleStopRecording();
 
     setIsCameraActive(false);
-    // Send final offline/stop event to the API before closing.
-    // sendBeacon must use a Blob with application/json so the server-side
-    // request.json() can parse it — plain strings are sent as text/plain.
+    // Only send the Offline beacon if the camera was actually streaming.
+    // This prevents spurious "Offline" events when cleanup fires on component
+    // init (no stream yet) or during next-auth background session refreshes.
+    // Uses Blob with application/json so server-side request.json() can parse it.
     if (isAuthenticated && user?.id) {
       const payload = JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } });
       navigator.sendBeacon(
