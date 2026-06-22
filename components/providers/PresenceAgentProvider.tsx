@@ -57,6 +57,27 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
   }, [isAuthenticated, user?.id, user?.role]);
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // 1b. Initial Permission Request
+  //     Ask for camera/mic permission once on login so that later background requests succeed silently.
+  // ─────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated || !isMonitoredRole) return;
+
+    const checkPermissions = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Immediately stop the stream; we just wanted the user to grant permission
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err: any) {
+        console.error("Initial camera permission denied:", err);
+        pushStateToBackend("Camera Blocked", { error: err.message });
+      }
+    };
+
+    checkPermissions();
+  }, [isAuthenticated, isMonitoredRole]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // 2. Heartbeat — purely activity-based presence (no camera required)
   //    Pushes state update every 4s, guarantees a heartbeat at least every 30s.
   //    Camera is NO longer auto-started here — it only starts when admin views.
@@ -193,6 +214,20 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     } catch (err: any) {
       console.error("LiveKit publish error:", err);
       setError(err.message);
+      pushStateToBackend("Camera Blocked", { error: err.message });
+      
+      // Notify admin that connection failed
+      if (supabase && user?.id) {
+         supabase.channel(`monitoring:signals:${user.id}`).send({
+            type: "broadcast",
+            event: "livekit-publish-error",
+            payload: { error: err.message }
+         });
+      }
+      
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+      }
       livekitRoomRef.current = null;
     }
   };

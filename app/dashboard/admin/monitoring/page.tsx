@@ -209,6 +209,19 @@ export default function MonitoringPage() {
       // 4. Signal the member to start publishing (via Supabase broadcast)
       if (supabase) {
         const ch = supabase.channel(`monitoring:signals:${userId}`);
+        
+        // Listen for immediate failure from the member
+        ch.on("broadcast", { event: "livekit-publish-error" }, (payload) => {
+          toast.error(`Member camera blocked: ${payload.payload?.error || "Permission denied"}`);
+          setSessionStates((p) => {
+            const next = { ...p };
+            delete next[userId];
+            return next;
+          });
+          room.disconnect();
+          supabase.removeChannel(ch);
+        });
+
         ch.subscribe((status) => {
           if (status === "SUBSCRIBED") {
             ch.send({
@@ -216,8 +229,8 @@ export default function MonitoringPage() {
               event: "livekit-view-request",
               payload: { adminId: adminIdRef.current },
             });
-            // Clean up the signaling channel after sending
-            setTimeout(() => supabase.removeChannel(ch), 2000);
+            // Keep channel open briefly to catch synchronous errors
+            setTimeout(() => supabase.removeChannel(ch), 8000);
           }
         });
       }
