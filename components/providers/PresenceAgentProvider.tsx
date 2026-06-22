@@ -65,12 +65,19 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
 
     const checkPermissions = async () => {
       try {
+        // Try both first
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        // Immediately stop the stream; we just wanted the user to grant permission
         stream.getTracks().forEach(track => track.stop());
       } catch (err: any) {
-        console.error("Initial camera permission denied:", err);
-        pushStateToBackend("Camera Blocked", { error: err.message });
+        console.warn("Combined camera/mic permission failed, trying individually...", err);
+        try {
+          // Maybe they don't have a mic? Try video only
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+        } catch (videoErr: any) {
+          console.error("Video permission denied:", videoErr);
+          pushStateToBackend("Camera Blocked", { error: videoErr.message });
+        }
       }
     };
 
@@ -207,8 +214,24 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       });
 
       await room.connect(url, token);
-      // Enable camera and microphone — browser will ask permission once and remember it
-      await room.localParticipant.enableCameraAndMicrophone();
+      
+      // Try to enable them independently so a missing mic doesn't crash the video
+      try {
+        await room.localParticipant.setCameraEnabled(true);
+      } catch (camErr) {
+        console.error("Failed to enable camera:", camErr);
+      }
+      
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+      } catch (micErr) {
+        console.error("Failed to enable mic:", micErr);
+      }
+      
+      // If BOTH failed to publish, consider it a failure
+      if (room.localParticipant.videoTrackPublications.size === 0 && room.localParticipant.audioTrackPublications.size === 0) {
+        throw new Error("Could not access either camera or microphone (Hardware missing or permission denied)");
+      }
 
       livekitRoomRef.current = room;
     } catch (err: any) {
