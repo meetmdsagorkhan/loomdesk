@@ -317,8 +317,11 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       startAnalysisLoop();
     } catch (err: any) {
       console.error("Camera monitoring failed to start:", err);
+      cameraStartedRef.current = false;
       setState("Monitoring Error");
       setError(err.message || "Failed to initialize webcam");
+      // Push the error state so admin sees "Camera Disconnected" not stale data
+      pushStateToBackend("Monitoring Error", { reason: err.message || "getUserMedia_failed" });
     }
   };
 
@@ -327,6 +330,13 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    // Capture whether a real stream was active BEFORE we null out the ref.
+    // The Offline beacon must only fire when we're closing a genuinely live session.
+    // Without this, startCamera()'s internal cleanupCamera() call (which runs
+    // before getUserMedia when no prior stream exists) would fire a spurious
+    // sendBeacon("Offline") and cause the admin to see "Camera Disconnected".
+    const hadActiveStream = !!streamRef.current;
 
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -350,11 +360,10 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     handleStopRecording();
 
     setIsCameraActive(false);
-    // Only send the Offline beacon if the camera was actually streaming.
-    // This prevents spurious "Offline" events when cleanup fires on component
-    // init (no stream yet) or during next-auth background session refreshes.
-    // Uses Blob with application/json so server-side request.json() can parse it.
-    if (isAuthenticated && user?.id) {
+    // Only send the Offline beacon when there was a real stream to close.
+    // Uses Blob with application/json so server-side request.json() can parse it
+    // (plain string sendBeacon sends as text/plain which fails request.json()).
+    if (hadActiveStream && isAuthenticated && user?.id) {
       const payload = JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } });
       navigator.sendBeacon(
         "/api/monitoring/presence",
