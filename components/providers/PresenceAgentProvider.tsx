@@ -3,56 +3,38 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/lib/supabase";
+import { Room } from "livekit-client";
 
 interface PresenceAgentContextType {
   state: string;
-  isCameraActive: boolean;
-  resolution: string;
-  fps: number;
   error: string | null;
 }
 
 const PresenceAgentContext = createContext<PresenceAgentContextType>({
   state: "Offline",
-  isCameraActive: false,
-  resolution: "320x180",
-  fps: 5,
   error: null,
 });
 
 export const usePresenceAgent = () => useContext(PresenceAgentContext);
 
 export function PresenceAgentProvider({ children }: { children: React.ReactNode }) {
-  const { user, isLoading: sessionLoading, isAuthenticated } = useCurrentUser();
+  const { user, isAuthenticated } = useCurrentUser();
   const [state, setState] = useState("Offline");
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [resolution, setResolution] = useState("320x180");
-  const [fps, setFps] = useState(5);
   const [error, setError] = useState<string | null>(null);
 
-  const streamRef = useRef<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const currentSignalRef = useRef<string>("low"); // "low" or "high"
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const lastAudioLevelRef = useRef<number>(0);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const lastPushedStateRef = useRef<string>("Offline");
-  // Track the wall-clock time of last push so we can guarantee a heartbeat every 30s
   const lastPushedTimeRef = useRef<number>(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const activeRecordingIdRef = useRef<string | null>(null);
-  const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
-  // Tracks whether the camera has actually been started, so cleanupCamera's
-  // sendBeacon only fires when there's genuinely a live session to close.
-  const cameraStartedRef = useRef(false);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // LiveKit room for on-demand video — starts only when admin explicitly requests a view
+  const livekitRoomRef = useRef<Room | null>(null);
 
   // Roles that participate in presence monitoring
   const isMonitoredRole = user?.role === "MEMBER" || user?.role === "TEAM_LEAD";
 
-  // 1. Setup activity listeners for Idle/Away tracking
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. Activity listeners — track last user interaction for idle/away detection
+  // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !isMonitoredRole) return;
 
@@ -73,503 +55,157 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     };
   }, [isAuthenticated, user?.id, user?.role]);
 
-  // 2. Initialize camera & real-time analytics
-  //
-  // IMPORTANT: `sessionLoading` is intentionally NOT in the dependency array.
-  // Including it causes next-auth's periodic background session refresh to
-  // briefly toggle sessionLoading true→false, which triggers the effect cleanup
-  // (firing sendBeacon("Offline") while the user is still active).
-  //
-  // The initial loading case is handled correctly without sessionLoading:
-  //   - First render: isAuthenticated=false → skips camera start (no-op)
-  //   - Session resolves: isAuthenticated=true → deps change → camera starts
-  //   - Background refresh: only sessionLoading changes (not in deps) → no re-run ✓
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2. Heartbeat — purely activity-based presence (no camera required)
+  //    Pushes state update every 4s, guarantees a heartbeat at least every 30s.
+  //    Camera is NO longer auto-started here — it only starts when admin views.
+  // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isAuthenticated || !isMonitoredRole) {
-      // Only clean up if we actually started the camera
-      if (cameraStartedRef.current) {
-        cameraStartedRef.current = false;
-        cleanupCamera();
+    if (!isAuthenticated || !isMonitoredRole) return;
+
+    // Push "Active" immediately on login so admin sees the member right away
+    pushStateToBackend("Active", { reason: "session_started" });
+    setState("Active");
+    lastPushedStateRef.current = "Active";
+    lastPushedTimeRef.current = Date.now();
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      const idleDuration = Date.now() - lastActivityRef.current;
+      let calculatedState: string;
+
+      if (idleDuration >= 10 * 60 * 1000) {
+        calculatedState = "Away From Desk";
+      } else if (idleDuration >= 3 * 60 * 1000) {
+        calculatedState = "Idle";
+      } else {
+        calculatedState = "Active";
       }
-      return;
-    }
 
-    // Camera is already running for this session — don't restart it.
-    // This guard also prevents a double-start if some other dep re-triggers.
-    if (cameraStartedRef.current) return;
+      const now = Date.now();
+      const heartbeatDue = now - lastPushedTimeRef.current >= 30_000;
 
-    navigator.permissions
-      ?.query({ name: "camera" as PermissionName })
-      .then((permissionStatus) => {
-        if (permissionStatus.state === "granted" || permissionStatus.state === "prompt") {
-          cameraStartedRef.current = true;
-          startCamera();
-        } else {
-          setState("Monitoring Error");
-          setError("Webcam permission not granted");
-          pushStateToBackend("Monitoring Error", { reason: "permission_denied" });
-        }
-
-        permissionStatus.onchange = () => {
-          if (permissionStatus.state === "granted") {
-            cameraStartedRef.current = true;
-            startCamera();
-          } else {
-            cameraStartedRef.current = false;
-            cleanupCamera();
-            setState("Monitoring Error");
-            setError("Webcam permission revoked");
-          }
-        };
-      })
-      .catch(() => {
-        // Fallback: trigger browser dialog
-        cameraStartedRef.current = true;
-        startCamera();
-      });
-
-    // Cleanup only on true unmount (component leaves the tree) or genuine logout
-    return () => {
-      if (cameraStartedRef.current) {
-        cameraStartedRef.current = false;
-        cleanupCamera();
+      if (calculatedState !== lastPushedStateRef.current || heartbeatDue) {
+        setState(calculatedState);
+        lastPushedStateRef.current = calculatedState;
+        lastPushedTimeRef.current = now;
+        pushStateToBackend(calculatedState, {});
       }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.id, user?.role]);
-
-  // 3. Setup signaling channel (Supabase fallback to short-poll)
-  useEffect(() => {
-    if (!isAuthenticated || !user || !isMonitoredRole) return;
-
-    let subscription: any = null;
-    let pollInterval: NodeJS.Timeout | null = null;
-
-    if (supabase) {
-      // Connect to signaling channel for this employee
-      const channel = supabase.channel(`monitoring:signals:${user.id}`);
-      
-      channel
-        .on("broadcast", { event: "upgrade-stream" }, () => {
-          console.log("Upgrading stream to high quality");
-          upgradeStream();
-        })
-        .on("broadcast", { event: "downgrade-stream" }, () => {
-          console.log("Downgrading stream to low quality");
-          downgradeStream();
-        })
-        .on("broadcast", { event: "take-screenshot" }, async ({ payload }) => {
-          console.log("Taking screenshot requested by admin");
-          await captureAndUploadScreenshot(payload?.reason || "Instant Screenshot");
-        })
-        .on("broadcast", { event: "start-recording" }, ({ payload }) => {
-          console.log("Starting video recording requested by admin");
-          handleStartRecording(payload?.recordingId);
-        })
-        .on("broadcast", { event: "stop-recording" }, () => {
-          console.log("Stopping video recording requested by admin");
-          handleStopRecording();
-        })
-        .on("broadcast", { event: "request-webrtc" }, async ({ payload }) => {
-          const { viewerId } = payload;
-          if (!viewerId || !streamRef.current) return;
-
-          if (peerConnectionsRef.current[viewerId]) {
-            peerConnectionsRef.current[viewerId].close();
-          }
-
-          const pc = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-          });
-          peerConnectionsRef.current[viewerId] = pc;
-
-          streamRef.current.getTracks().forEach(track => {
-            if (streamRef.current) pc.addTrack(track, streamRef.current);
-          });
-
-          pc.onicecandidate = (event) => {
-            if (event.candidate) {
-              channel.send({
-                type: 'broadcast',
-                event: 'webrtc-ice-candidate',
-                payload: { targetId: viewerId, candidate: event.candidate, senderId: user.id }
-              });
-            }
-          };
-
-          try {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            
-            channel.send({
-              type: 'broadcast',
-              event: 'webrtc-offer',
-              payload: { targetId: viewerId, sdp: offer, senderId: user.id }
-            });
-          } catch (err) {
-            console.error("Failed to create WebRTC offer:", err);
-          }
-        })
-        .on("broadcast", { event: "webrtc-answer" }, async ({ payload }) => {
-          const { senderId, targetId, sdp } = payload;
-          if (targetId !== user.id) return;
-          const pc = peerConnectionsRef.current[senderId];
-          if (pc) {
-            try {
-              await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-            } catch (err) {
-              console.error("Failed to set remote description:", err);
-            }
-          }
-        })
-        .on("broadcast", { event: "webrtc-ice-candidate" }, async ({ payload }) => {
-          const { senderId, targetId, candidate } = payload;
-          if (targetId !== user.id) return;
-          const pc = peerConnectionsRef.current[senderId];
-          if (pc && candidate) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (err) {
-              console.error("Failed to add ICE candidate:", err);
-            }
-          }
-        })
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            console.log("Subscribed to admin signaling channel");
-          }
-        });
-
-      subscription = channel;
-    } else {
-      // Fallback: poll for command signals
-      pollInterval = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/monitoring/presence?userId=${user.id}&checkCommands=true`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.command === "upgrade") upgradeStream();
-            else if (data.command === "downgrade") downgradeStream();
-            
-            if (data.takeScreenshot) {
-              await captureAndUploadScreenshot(data.screenshotReason || "Scheduled Screenshot");
-            }
-          }
-        } catch (err) {
-          console.error("Signal poll error:", err);
-        }
-      }, 5000);
-    }
+    }, 4000);
 
     return () => {
-      if (subscription) {
-        supabase.removeChannel(subscription);
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
       }
-      if (pollInterval) {
-        clearInterval(pollInterval);
+      // Disconnect any active LiveKit session on logout
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+        livekitRoomRef.current = null;
       }
-    };
-  }, [isAuthenticated, user?.id, user?.role]);
-
-  const startCamera = async () => {
-    try {
-      cleanupCamera();
-
-      // Create video and canvas elements dynamically if not mounted
-      if (!videoRef.current) {
-        const video = document.createElement("video");
-        video.autoplay = true;
-        video.playsInline = true;
-        video.muted = true;
-        video.style.display = "none";
-        videoRef.current = video;
-        document.body.appendChild(video);
-      }
-
-      if (!canvasRef.current) {
-        const canvas = document.createElement("canvas");
-        canvas.style.display = "none";
-        canvasRef.current = canvas;
-        document.body.appendChild(canvas);
-      }
-
-      // Initialize in thumbnail/low-bandwidth mode by default
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 320 },
-          height: { ideal: 180 },
-          frameRate: { ideal: 5 },
-        },
-        audio: true,
-      });
-
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-
-      setIsCameraActive(true);
-      setError(null);
-      setState("Present");
-      lastPushedStateRef.current = "Present";
-      pushStateToBackend("Present", { reason: "camera_started" });
-
-      // Start the frame analysis loop
-      startAnalysisLoop();
-    } catch (err: any) {
-      console.error("Camera monitoring failed to start:", err);
-      cameraStartedRef.current = false;
-      setState("Monitoring Error");
-      setError(err.message || "Failed to initialize webcam");
-      // Push the error state so admin sees "Camera Disconnected" not stale data
-      pushStateToBackend("Monitoring Error", { reason: err.message || "getUserMedia_failed" });
-    }
-  };
-
-  const cleanupCamera = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Capture whether a real stream was active BEFORE we null out the ref.
-    // The Offline beacon must only fire when we're closing a genuinely live session.
-    // Without this, startCamera()'s internal cleanupCamera() call (which runs
-    // before getUserMedia when no prior stream exists) would fire a spurious
-    // sendBeacon("Offline") and cause the admin to see "Camera Disconnected".
-    const hadActiveStream = !!streamRef.current;
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-      videoRef.current.remove();
-      videoRef.current = null;
-    }
-
-    if (canvasRef.current) {
-      canvasRef.current.remove();
-      canvasRef.current = null;
-    }
-
-    Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
-    peerConnectionsRef.current = {};
-
-    handleStopRecording();
-
-    setIsCameraActive(false);
-    // Only send the Offline beacon when there was a real stream to close.
-    // Uses Blob with application/json so server-side request.json() can parse it
-    // (plain string sendBeacon sends as text/plain which fails request.json()).
-    if (hadActiveStream && isAuthenticated && user?.id) {
+      // Send Offline beacon on session end
       const payload = JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } });
       navigator.sendBeacon(
         "/api/monitoring/presence",
         new Blob([payload], { type: "application/json" })
       );
-    }
-  };
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id, user?.role]);
 
-  const handleStartRecording = (recordingId: string) => {
-    if (!streamRef.current || mediaRecorderRef.current || !recordingId) return;
-    
-    activeRecordingIdRef.current = recordingId;
-    const mediaRecorder = new MediaRecorder(streamRef.current, {
-      mimeType: "video/webm;codecs=vp8,opus",
-    });
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. Supabase signaling channel — listens for admin LiveKit view requests
+  //    Hidden from the member — no UI notification is shown.
+  // ─────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated || !user || !isMonitoredRole || !supabase) return;
 
-    mediaRecorder.ondataavailable = async (e) => {
-      if (e.data.size > 0 && activeRecordingIdRef.current) {
-        const formData = new FormData();
-        formData.append("chunk", e.data);
-        formData.append("recordingId", activeRecordingIdRef.current);
-        
-        try {
-          await fetch("/api/monitoring/recordings/upload", {
-            method: "POST",
-            body: formData,
-          });
-        } catch (err) {
-          console.error("Failed to upload video chunk", err);
-        }
+    const channel = supabase.channel(`monitoring:signals:${user.id}`);
+
+    channel
+      .on("broadcast", { event: "livekit-view-request" }, async () => {
+        await startLiveKitPublish();
+      })
+      .on("broadcast", { event: "livekit-view-end" }, async () => {
+        await stopLiveKitPublish();
+      })
+      // Keep screenshot capture signals working as before
+      .on("broadcast", { event: "take-screenshot" }, async ({ payload }) => {
+        // Screenshot capture is handled by the admin-triggered API
+        console.log("Screenshot signal received:", payload?.reason);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id, user?.role]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Clean up LiveKit on tab close
+  // ─────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const handleUnload = () => {
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
       }
     };
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
+    };
+  }, []);
 
-    mediaRecorder.start(2000); // Send chunks every 2 seconds
-    mediaRecorderRef.current = mediaRecorder;
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
-      activeRecordingIdRef.current = null;
-    }
-  };
-
-  // Adjust camera constraints dynamically
-  const upgradeStream = async () => {
-    if (!streamRef.current) return;
-    const videoTrack = streamRef.current.getVideoTracks()[0];
-    if (videoTrack) {
-      try {
-        await videoTrack.applyConstraints({
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-        });
-        setResolution("1280x720");
-        setFps(30);
-        currentSignalRef.current = "high";
-      } catch (err) {
-        console.error("Failed to upgrade camera stream constraints:", err);
-      }
-    }
-  };
-
-  const downgradeStream = async () => {
-    if (!streamRef.current) return;
-    const videoTrack = streamRef.current.getVideoTracks()[0];
-    if (videoTrack) {
-      try {
-        await videoTrack.applyConstraints({
-          width: { ideal: 320 },
-          height: { ideal: 180 },
-          frameRate: { ideal: 5 },
-        });
-        setResolution("320x180");
-        setFps(5);
-        currentSignalRef.current = "low";
-      } catch (err) {
-        console.error("Failed to downgrade camera stream constraints:", err);
-      }
-    }
-  };
-
-  // Take client-side canvas snapshot of current stream
-  const captureAndUploadScreenshot = async (reason: string) => {
-    if (!videoRef.current || !canvasRef.current || !user) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    canvas.width = video.videoWidth || 320;
-    canvas.height = video.videoHeight || 180;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageUrl = canvas.toDataURL("image/jpeg", 0.6);
+  // ─────────────────────────────────────────────────────────────────────────────
+  // LiveKit: silently start publishing camera + mic when admin requests a view
+  // ─────────────────────────────────────────────────────────────────────────────
+  const startLiveKitPublish = async () => {
+    if (!user?.id) return;
+    if (livekitRoomRef.current) return; // already connected — ignore duplicate requests
 
     try {
-      await fetch("/api/monitoring/screenshots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, imageUrl, reason }),
+      const res = await fetch(`/api/monitoring/livekit-token?userId=${user.id}&role=member`);
+      if (!res.ok) throw new Error("Token fetch failed");
+      const { token, url } = await res.json();
+
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        // Optimise for monitoring: low latency over quality
+        videoCaptureDefaults: {
+          resolution: { width: 1280, height: 720, frameRate: 30 },
+        },
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
-    } catch (err) {
-      console.error("Upload screenshot failed:", err);
+
+      await room.connect(url, token);
+      // Enable camera and microphone — browser will ask permission once and remember it
+      await room.localParticipant.enableCameraAndMicrophone();
+
+      livekitRoomRef.current = room;
+    } catch (err: any) {
+      console.error("LiveKit publish error:", err);
+      setError(err.message);
+      livekitRoomRef.current = null;
     }
   };
 
-  // 4. Analytics Loop (runs every 4 seconds)
-  const startAnalysisLoop = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-
-    intervalRef.current = setInterval(async () => {
-      if (!videoRef.current || !canvasRef.current || !user) return;
-
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      if (video.videoWidth === 0) return;
-
-      canvas.width = 160; // downsample for analytical speed
-      canvas.height = 90;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const pixels = imgData.data;
-
-      // Calculate average luminance and pixel variance (to detect covered/blocked camera)
-      let sumLuminance = 0;
-      const totalPixels = canvas.width * canvas.height;
-
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        sumLuminance += luminance;
-      }
-
-      const avgLuminance = sumLuminance / totalPixels;
-
-      let varianceSum = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        varianceSum += Math.pow(luminance - avgLuminance, 2);
-      }
-      const pixelVariance = varianceSum / totalPixels;
-
-      // Determine presence state
-      let calculatedState = "Present";
-
-      // Covered camera typically has very low average luminance and nearly zero variance
-      if (avgLuminance < 15 && pixelVariance < 45) {
-        calculatedState = "Camera Blocked";
-      } else {
-        // Face detection implementation
-        // Fallback or native Chrome Shape Detection API
-        const FaceDetectorClass = (window as any).FaceDetector;
-        if (FaceDetectorClass) {
-          try {
-            const detector = new FaceDetectorClass({ maxDetectedFaces: 5, fastMode: true });
-            const faces = await detector.detect(video);
-            if (faces.length === 0) {
-              calculatedState = "Away From Desk";
-            } else if (faces.length > 1) {
-              calculatedState = "Multiple People Detected";
-            }
-          } catch (err) {
-            console.error("FaceDetector API failed", err);
-          }
-        }
-      }
-
-      // Check inactivity timers if state is still standard
-      if (calculatedState === "Present") {
-        const idleDuration = Date.now() - lastActivityRef.current;
-        if (idleDuration >= 10 * 60 * 1000) {
-          calculatedState = "Away From Desk";
-        } else if (idleDuration >= 3 * 60 * 1000) {
-          calculatedState = "Idle";
-        } else {
-          calculatedState = "Active";
-        }
-      }
-
-      // Push update if: state changed, OR 30 seconds have elapsed since the last push (heartbeat)
-      // The 30-second wall-clock check replaces the unreliable Math.random() approach which
-      // could go minutes without a push in backgrounded/throttled tabs.
-      const now = Date.now();
-      const heartbeatDue = now - lastPushedTimeRef.current >= 30_000;
-      if (calculatedState !== lastPushedStateRef.current || heartbeatDue) {
-        setState(calculatedState);
-        lastPushedStateRef.current = calculatedState;
-        lastPushedTimeRef.current = now;
-        pushStateToBackend(calculatedState, { avgLuminance, pixelVariance, resolution, fps });
-      }
-    }, 4000);
+  // ─────────────────────────────────────────────────────────────────────────────
+  // LiveKit: disconnect when admin stops viewing
+  // ─────────────────────────────────────────────────────────────────────────────
+  const stopLiveKitPublish = async () => {
+    if (!livekitRoomRef.current) return;
+    await livekitRoomRef.current.disconnect();
+    livekitRoomRef.current = null;
   };
 
-  const pushStateToBackend = async (newState: string, metrics: any) => {
+  const pushStateToBackend = async (newState: string, metrics: Record<string, unknown>) => {
     try {
       await fetch("/api/monitoring/presence", {
         method: "POST",
@@ -581,23 +217,8 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     }
   };
 
-  // Listen to network change/tab close
-  useEffect(() => {
-    const handleUnload = () => {
-      cleanupCamera();
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
-    window.addEventListener("pagehide", handleUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleUnload);
-      window.removeEventListener("pagehide", handleUnload);
-    };
-  }, [isAuthenticated]);
-
   return (
-    <PresenceAgentContext.Provider value={{ state, isCameraActive, resolution, fps, error }}>
+    <PresenceAgentContext.Provider value={{ state, error }}>
       {children}
     </PresenceAgentContext.Provider>
   );
