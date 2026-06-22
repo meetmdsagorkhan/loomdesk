@@ -216,21 +216,27 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       await room.connect(url, token);
       
       // Try to enable them independently so a missing mic doesn't crash the video
+      let camError = "No tracks published";
       try {
         await room.localParticipant.setCameraEnabled(true);
-      } catch (camErr) {
+        camError = "";
+      } catch (camErr: any) {
+        camError = camErr.message || "Unknown camera error";
         console.error("Failed to enable camera:", camErr);
       }
       
+      let micError = "No tracks published";
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
-      } catch (micErr) {
+        micError = "";
+      } catch (micErr: any) {
+        micError = micErr.message || "Unknown mic error";
         console.error("Failed to enable mic:", micErr);
       }
       
-      // If BOTH failed to publish, consider it a failure
+      // If BOTH failed to publish, consider it a failure and throw the exact reasons
       if (room.localParticipant.videoTrackPublications.size === 0 && room.localParticipant.audioTrackPublications.size === 0) {
-        throw new Error("Could not access either camera or microphone (Hardware missing or permission denied)");
+        throw new Error(`Cam: ${camError} | Mic: ${micError}`);
       }
 
       livekitRoomRef.current = room;
