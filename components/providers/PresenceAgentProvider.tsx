@@ -202,10 +202,6 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
-        // Optimise for monitoring: low latency over quality
-        videoCaptureDefaults: {
-          resolution: { width: 1280, height: 720, frameRate: 30 },
-        },
         audioCaptureDefaults: {
           echoCancellation: true,
           noiseSuppression: true,
