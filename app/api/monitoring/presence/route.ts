@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current/latest presence event for each monitored user
+    // Include both MEMBER and TEAM_LEAD roles (team leads can also be monitored)
     const users = await prisma.user.findMany({
-      where: { role: "MEMBER" },
+      where: { role: { in: ["MEMBER", "TEAM_LEAD"] } },
       select: {
         id: true,
         name: true,
@@ -48,16 +49,30 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const presenceList = users.map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      department: u.department,
-      position: u.position,
-      currentPresence: u.presenceEvents[0] || null,
-      pendingAlerts: u.complianceAlerts,
-    }));
+    // Presence events older than 15 minutes are considered stale → treat as Offline
+    const PRESENCE_STALE_MS = 15 * 60 * 1000;
+    const now = Date.now();
+
+    const presenceList = users.map(u => {
+      const latestEvent = u.presenceEvents[0] || null;
+      const isStale =
+        !latestEvent ||
+        now - new Date(latestEvent.timestamp).getTime() > PRESENCE_STALE_MS;
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        department: u.department,
+        position: u.position,
+        // If the latest event is stale, override state to Offline so admin sees correct status
+        currentPresence: isStale
+          ? (latestEvent ? { ...latestEvent, state: "Offline" } : null)
+          : latestEvent,
+        pendingAlerts: u.complianceAlerts,
+      };
+    });
 
     return NextResponse.json({ presence: presenceList });
   } catch (error) {

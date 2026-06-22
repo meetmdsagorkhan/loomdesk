@@ -23,7 +23,7 @@ const PresenceAgentContext = createContext<PresenceAgentContextType>({
 export const usePresenceAgent = () => useContext(PresenceAgentContext);
 
 export function PresenceAgentProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useCurrentUser();
+  const { user, isLoading: sessionLoading, isAuthenticated } = useCurrentUser();
   const [state, setState] = useState("Offline");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [resolution, setResolution] = useState("320x180");
@@ -40,13 +40,18 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const lastPushedStateRef = useRef<string>("Offline");
+  // Track the wall-clock time of last push so we can guarantee a heartbeat every 30s
+  const lastPushedTimeRef = useRef<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeRecordingIdRef = useRef<string | null>(null);
   const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
 
+  // Roles that participate in presence monitoring
+  const isMonitoredRole = user?.role === "MEMBER" || user?.role === "TEAM_LEAD";
+
   // 1. Setup activity listeners for Idle/Away tracking
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "MEMBER") return;
+    if (!isAuthenticated || !isMonitoredRole) return;
 
     const handleActivity = () => {
       lastActivityRef.current = Date.now();
@@ -67,7 +72,11 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
 
   // 2. Initialize camera & real-time analytics
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "MEMBER") {
+    // While the session is still being loaded, do nothing — avoids a spurious
+    // cleanupCamera() call that would fire sendBeacon("Offline") immediately.
+    if (sessionLoading) return;
+
+    if (!isAuthenticated || !isMonitoredRole) {
       cleanupCamera();
       return;
     }
@@ -101,11 +110,13 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     return () => {
       cleanupCamera();
     };
-  }, [isAuthenticated, user?.id, user?.role]);
+  // sessionLoading added so the effect re-evaluates once the session resolves
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, sessionLoading, user?.id, user?.role]);
 
   // 3. Setup signaling channel (Supabase fallback to short-poll)
   useEffect(() => {
-    if (!isAuthenticated || !user || user.role !== "MEMBER") return;
+    if (!isAuthenticated || !user || !isMonitoredRole) return;
 
     let subscription: any = null;
     let pollInterval: NodeJS.Timeout | null = null;
@@ -315,11 +326,14 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
     handleStopRecording();
 
     setIsCameraActive(false);
-    // Send final offline/stop event to the API before closing
+    // Send final offline/stop event to the API before closing.
+    // sendBeacon must use a Blob with application/json so the server-side
+    // request.json() can parse it — plain strings are sent as text/plain.
     if (isAuthenticated && user?.id) {
+      const payload = JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } });
       navigator.sendBeacon(
         "/api/monitoring/presence",
-        JSON.stringify({ state: "Offline", metadata: { reason: "session_ended" } })
+        new Blob([payload], { type: "application/json" })
       );
     }
   };
@@ -507,10 +521,15 @@ export function PresenceAgentProvider({ children }: { children: React.ReactNode 
         }
       }
 
-      // If state has changed or 30 seconds have passed, push update to backend
-      if (calculatedState !== lastPushedStateRef.current || Math.random() < 0.15) {
+      // Push update if: state changed, OR 30 seconds have elapsed since the last push (heartbeat)
+      // The 30-second wall-clock check replaces the unreliable Math.random() approach which
+      // could go minutes without a push in backgrounded/throttled tabs.
+      const now = Date.now();
+      const heartbeatDue = now - lastPushedTimeRef.current >= 30_000;
+      if (calculatedState !== lastPushedStateRef.current || heartbeatDue) {
         setState(calculatedState);
         lastPushedStateRef.current = calculatedState;
+        lastPushedTimeRef.current = now;
         pushStateToBackend(calculatedState, { avgLuminance, pixelVariance, resolution, fps });
       }
     }, 4000);

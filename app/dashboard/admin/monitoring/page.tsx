@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { 
   Camera, Search, Filter, Monitor, Users, AlertTriangle, ShieldAlert,
   LayoutGrid, Maximize2, RefreshCw, Play, Pause, Square, Film, Eye, 
@@ -41,10 +41,14 @@ export default function MonitoringPage() {
   const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
   const connectionInitiatedRef = useRef<Set<string>>(new Set());
   const sessionUserRef = useRef<{ id: string } | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/session').then(res => res.json()).then(data => {
-      if (data?.user?.id) sessionUserRef.current = data.user;
+      if (data?.user?.id) {
+        sessionUserRef.current = data.user;
+        setSessionLoaded(true);
+      }
     });
   }, []);
 
@@ -229,11 +233,15 @@ export default function MonitoringPage() {
   });
 
   // WebRTC Connection Logic
+  // Depends on `employees` (raw list) + `sessionLoaded` to avoid running before
+  // the admin session is ready. filteredEmployees is derived and changes on every
+  // search/filter keypress — using it caused missed connections and race conditions.
   useEffect(() => {
-    if (!supabase || !sessionUserRef.current) return;
+    // Wait until the admin session is confirmed loaded
+    if (!supabase || !sessionLoaded || !sessionUserRef.current) return;
     const myAdminId = sessionUserRef.current.id;
 
-    filteredEmployees.forEach(emp => {
+    employees.forEach(emp => {
       const presenceState = emp.currentPresence?.state || "Offline";
       if (presenceState !== "Offline" && !connectionInitiatedRef.current.has(emp.id)) {
         connectionInitiatedRef.current.add(emp.id);
@@ -297,7 +305,8 @@ export default function MonitoringPage() {
         });
       }
     });
-  }, [filteredEmployees]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employees, sessionLoaded]);
 
   return (
     <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto relative">
@@ -550,10 +559,17 @@ export default function MonitoringPage() {
                     <Shield className="w-3.5 h-3.5 text-indigo-500/70" />
                     {emp.role}
                   </div>
-                  {emp.currentPresence?.timestamp && (
-                    <div>
-                      Updated {format(new Date(emp.currentPresence.timestamp), "HH:mm:ss")}
-                    </div>
+                  {emp.currentPresence?.timestamp ? (() => {
+                    const ts = new Date(emp.currentPresence.timestamp);
+                    const ageMs = Date.now() - ts.getTime();
+                    const isStale = ageMs > 5 * 60 * 1000; // older than 5 min
+                    return (
+                      <div className={isStale ? "text-amber-500" : "text-muted-foreground"} title={format(ts, "PPpp")}>
+                        {formatDistanceToNow(ts, { addSuffix: true })}
+                      </div>
+                    );
+                  })() : (
+                    <div className="text-muted-foreground/50">No data yet</div>
                   )}
                 </div>
               </CardContent>
